@@ -166,6 +166,7 @@ def speciesMeta(meta) {
     return [
         id              : meta.id,
         pool            : known(meta.pool) ?: 'pool',
+        chemistry       : known(meta.chemistry),
         genome_size     : genome_size?.toString(),
         ploidy          : known(meta.ploidy)?.toInteger(),
         n_chromosomes   : known(meta.n_chromosomes)?.toInteger(),

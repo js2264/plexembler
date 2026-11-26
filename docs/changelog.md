@@ -14,6 +14,8 @@ follow [semantic versioning](https://semver.org).
 - **Two samplesheets**: the species and their nanopore runs (`--input`), and the
   pooled Hi-C, WGS and RNA-seq libraries (`--libraries`), checked against each
   other. A relative path in them is read from the samplesheet's folder.
+- **The species' nanopore chemistry**, a `chemistry` column: `r10`, `r9`, or
+  `NA` to tell it from the reads.
 - **Unknown values**: `NA`, or an empty cell, in a species' `genome_size`,
   `ploidy`, `n_chromosomes`, `busco_lineage`, `genetic_code` and
   `telomere_repeat`; the step that needs one estimates it. A library's ID or

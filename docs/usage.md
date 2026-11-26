@@ -56,6 +56,7 @@ Huva,poolA,ont/Huva.fastq.gz,NA,NA,NA,NA
 | `species` | yes | The species' ID: a letter, then letters, digits and hyphens. It starts the name of every contig of the species, `<species>_<contig>`, and names its results. | |
 | `pool` | no (`pool`) | The pool the species is in: the pooled libraries of the same pool are split between its species. | |
 | `ont` | yes | The species' nanopore reads: FASTQ, gzipped or not. | |
+| `chemistry` | no | The nanopore chemistry: `r10` (R10.4.1, Dorado SUP or HAC) or `r9` (R9.4.1 and older). It sets the assembler's mode and the polisher's model. | told from the reads' median quality (Q15 and above: `r10`); `r10` until then (milestone 1) |
 | `genome_size` | no | The expected genome size, in bases, with an optional `k`, `m` or `g` (`12m`). | estimated from the nanopore reads (milestone 1) |
 | `ploidy` | no | The expected ploidy. | estimated from k-mers and allele balance; haploid until then (milestones 1 and 6) |
 | `n_chromosomes` | no | The expected number of nuclear chromosomes: a check of the scaffolds, and HapHiC's input. | scaffolds judged without it; HapHiC skipped (milestone 3) |

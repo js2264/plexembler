@@ -29,6 +29,18 @@
                 "pattern": "^\\S+\\.f(ast)?q(\\.gz)?$",
                 "errorMessage": "The species' nanopore reads: a FASTQ file (.fastq, .fq, gzipped or not), without spaces in its path"
             },
+            "chemistry": {
+                "type": "string",
+                "enum": [
+                    "r10",
+                    "r9",
+                    "NA"
+                ],
+                "errorMessage": "The nanopore chemistry: r10 (R10.4.1, Dorado SUP or HAC) or r9 (R9.4.1 and older); NA, or empty, to tell it from the reads' quality",
+                "meta": [
+                    "chemistry"
+                ]
+            },
             "genome_size": {
                 "type": [
                     "integer",
