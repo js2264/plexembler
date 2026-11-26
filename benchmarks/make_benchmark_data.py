@@ -110,9 +110,11 @@ SPECIES = (
 
 #: The mitochondrion's copies per nuclear genome, in every library.
 MITO_COPIES = 5
-#: The share of a species' nanopore reads that come from the next species of
-#: the pool: barcodes misassigned between runs, which the contig screen catches.
-BLEED_THROUGH = 0.01
+#: Bleed-through: the share of a species' nanopore reads that come from another
+#: species of the pool (barcodes misassigned between runs). Spar's run holds
+#: enough of Cgla's reads to assemble some: contigs the screen must move or
+#: drop. The others, at 1 %, are too thin to assemble.
+BLEED_THROUGH = {"Scer": ("Spar", 0.01), "Spar": ("Cgla", 0.15), "Cgla": ("Scer", 0.01)}
 #: Hi-C: pairs, read length, and how the contacts fall.
 HIC_PAIRS = 300_000
 READ_LENGTH = 150
@@ -405,12 +407,10 @@ def main(outdir: Path, threads: int) -> None:
             reads = {name: job.result() for name, job in jobs.items()}
         rng = random.Random(f"plexembler-benchmark-v{GENERATOR_VERSION}")
         bleed = {}
-        for i, species in enumerate(SPECIES):
-            source = SPECIES[(i + 1) % len(SPECIES)].name
-            extra = rng.sample(
-                reads[source], round(BLEED_THROUGH * len(reads[species.name]))
-            )
-            bleed[species.name] = {"from": source, "reads": len(extra)}
+        for species in SPECIES:
+            source, share = BLEED_THROUGH[species.name]
+            extra = rng.sample(reads[source], round(share * len(reads[species.name])))
+            bleed[species.name] = {"from": source, "share": share, "reads": len(extra)}
             write_gzip(
                 small / "ont" / f"{species.name}.fastq.gz", reads[species.name] + extra
             )
