@@ -40,26 +40,28 @@ before anything runs.
 
 One row per nanopore run of a species; the rows of a species are its runs, and
 share its values. The [schema](https://github.com/js2264/plexembler/blob/main/assets/schema_input.json)
-checks each column.
+checks each column. What you do not know about a species' genome is `NA`, or an
+empty cell: the step that needs it estimates it, and the report says so.
 
 ```csv title="species.csv"
 species,pool,ont,genome_size,ploidy,n_chromosomes,genetic_code
 Scer,poolA,ont/Scer.fastq.gz,12m,1,16,1
 Calb,poolA,ont/Calb_run1.fastq.gz,14m,2,8,12
 Calb,poolA,ont/Calb_run2.fastq.gz,14m,2,8,12
+Huva,poolA,ont/Huva.fastq.gz,NA,NA,NA,NA
 ```
 
-| Column | Required | Description | Used from |
+| Column | Required | Description | When it is `NA` |
 |---|---|---|---|
-| `species` | yes | The species' ID: a letter, then letters, digits and hyphens. It starts the name of every contig of the species, `<species>_<contig>`, and names its results. | now |
-| `pool` | no (`pool`) | The pool the species is in: the pooled libraries of the same pool are split between its species. | now |
-| `ont` | yes | The species' nanopore reads: FASTQ, gzipped or not. | now (QC); milestone 1 (assembly) |
-| `genome_size` | no | The expected genome size, in bases, with an optional `k`, `m` or `g` (`12m`). | milestone 1 |
-| `ploidy` | no | The expected ploidy. | milestones 1 and 6 |
-| `n_chromosomes` | no | The expected number of nuclear chromosomes: a check of the scaffolds, and HapHiC's input. | milestone 3 |
-| `busco_lineage` | no | A BUSCO lineage (`busco --list-datasets`); BUSCO picks one when absent. | milestone 1 |
-| `genetic_code` | no (`1`) | The NCBI translation table of the nuclear genes: `12` for the CUG-Ser clade, `26` for the CUG-Ala clade. | milestone 4 |
-| `telomere_repeat` | no | The telomeric repeat unit (`TGTGGG`); found from the reads when absent. | milestone 3 |
+| `species` | yes | The species' ID: a letter, then letters, digits and hyphens. It starts the name of every contig of the species, `<species>_<contig>`, and names its results. | |
+| `pool` | no (`pool`) | The pool the species is in: the pooled libraries of the same pool are split between its species. | |
+| `ont` | yes | The species' nanopore reads: FASTQ, gzipped or not. | |
+| `genome_size` | no | The expected genome size, in bases, with an optional `k`, `m` or `g` (`12m`). | estimated from the nanopore reads (milestone 1) |
+| `ploidy` | no | The expected ploidy. | estimated from k-mers and allele balance; haploid until then (milestones 1 and 6) |
+| `n_chromosomes` | no | The expected number of nuclear chromosomes: a check of the scaffolds, and HapHiC's input. | scaffolds judged without it; HapHiC skipped (milestone 3) |
+| `busco_lineage` | no | A BUSCO lineage (`busco --list-datasets`). | BUSCO picks one (milestone 1) |
+| `genetic_code` | no | The NCBI translation table of the nuclear genes: `1`, `12` for the CUG-Ser clade, `26` for the CUG-Ala clade. | inferred from the genome; `1` until then (milestone 4) |
+| `telomere_repeat` | no | The telomeric repeat unit (`TGTGGG`). | found from the reads (milestone 3) |
 
 ## Pooled libraries
 
@@ -98,10 +100,10 @@ Scer,poolA,ont/Scer.fastq.gz,12m,1,16,1
 Kmar,poolA,ont/Kmar_run1.fastq.gz,11m,1,8,1
 Kmar,poolA,ont/Kmar_run2.fastq.gz,11m,1,8,1
 Lthe,poolA,ont/Lthe.fastq.gz,10.4m,1,8,1
-Huva,poolA,ont/Huva.fastq.gz,9m,,,1
+Huva,poolA,ont/Huva.fastq.gz,NA,NA,NA,NA
 Calb,poolB,ont/Calb.fastq.gz,14m,2,8,12
 Dhan,poolB,ont/Dhan.fastq.gz,12m,1,7,12
-Ptan,poolB,ont/Ptan.fastq.gz,13m,1,,26
+Ptan,poolB,ont/Ptan.fastq.gz,13m,1,NA,26
 Spom,poolC,ont/Spom.fastq.gz,12.6m,1,3,1
 Ylip,poolC,ont/Ylip.fastq.gz,20m,1,6,1
 Pkud,poolC,ont/Pkud.fastq.gz,11m,2,5,1
@@ -127,8 +129,8 @@ C-rna-ypd-2,poolC,rnaseq,poolC/rna_ypd2_R1.fastq.gz,poolC/rna_ypd2_R2.fastq.gz,Y
   are merged.
 - `Calb` and `Dhan` (CUG-Ser clade) and `Ptan` (CUG-Ala) translate CUG
   differently: their `genetic_code` is 12 or 26.
-- Empty cells are allowed where a column is optional: `Huva`'s ploidy and
-  chromosome count are unknown.
+- `NA` (or an empty cell) is what is not known: `Huva`'s genome size, ploidy,
+  chromosome count and genetic code, `Ptan`'s chromosome count.
 
 What each pool's species get, once the pipeline is complete
 ([plan](plan.md)):
@@ -138,6 +140,11 @@ What each pool's species get, once the pipeline is complete
 | poolA | Arima (DpnII, HinfI), two lanes | yes | 2 conditions × 2 | everything: polished and scaffolded genomes, Hi-C maps, annotation with RNA evidence, expression tables |
 | poolB | DpnII | yes | none | scaffolded genomes and maps; genes from protein evidence only; no expression table |
 | poolC | Micro-C (`none`) | none | 1 condition × 2 | genomes polished with nanopore reads only, and a rougher QV, from nanopore k-mers; YaHS only (instaGRAAL needs an enzyme); expression tables |
+
+A pool whose Hi-C library was made with a restriction enzyme can do without a
+WGS library: its Hi-C reads, cut at their ligation junctions, polish its
+species instead ([plan](plan.md), milestone 2). A Micro-C library has no
+junction to cut at, which is why `poolC` stays with nanopore polishing.
 
 ## Profiles
 
@@ -150,6 +157,20 @@ a cluster.
 
 `-profile test` runs on two species of a few dozen kilobases, from
 `tests/data/`: the plumbing, in a few minutes.
+
+## Releases
+
+Pin a release, so that a run can be made again as it was:
+
+```bash
+nextflow run js2264/plexembler -r v0.1.0 -profile docker \
+    --input species.csv --libraries libraries.csv --outdir results
+```
+
+plexembler stays at 0.x ([plan](plan.md#versions-0x-for-good)): a patch
+release (0.1.1) only fixes; a minor release (0.2.0) adds steps, and may change a
+parameter, a column or an output, which its [changelog](changelog.md) says
+under *Breaking changes*, with a page on moving a run to it.
 
 ## Running it again
 

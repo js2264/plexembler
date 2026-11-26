@@ -12,12 +12,38 @@ flowchart LR
   M2 --> M3[M3 Chromosomes<br>v0.3.0]
   M3 --> M4[M4 Annotation<br>v0.4.0]
   M4 --> M5[M5 Expression<br>v0.5.0]
-  M3 --> M6[M6 Reports and extras<br>v0.6.0 to v1.0.0]
+  M3 --> M6[M6 Reports and extras<br>v0.6.0]
   M5 --> M6
+  M6 --> C[The complete workflow<br>a 0.x release]
   T2[T2 Test data, benchmark pool] -.-> M1
   T1[T1 The package's container] -.-> M1
   T7[T7 chromosomix, metacooler] -.-> M2
 ```
+
+## Versions: 0.x, for good
+
+plexembler stays at 0.x, the complete workflow included: there is no 1.0.0 in
+this plan. CONVENTIONS.md § 18 allows a minor release before 1.0 to break the
+interface, and that is the freedom kept.
+
+- **A milestone is a minor release** (v0.1.0 for M1, … v0.6.0 for M6), and so
+  is every feature after them: the minor number has no ceiling (v0.10.0 follows
+  v0.9.0). `uv run bump-my-version bump minor` or `bump patch`, never `bump
+  major`.
+- **The complete workflow** is the first release in which every box of M1 to M6
+  is ticked and `test_full` is green: a 0.x release like the others, named so
+  in its changelog section and in the README.
+- **A patch release only fixes**, and never breaks a run.
+- **A minor release may break**, said where it does: a *Breaking changes*
+  section in its changelog, and `docs/upgrading.md`, a page on moving a run to
+  it (CONVENTIONS.md § 9). What can be renamed is first deprecated, with a
+  warning, for one minor release (§ 18): a parameter, a samplesheet column, an
+  output path, a key of the report.
+- **Runs pin their release** (`nextflow run js2264/plexembler -r v0.7.2`):
+  [usage](usage.md) says so, and every report names the release it was made
+  with.
+- **nf-core releases a pipeline from 1.0.0**, so plexembler stays
+  nf-core-compatible rather than becoming an nf-core pipeline (T6).
 
 ## How a step is built
 
@@ -71,8 +97,15 @@ usable as a draft genome on its own.
       keeping its tags); filtered by length and quality (`chopper`); capped at
       `--ont_max_depth` (100×) of the longest reads (`filtlong --target_bases`,
       or `rasusa`). The samplesheet's `ont` takes `.bam`.
+- [ ] **What the samplesheet leaves unknown** (`NA`): the genome size, from the
+      nanopore reads (LRGE), before the depth cap needs it; the ploidy, from the
+      k-mer spectrum of the species' nanopore reads (GenomeScope2, Smudgeplot),
+      then of its own WGS reads once M2 has split them, the species treated as
+      haploid until then. Each estimate is reported as one, beside what the
+      samplesheet gave when it gave something.
 - [ ] **Assemblers, as candidates** (`--assemblers flye,hifiasm`): Flye
-      `--nano-hq` by default, `--genome-size` from the samplesheet; hifiasm
+      `--nano-hq` by default, `--genome-size` from the samplesheet or its
+      estimate; hifiasm
       `--ont` for heterozygous species, its haplotypes kept as candidates
       (nf-core: `flye`, `hifiasm`).
 - [ ] **Contigs named after their species:** `plexembler rename`, in a local
@@ -100,7 +133,8 @@ finds no misassembly over 10 kb in the kept candidate.
 ## M2 · The pool, split · v0.2.0
 
 **Goal:** the pooled libraries split between the species; the contigs polished
-with their own species' WGS reads, and screened.
+with their own species' short reads (WGS, or Hi-C cut at its junctions), and
+screened.
 
 - [ ] **`POOL_DECONVOLVE`**, the pool-level subworkflow
       ([concepts](concepts.md#deconvolution)): the contigs of every species of a
@@ -114,10 +148,38 @@ with their own species' WGS reads, and screened.
       species and the random-ligation rate ε. The pool's channels are grouped
       with `groupKey(pool, n_species)`, so that a pool starts as soon as its own
       species are ready.
+- [ ] **The polishing reads** (`--polish_reads auto|wgs|hic|both`, `auto` by
+      default): a species' WGS pairs when its pool has a WGS library; when it has
+      none, or for a species whose WGS depth is under `--min_polish_depth`
+      (30×), its **Hi-C reads, cut at their ligation junctions**. A Hi-C read is
+      chimeric at a junction, but the pieces between junctions are genome, read
+      with the same chemistry as WGS. `plexembler digest` cuts each read with
+      hicstuff's rule (`cutsite_read`: 4 bases into the junction, so that each
+      piece keeps its half of the site), from the junctions of the library's
+      `enzymes` (DpnII's `GATCGATC`; Arima's four); drops the pieces under
+      `--min_piece` (40 bp); and writes every piece once, as single-end reads:
+      a Hi-C pair is two loci, not a fragment, and its pairing would mislead a
+      polisher. Before cutting, duplicate pairs go (Hi-C libraries carry more
+      PCR duplicates than WGS: `pairtools dedup` on the pool's Hi-C alignments),
+      and a piece takes the species its pair was given. The reads with 0, 1 and
+      2 or more junctions are counted: a ligation-efficiency figure for the
+      report. (hicstuff's own `cutsite` pairs the pieces again; a mode of it
+      that writes them once, unpaired, would replace `plexembler digest`, T4.)
 - [ ] **Short-read polishing** (`--sr_polisher polypolish,pypolca|none`):
-      Polypolish (on `bwa mem -a` alignments of the species' reads), then
-      pypolca; Merqury's QV before and after, and the polished version kept only
-      if it is better (`plexembler select --step polish`).
+      Polypolish on `bwa mem -a` alignments of the species' reads, single-end for
+      Hi-C pieces (its insert-size filter needs true pairs), alignments with
+      more than 5 clipped bases dropped (a junction the cutting missed); then
+      pypolca. Hi-C's coverage is uneven, highest near restriction sites: a base
+      it does not cover is left as it was, not changed. The guard: Merqury's QV
+      before and after on k-mers of 10 % of the pairs, held out of the polishing
+      (the polishing reads' own k-mers would flatter it, and Hi-C's uneven
+      coverage makes a QV from its k-mers pessimistic); the polished version is
+      kept only if it is better (`plexembler select --step polish`).
+- [ ] **Micro-C** (`enzymes` is `none`) has no junction sequence to cut at:
+      such a pool's species stay polished with nanopore reads alone, by default.
+      Polishing with the clipped local alignments of its reads (primary and
+      supplementary segments, the clipped bases left out) is tried on the
+      benchmark first, and offered only if it helps.
 - [ ] **The pool's Hi-C map, species as genomes:** every Hi-C pair of the
       pool, those between species included, binned on the pool's contigs as a
       `.metacool` whose genomes are the species (`metacooler create pairs`, the
@@ -147,7 +209,8 @@ with their own species' WGS reads, and screened.
 **Done when**, on the benchmark pool: ≥ 99.5 % of the assigned pairs go to their
 true species (the reads' names carry it) for pairs of species below 90 % ANI;
 ε within 10 % of the simulated rate; every planted bleed-through contig moved
-or dropped; no species' QV lower after polishing.
+or dropped; no species' QV lower after polishing; polishing with digested Hi-C
+alone gains at least 80 % of what WGS gains, species by species.
 
 ## M3 · Chromosomes · v0.3.0
 
@@ -177,8 +240,10 @@ its Hi-C maps.
       (nf-core's subworkflow `fasta_explore_search_plot_tidk`).
 - [ ] **One candidate kept:** `plexembler select --step scaffold`: no unsupported
       join (unless every candidate has some), then the most T2T chromosomes,
-      then the number of scaffolds nearest `n_chromosomes`, then N50; a
-      samplesheet column `scaffolder` names one instead.
+      then the number of scaffolds nearest `n_chromosomes` (a term left out when
+      it is `NA`, and HapHiC, which needs it, skipped), then N50; a samplesheet
+      column `scaffolder` names one instead. The karyotype found, T2T
+      chromosomes first, is reported against the one given.
 - [ ] **Curation:** a samplesheet column `curated_agp` replaces the kept layout
       with a curated one, checked against the contigs; each candidate's `.pretext`
       and `.hic` with its AGP are written for PretextView and Juicebox.
@@ -225,6 +290,9 @@ mitochondrial genes.
       `agat/spstatistics`): GTF and GFF3, locus tags `<species>_000010`, proteins
       translated with the species' `genetic_code` (CUG is a sense codon in tables
       1, 12 and 26 alike: gene structures do not change, proteins do), CDS.
+- [ ] **The genetic code, checked:** Codetta (Shulgina and Eddy 2021) infers each
+      species' nuclear code from its genome: it is the code used when the
+      samplesheet says `NA`, and a warning when it differs from the one given.
 - [ ] **Non-coding RNAs:** tRNAscan-SE (`-E`), barrnap (`--kingdom euk`: the rDNA
       locus), Infernal with Rfam.
 - [ ] **Functions:** eggNOG-mapper (orthologue names, GO, KEGG, EC, Pfam) →
@@ -257,7 +325,7 @@ BUSCO's genome.
 **Done when**, on the benchmark pool's simulated RNA-seq (known TPMs):
 Spearman's ρ ≥ 0.9 for every species.
 
-## M6 · Reports and extras · v0.6.0 to v1.0.0
+## M6 · Reports and extras · v0.6.0
 
 - [ ] **`plexembler report`**, on chromokit's report kit (CONVENTIONS.md § 12):
       per species, `report.txt`, its MultiQC row and its page: the summary;
@@ -288,8 +356,9 @@ Spearman's ρ ≥ 0.9 for every species.
       connected, or chromosomix.app with `?store=<url>` once the folder is on a
       bucket; the species' report embeds its view (`?embed=1`) where the results
       are served. Checked with chromosomix's own `scripts/make_store.py check`.
-- [ ] **v1.0.0:** `test_full` green on the benchmark, every page written, a metro
-      map (`manifest.diagram`), the benchmarks page (CONVENTIONS.md § 20).
+- [ ] **The complete workflow** (a 0.x release, see [Versions](#versions-0x-for-good)):
+      `test_full` green on the benchmark, every page written, a metro map
+      (`manifest.diagram`), the benchmarks page (CONVENTIONS.md § 20).
 
 ## Tracks
 
@@ -332,13 +401,15 @@ The local modules that run `plexembler <command>` need it in a container.
       `nf-core pipelines sync` brings the template's changes, `uvx copier update`
       chromokit's.
 
-### T4 · instaGRAAL, upstream
+### T4 · instaGRAAL and hicstuff, upstream
 
 - [ ] An AGP beside `final_genome.fa` (then `plexembler agp` loses that job).
 - [ ] A seed for the MCMC, for reproducible runs and tests.
 - [ ] Versioned image tags, a CPU-only image for `--mode cpu`, and a bioconda
       recipe (then Seqera Containers and BioContainers for free).
 - [ ] nf-core modules for `instagraal-endtoend` and `hicstuff pipeline`.
+- [ ] hicstuff: a `cutsite` mode that writes each piece once, unpaired, for
+      polishing (M2), so that `plexembler digest` can go.
 
 ### T7 · chromosomix and metacooler
 
@@ -372,9 +443,10 @@ from M2 on.
 - [ ] Each local module that is useful beyond plexembler, contributed to
       nf-core/modules once stable (instaGRAAL, hicstuff, metacooler, chromosomix,
       HapHiC, hictk, `dorado polish`, OMArk, Helixer).
-- [ ] At v1.0.0, whether to propose plexembler to nf-core: its scope (pools of
-      species) overlaps no nf-core pipeline, but nf-core's layout would replace
-      some of the conventions' choices (`CHANGELOG.md`, the docs' site).
+- [ ] plexembler itself stays here, nf-core-compatible: nf-core releases a
+      pipeline from 1.0.0, which plexembler does not plan
+      ([Versions](#versions-0x-for-good)), and nf-core's layout would replace some
+      of the conventions' choices (`CHANGELOG.md`, the docs' site).
 
 ## Questions that change defaults
 

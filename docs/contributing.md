@@ -126,7 +126,7 @@ uv run --only-group docs zensical serve     # http://localhost:8000
 From an up-to-date `main` with green CI:
 
 ```bash
-uv run bump-my-version bump minor     # or patch, or major
+uv run bump-my-version bump minor     # or patch; never major: plexembler stays at 0.x (plan)
 git push --follow-tags
 ```
 
@@ -136,6 +136,8 @@ pipeline's `manifest.version` in `nextflow.config`, `zensical.toml`'s
 commits `chore(release): vX.Y.Z` and tags `vX.Y.Z`. The tag starts
 `release.yml`: CI on the tag, the sdist and the wheel checked, PyPI by trusted
 publishing, the GitHub release from the changelog. The pipeline is released by
-the same tag: `nextflow run js2264/plexembler -r vX.Y.Z`.
+the same tag: `nextflow run js2264/plexembler -r vX.Y.Z`. A minor release that
+breaks something says so under *Breaking changes* in its changelog section, and
+comes with `docs/upgrading.md` ([the plan's versions](plan.md#versions-0x-for-good)).
 
 The project's template (chromokit's) brings its changes with `uvx copier update`.
