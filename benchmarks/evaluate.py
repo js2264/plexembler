@@ -329,17 +329,31 @@ def main() -> int:
     parser.add_argument("--milestone", type=int, choices=[1, 2], default=1)
     parser.add_argument("--busco", default="busco", help="how to run BUSCO")
     parser.add_argument("--quast", default="quast.py", help="how to run QUAST")
+    parser.add_argument("--minimap2", default="minimap2", help="how to run minimap2")
     parser.add_argument(
         "--busco-db", type=Path, help="BUSCO's lineages, downloaded beforehand"
     )
-    arguments = parser.parse_args()
-    checks = milestone_1(
-        arguments.results,
-        arguments.data,
-        shlex.split(arguments.busco),
-        shlex.split(arguments.quast),
-        arguments.busco_db,
+    parser.add_argument(
+        "--hic-results",
+        type=Path,
+        help="milestone 2: the --outdir of a run with --polish_reads hic",
     )
+    arguments = parser.parse_args()
+    if arguments.milestone == 1:
+        checks = milestone_1(
+            arguments.results,
+            arguments.data,
+            shlex.split(arguments.busco),
+            shlex.split(arguments.quast),
+            arguments.busco_db,
+        )
+    else:
+        checks = milestone_2(
+            arguments.results,
+            arguments.data,
+            shlex.split(arguments.minimap2),
+            arguments.hic_results,
+        )
     return 0 if write_report(checks, arguments.results, arguments.milestone) else 1
 
 
