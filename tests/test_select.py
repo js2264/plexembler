@@ -255,3 +255,50 @@ def test_a_species_id_is_checked(tmp_path: Path):
     rows = [candidate_row(tmp_path, "flye")]
     result = run(str(table(tmp_path, rows)), "-p", "S_cer", "-o", str(tmp_path / "o"))
     assert result.exit_code == 2
+
+
+def test_the_polishing_step(tmp_path: Path):
+    from plexembler.select import choose_polish
+
+    def make(name, qv):
+        return Candidate(name, tmp_path / name, qv=qv)
+
+    better = choose_polish(
+        [make("draft", 40), make("polypolish", 44), make("pypolca", 46)]
+    )
+    assert (better.kept.name, better.reason) == (
+        "pypolca",
+        "a higher QV than the draft's",
+    )
+    worse = choose_polish([make("draft", 40), make("polypolish", 39.5)])
+    assert (worse.kept.name, worse.reason) == ("draft", "no polishing raised the QV")
+    assert choose_polish([make("draft", 40), make("p", 40.5)], 1.0).kept.name == "draft"
+    assert choose_polish([make("draft", None), make("p", 41)]).kept.name == "p"
+    assert choose_polish([make("draft", 40)]).reason == "the only candidate"
+    rows = [
+        {
+            "candidate": "draft",
+            "fasta": fasta(tmp_path, "draft").name,
+            "qv": merqury(tmp_path, "draft", "38.0").name,
+        },
+        {
+            "candidate": "polished",
+            "fasta": fasta(tmp_path, "polished").name,
+            "qv": merqury(tmp_path, "polished", "45.0").name,
+        },
+    ]
+    outdir = tmp_path / "out"
+    result = run(
+        str(table(tmp_path, rows)), "-s", "polish", "-p", "Scer", "-o", str(outdir)
+    )
+    assert result.exit_code == 0, result.output
+    assert (
+        (outdir / "Scer.polish.selection.tsv")
+        .read_text()
+        .splitlines()[2]
+        .startswith("polished\tyes")
+    )
+    with pytest.raises(ValueError, match="no rules for the step"):
+        from plexembler.select import select
+
+        select(table(tmp_path, rows), outdir, "Scer", "scaffold")
