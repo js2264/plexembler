@@ -1,0 +1,31 @@
+# CONVENTIONS.md § 5.
+* text=auto eol=lf
+
+# Binary test data.
+*.cool binary
+*.mcool binary
+*.metacool binary
+*.mmetacool binary
+*.h5 binary
+*.gz binary
+*.bt2 binary
+
+# Written by tools, not by hand.
+uv.lock linguist-generated
+# chromokit's kits, copied as they are (chromokit.json lists them).
+src/plexembler/_report/** linguist-vendored
+overrides/** linguist-vendored
+docs/stylesheets/chromokit.css linguist-vendored
+docs/javascripts/chromokit.js linguist-vendored
+
+# The pipeline (Nextflow): its configs and tests are Nextflow.
+*.config linguist-language=nextflow
+*.nf.test linguist-language=nextflow
+# nf-core's modules and subworkflows, installed by `nf-core modules install`
+# and `nf-core subworkflows install`, never edited by hand (modules.json lists them).
+modules/nf-core/** linguist-generated
+subworkflows/nf-core/** linguist-generated
+modules.json linguist-generated
+# Binary inputs: nanopore reads and alignments.
+*.bam binary
+*.pod5 binary

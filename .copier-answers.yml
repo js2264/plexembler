@@ -1,0 +1,54 @@
+# Changes here are overwritten by `uvx copier update`: answer again there.
+_commit: v0.2.0-1-g2728934
+_src_path: gh:js2264/chromokit
+authors:
+-   name: Jacques Serizay
+bioconda: false
+cli: click
+command: plexembler
+compiled_dependencies: false
+default_branch: main
+description: Reference genomes, gene annotations, Hi-C maps and expression tables
+    for every species of a pool, from per-species nanopore reads and pooled Hi-C,
+    WGS and RNA-seq
+distribution: plexembler
+docs_url: https://js2264.github.io/plexembler/
+docstring_style: numpy
+doi: ''
+entry_point: plexembler.cli:cli
+formats_page: formats.md
+gpu: false
+image: false
+install_run: ''
+install_source_builds: {}
+keywords:
+- genome-assembly
+- hi-c
+- nanopore
+- scaffolding
+- genome-annotation
+- yeast
+- nextflow
+- multiplexing
+license: MIT
+line_length: 88
+maintainers: []
+next_python_apt: ''
+owner: js2264
+package: plexembler
+paper: null
+project_name: plexembler
+pypi_only: true
+python_dev: '3.14'
+python_max: '3.14'
+released: '2026-11-26'
+repository: plexembler
+ruff_version: 0.17.4
+sdist_test_data: true
+src_layout: true
+status: 3 - Alpha
+test_apt: ''
+test_data: tests/data
+ty_required: true
+version: 0.0.0
+version_module: ''

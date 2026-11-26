@@ -1,0 +1,114 @@
+[project]
+site_name = "plexembler"
+site_url = "https://js2264.github.io/plexembler/"
+site_description = "Reference genomes, gene annotations, Hi-C maps and expression tables for every species of a pool, from per-species nanopore reads and pooled Hi-C, WGS and RNA-seq"
+site_author = "Jacques Serizay"
+copyright = "&copy; Jacques Serizay"
+repo_url = "https://github.com/js2264/plexembler"
+repo_name = "js2264/plexembler"
+docs_dir = "docs"
+site_dir = "site"
+# chromokit's stylesheet first, then the repository's own
+# (docs/stylesheets/site.css), which wins.
+extra_css = ["stylesheets/chromokit.css", "stylesheets/site.css"]
+extra_javascript = ["javascripts/chromokit.js"]
+
+# In this order (CONVENTIONS.md § 8): Home; Getting started; Guides, one per
+# task; Reference; the project. The pipeline's pages are nf-core's: usage.md (its
+# inputs), parameters.md (written from nextflow_schema.json by `nf-core pipelines
+# schema docs`) and output.md; the implementation plan goes with the project.
+nav = [
+  { "Home" = "index.md" },
+  { "Getting started" = [
+    { "Why plexembler?" = "why.md" },
+    { "Installation" = "installation.md" },
+    { "Quickstart" = "quickstart.md" },
+    { "Concepts" = "concepts.md" }
+  ]},
+  { "Guides" = [
+    { "On a workstation or a cluster" = "guides/compute.md" }
+  ]},
+  { "Reference" = [
+    { "Usage" = "usage.md" },
+    { "Parameters" = "parameters.md" },
+    { "Outputs" = "output.md" },
+    { "Command line" = "cli.md" },
+    { "File formats" = "formats.md" },
+    { "Python API" = "api/plexembler.md" }
+  ]},
+  { "The project" = [
+    { "Implementation plan" = "plan.md" },
+    { "Contributing" = "contributing.md" },
+    { "Citing plexembler" = "citation.md" },
+    { "Changelog" = "changelog.md" }
+  ]}
+]
+
+# chromokit (https://github.com/js2264/chromokit): the header and the
+# in-column footer come from overrides/, the palette and the rest of the look
+# from docs/stylesheets/chromokit.css. They are kit files, listed in
+# chromokit.json: `npx github:js2264/chromokit sync` updates them, and local
+# changes go in docs/stylesheets/site.css.
+[project.theme]
+custom_dir = "overrides"
+logo = "assets/mark.svg"
+favicon = "assets/mark.svg"
+# System fonts, as on chromosomix: no web-font request.
+font = false
+features = [
+  "navigation.instant",
+  "navigation.expand",
+  "navigation.sections",
+  "navigation.top",
+  "search.suggest",
+  "search.highlight",
+  "content.code.copy",
+  "content.code.annotate",
+  "content.tabs.link"
+]
+
+# Light and dark follow the system until the header's toggle picks one. The
+# colours are chromokit's, so `primary` and `accent` are "custom".
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "custom"
+accent = "custom"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "custom"
+accent = "custom"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+[project.extra]
+# Beside the name in the header and in every page's footer: bump-my-version
+# keeps it in step with the package (pyproject.toml, [tool.bumpversion]).
+release = "0.0.0"
+# The small word after the name ("" for none).
+kicker = "docs"
+
+# zensical's default Markdown extensions (admonitions, tabs, attribute lists,
+# icons, keys, Mermaid diagrams, highlighting with language classes) are what
+# the kit styles: declaring [project.markdown_extensions] would replace them.
+
+# The Python API pages: `::: plexembler.<module>` in docs/api/*.md, read
+# from the sources without importing them.
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["src"]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_style = "numpy"
+show_source = true
+show_root_heading = true
+show_root_full_path = true
+show_signature_annotations = true
+separate_signature = true
+line_length = 80
+members_order = "source"
+show_submodules = false
+filters = ["!^_"]

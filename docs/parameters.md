@@ -1,0 +1,46 @@
+# js2264/plexembler pipeline parameters
+
+Reference genomes, gene annotations, Hi-C maps and expression tables for every species of a pool, from per-species nanopore reads and pooled Hi-C, WGS and RNA-seq
+
+## Input/output options
+
+The species and the pooled libraries, and where the results go.
+
+| Parameter | Description | Type | Default | Required | Hidden |
+|-----------|-----------|-----------|-----------|-----------|-----------|
+| `input` | The species samplesheet: one row per nanopore run of a species. <details><summary>Help</summary><small>A CSV file with a header: species, pool, ont, and optionally genome_size, ploidy, n_chromosomes, busco_lineage, genetic_code and telomere_repeat. A relative path in it is read from the samplesheet's folder. See the [usage page](https://js2264.github.io/plexembler/usage/#species).</small></details>| `string` |  | True |  |
+| `libraries` | The pooled libraries samplesheet: one row per pair of FASTQ files of a Hi-C, WGS or RNA-seq library made from a pool of species. <details><summary>Help</summary><small>A CSV file with a header: library, pool, type (hic, wgs or rnaseq), fastq_1, fastq_2, and optionally condition and replicate (rnaseq), enzymes (hic). A relative path in it is read from the samplesheet's folder. See the [usage page](https://js2264.github.io/plexembler/usage/#pooled-libraries).</small></details>| `string` |  | True |  |
+| `outdir` | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. | `string` |  | True |  |
+| `multiqc_title` | MultiQC report title. Printed as page header, used for filename if not otherwise specified. | `string` |  |  |  |
+
+## Institutional config options
+
+Parameters used to describe centralised config profiles. These should not be edited.
+
+| Parameter | Description | Type | Default | Required | Hidden |
+|-----------|-----------|-----------|-----------|-----------|-----------|
+| `custom_config_version` | Git commit id for Institutional configs. | `string` | master |  | True |
+| `custom_config_base` | Base directory for Institutional configs. <details><summary>Help</summary><small>If you're running offline, Nextflow will not be able to fetch the institutional config files from the internet. If you don't need them, then this is not a problem. If you do need them, you should download the files from the repo and tell Nextflow where to find them with this parameter.</small></details>| `string` | https://raw.githubusercontent.com/nf-core/configs/master |  | True |
+| `config_profile_name` | Institutional config name. | `string` |  |  | True |
+| `config_profile_description` | Institutional config description. | `string` |  |  | True |
+| `config_profile_contact` | Institutional config contact information. | `string` |  |  | True |
+| `config_profile_url` | Institutional config URL link. | `string` |  |  | True |
+
+## Generic options
+
+Less common options for the pipeline, typically set in a config file.
+
+| Parameter | Description | Type | Default | Required | Hidden |
+|-----------|-----------|-----------|-----------|-----------|-----------|
+| `version` | Display version and exit. | `boolean` |  |  | True |
+| `publish_dir_mode` | Method used to save pipeline results to output directory. (accepted: `symlink`\|`rellink`\|`link`\|`copy`\|`copyNoFollow`\|`move`) <details><summary>Help</summary><small>The Nextflow `publishDir` option specifies which intermediate files should be saved to the output directory. This option tells the pipeline what method should be used to move these files. See [Nextflow docs](https://www.nextflow.io/docs/latest/process.html#publishdir) for details.</small></details>| `string` | copy |  | True |
+| `max_multiqc_email_size` | File size limit when attaching MultiQC reports to summary emails. | `string` | 25.MB |  | True |
+| `monochrome_logs` | Do not use coloured log outputs. | `boolean` |  |  | True |
+| `multiqc_config` | Custom config file to supply to MultiQC. | `string` |  |  | True |
+| `multiqc_logo` | Custom logo file to supply to MultiQC. File name must also be set in the MultiQC config file | `string` |  |  | True |
+| `multiqc_methods_description` | Custom MultiQC yaml file containing HTML including a methods description. | `string` |  |  |  |
+| `validate_params` | Boolean whether to validate parameters against the schema at runtime | `boolean` | True |  | True |
+| `trace_report_suffix` | Suffix to add to the trace report filename. Default is the date and time in the format yyyy-MM-dd_HH-mm-ss. | `string` |  |  | True |
+| `help` | Display the help message. | `['boolean', 'string']` |  |  |  |
+| `help_full` | Display the full detailed help message. | `boolean` |  |  |  |
+| `show_hidden` | Display hidden parameters in the help message (only works when --help or --help_full are provided). | `boolean` |  |  |  |

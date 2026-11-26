@@ -1,0 +1,40 @@
+# CONVENTIONS.md § 5.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.py]
+indent_style = space
+indent_size = 4
+
+[*.{yml,yaml,toml,json,cff}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+# Two spaces at the end of a line are a line break in Markdown.
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
+
+# The pipeline: Nextflow scripts, configs and tests, as nf-core writes them.
+[*.{nf,config,groovy}]
+indent_style = space
+indent_size = 4
+
+[*.nf.test]
+indent_style = space
+indent_size = 4
+
+# nf-core's modules and subworkflows keep the style they are installed with:
+# they are never edited here (`nf-core modules patch` records a change).
+[{modules,subworkflows}/nf-core/**]
+indent_style = unset
+indent_size = unset
+trim_trailing_whitespace = unset
+insert_final_newline = unset

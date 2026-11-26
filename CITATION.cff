@@ -1,0 +1,25 @@
+# GitHub shows this file as "Cite this repository", and Zenodo reads it for
+# each release (CONVENTIONS.md § 17). bump-my-version updates version and
+# date-released.
+cff-version: 1.2.0
+message: "If you use plexembler, please cite it as below."
+type: software
+title: "plexembler"
+abstract: "Reference genomes, gene annotations, Hi-C maps and expression tables for every species of a pool, from per-species nanopore reads and pooled Hi-C, WGS and RNA-seq"
+version: "0.0.0"
+date-released: "2026-11-26"
+license: "MIT"
+repository-code: "https://github.com/js2264/plexembler"
+url: "https://js2264.github.io/plexembler/"
+keywords:
+  - "genome-assembly"
+  - "hi-c"
+  - "nanopore"
+  - "scaffolding"
+  - "genome-annotation"
+  - "yeast"
+  - "nextflow"
+  - "multiplexing"
+authors:
+  - family-names: "Serizay"
+    given-names: "Jacques"

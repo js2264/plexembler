@@ -1,0 +1,4 @@
+library,pool,type,fastq_1,fastq_2,condition,replicate,enzymes
+hic,pool,hic,pool_hic_R1.fastq.gz,pool_hic_R2.fastq.gz,,,DpnII
+wgs,pool,wgs,pool_wgs_R1.fastq.gz,pool_wgs_R2.fastq.gz,,,
+rna-ypd-1,pool,rnaseq,pool_rnaseq_R1.fastq.gz,pool_rnaseq_R2.fastq.gz,YPD,1,

@@ -1,0 +1,193 @@
+[build-system]
+# 1.27 is the first hatchling that writes PEP 639 license metadata.
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "plexembler"
+version = "0.0.0"
+description = "Reference genomes, gene annotations, Hi-C maps and expression tables for every species of a pool, from per-species nanopore reads and pooled Hi-C, WGS and RNA-seq"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Jacques Serizay" },
+]
+maintainers = [
+    { name = "Jacques Serizay" },
+]
+keywords = ["genome-assembly", "hi-c", "nanopore", "scaffolding", "genome-annotation", "yeast", "nextflow", "multiplexing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+]
+# Every runtime dependency has a floor, and every floor a reason, the oldest
+# version the bounds job passes with (CONVENTIONS.md § 3).
+dependencies = [
+    # 8.1: the click the command line and its in-process tests are written against.
+    "click>=8.1",
+    # 1.9: rich-click's command_panel, which groups the commands into panels.
+    "rich-click>=1.9",
+]
+
+[project.optional-dependencies]
+# Optional runtime features only, never tools (CONVENTIONS.md § 2).
+
+[dependency-groups]
+# Never published (CONVENTIONS.md § 2): `uv sync` installs dev, and
+# `uv run --only-group docs …` the docs alone.
+dev = [
+    "bump-my-version>=1.2",
+    "diff-cover>=9",
+    "pre-commit>=4",
+    "pytest>=8",
+    "pytest-cov>=6",
+    "ruff>=0.17.4",
+    "ty>=0.0.38",
+]
+docs = [
+    "zensical>=0.0.43",
+    "mkdocstrings[python]>=0.25",
+]
+
+[project.urls]
+Homepage = "https://github.com/js2264/plexembler"
+Documentation = "https://js2264.github.io/plexembler/"
+Repository = "https://github.com/js2264/plexembler"
+Changelog = "https://js2264.github.io/plexembler/changelog/"
+Issues = "https://github.com/js2264/plexembler/issues"
+
+[project.scripts]
+plexembler = "plexembler.cli:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/plexembler"]
+
+[tool.hatch.build.targets.sdist]
+# The sources, the tests and their data, README, LICENSE, CITATION.cff and the
+# changelog: what packagers build and test from. Repository tooling and media
+# stay out.
+exclude = [
+    "/.github",
+    "/uv.lock",
+    "/.pre-commit-config.yaml",
+    "/Makefile",
+    "/AGENTS.md",
+    "/benchmarks",
+    "/docs/images",
+    # The Nextflow pipeline, which the package's tests do not run: nf-test runs
+    # it from the repository (docs/contributing.md).
+    "/main.nf",
+    "/nextflow.config",
+    "/nextflow_schema.json",
+    "/modules.json",
+    "/nf-test.config",
+    "/.nf-core.yml",
+    "/workflows",
+    "/subworkflows",
+    "/modules",
+    "/conf",
+    "/assets",
+    "/CITATIONS.md",
+    "/tests/*.nf.test",
+    "/tests/nextflow.config",
+    "/tests/.nftignore",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+# chromokit's report kit, linted and formatted in chromokit.
+extend-exclude = ["src/plexembler/_report"]
+
+[tool.ruff.lint]
+# An explicit list, so that upgrading ruff never changes the rules.
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = [
+    "E501",  # the formatter wraps code; long strings and docstrings are allowed
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ty.src]
+# chromokit's report kit, type-checked in chromokit.
+exclude = ["src/plexembler/_report"]
+
+[tool.pytest.ini_options]
+minversion = "8"
+testpaths = ["tests"]
+xfail_strict = true
+addopts = [
+    "-ra",
+    "--strict-config",
+    "--strict-markers",
+    "--cov=plexembler",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+]
+
+[tool.coverage.run]
+# chromokit's report kit is tested in chromokit.
+omit = ["*/plexembler/_report/*"]
+
+[tool.bumpversion]
+current_version = "0.0.0"
+commit = true
+tag = true
+tag_name = "v{new_version}"
+message = "chore(release): v{new_version}"
+allow_dirty = false
+
+# The package's own entries: the name anchors the search, keeping it off
+# current_version above and off the other packages of uv.lock.
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = "name = \"plexembler\"\nversion = \"{current_version}\""
+replace = "name = \"plexembler\"\nversion = \"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = "uv.lock"
+search = "name = \"plexembler\"\nversion = \"{current_version}\""
+replace = "name = \"plexembler\"\nversion = \"{new_version}\""
+
+[[tool.bumpversion.files]]
+# The pipeline's version, which Nextflow reads (manifest.version): the package's,
+# written twice since Nextflow cannot read pyproject.toml, and kept in step here.
+# The pipeline workflow's lint job fails when the two differ.
+filename = "nextflow.config"
+search = "    version         = '{current_version}'"
+replace = "    version         = '{new_version}'"
+
+[[tool.bumpversion.files]]
+# The version the documentation's header and footer show.
+filename = "zensical.toml"
+search = 'release = "{current_version}"'
+replace = 'release = "{new_version}"'
+
+[[tool.bumpversion.files]]
+# The Unreleased entries become this version's section, under a fresh Unreleased.
+filename = "docs/changelog.md"
+search = "## Unreleased"
+replace = "## Unreleased\n\n## [{new_version}] - {now:%Y-%m-%d}"
+
+[[tool.bumpversion.files]]
+filename = "CITATION.cff"
+search = 'version: "{current_version}"'
+replace = 'version: "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "CITATION.cff"
+regex = true
+search = 'date-released: "\d{{4}}-\d{{2}}-\d{{2}}"'
+replace = 'date-released: "{now:%Y-%m-%d}"'

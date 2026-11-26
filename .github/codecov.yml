@@ -1,0 +1,11 @@
+# CONVENTIONS.md § 13: two required checks, both at 80 %. Before pushing:
+#   uv run pytest                                                   # the project's figure
+#   uv run diff-cover coverage.xml --compare-branch=origin/main --fail-under=80   # the patch's
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+    patch:
+      default:
+        target: 80%

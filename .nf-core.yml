@@ -1,0 +1,96 @@
+# nf-core/tools' settings: the template this pipeline was made from (for
+# `nf-core pipelines sync`), and the lint checks it skips, each with its reason.
+repository_type: pipeline
+nf_core_version: 4.2.2
+template:
+  name: plexembler
+  org: js2264
+  author: Jacques Serizay
+  description: Reference genomes, gene annotations, Hi-C maps and expression tables for every species of a pool, from per-species nanopore reads and pooled Hi-C, WGS and RNA-seq
+  version: 0.0.0
+  is_nfcore: false
+  outdir: .
+  force: false
+  # The repository's own files replace these features (CONVENTIONS.md): its
+  # workflows and community files (.github, js2264/.github), its README, its
+  # changelog (docs/changelog.md), its pre-commit and its zensical site (docs/).
+  skip_features:
+    - github
+    - github_badges
+    - changelog
+    - ci
+    - igenomes
+    - seqera_platform
+    - codespaces
+    - vscode
+    - code_linters
+    - documentation
+    - rocrate
+    - email
+lint:
+  # nf-core's own exceptions for the features skipped above, as `nf-core
+  # pipelines create` writes them: the files those features would bring.
+  files_exist:
+    - .github/.dockstore.yml
+    - .github/ISSUE_TEMPLATE/bug_report.yml
+    - .github/ISSUE_TEMPLATE/config.yml
+    - .github/ISSUE_TEMPLATE/feature_request.yml
+    - .github/PULL_REQUEST_TEMPLATE.md
+    - .github/actions/get-shards/action.yml
+    - .github/actions/nf-test/action.yml
+    - .github/workflows/awsfulltest.yml
+    - .github/workflows/awstest.yml
+    - .github/workflows/branch.yml
+    - .github/workflows/linting.yml
+    - .github/workflows/nf-test.yml
+    - .github/workflows/pr-comment.yml
+    - .prettierignore
+    - .prettierrc.yml
+    - CHANGELOG.md
+    - CODE_OF_CONDUCT.md
+    - assets/email_template.html
+    - assets/email_template.txt
+    - assets/nf-core-plexembler_logo_light.png
+    - assets/sendmail_template.txt
+    - conf/igenomes.config
+    - conf/igenomes_ignored.config
+    - docs/CONTRIBUTING.md
+    - docs/README.md
+    - docs/images/nf-core-plexembler_logo_dark.png
+    - docs/images/nf-core-plexembler_logo_light.png
+    - ro-crate-metadata.json
+  readme:
+    - nextflow_badge
+    - nfcore_template_badge
+  multiqc_config:
+    - report_comment
+  nextflow_config:
+    - manifest.name
+    - manifest.homePage
+    # The version is X.Y.Z, the Python package's, which bump-my-version keeps
+    # in step (CONVENTIONS.md § 14): no `dev` suffix between releases.
+    - manifest.version
+    # A metro map of the pipeline comes once its steps are in (docs/plan.md).
+    - manifest.diagram
+  # files_unchanged compares files with nf-core's template rendered with every
+  # feature on, whatever skip_features says: here the community files come from
+  # js2264/.github, and .gitignore anchors /work/ and /results/ so that
+  # tests/data/ stays tracked (CONVENTIONS.md § 17). Rendering it also looks the
+  # author up on ORCID's API, by name.
+  files_unchanged: false
+  # chromokit's kit files (chromokit.json): Jinja templates of the docs site and
+  # of the report, which zensical and the report kit render, never nf-core.
+  template_strings:
+    - overrides/main.html
+    - overrides/partials/cx-page-footer.html
+    - overrides/partials/header.html
+    - overrides/partials/search.html
+    - src/plexembler/_report/base.html.j2
+    - src/plexembler/_report/macros.html.j2
+    # bump-my-version's pattern for CITATION.cff's date: its doubled braces are
+    # a format string's escapes (chromokit's template).
+    - pyproject.toml
+  # The tests read tests/data/ through the test profile (CONVENTIONS.md § 13),
+  # not nf-core/test-datasets: no test-data base paths.
+  nf_test_content:
+    - tests/nextflow.config

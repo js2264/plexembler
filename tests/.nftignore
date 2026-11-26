@@ -1,0 +1,7 @@
+.DS_Store
+multiqc/multiqc_data/*
+multiqc/multiqc_plots/{svg,pdf,png}/*.{svg,pdf,png}
+multiqc/multiqc_report.html
+pools/*/qc/fastqc/*_fastqc.{html,zip}
+species/*/qc/nanoplot/*
+pipeline_info/*.{html,json,txt,yml}

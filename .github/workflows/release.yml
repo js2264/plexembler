@@ -1,0 +1,140 @@
+name: Release
+
+# CONVENTIONS.md § 14, on a tag vX.Y.Z, which `uv run bump-my-version bump
+# minor` (or patch, or major) makes and `git push --follow-tags` pushes:
+#   1. CI on the tagged commit;
+#   2. the sdist and the wheel built and checked: the tag is v + the wheel's
+#      version, the changelog has its section, the wheel installs and runs;
+#   3. PyPI, by trusted publishing;
+#   4. the GitHub release, its notes the changelog's section.
+# Run by hand on an existing tag (Run workflow, then the tag), it builds and
+# checks everything again, and publishes nothing.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A release is never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI on the tag
+    # ./…, GitHub's documented form, which actionlint checks; zizmor suggests $/…, which it does not take.
+    uses: ./.github/workflows/ci.yml # zizmor: ignore[self-repository]
+    permissions:
+      contents: read
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  build:
+    name: Build and verify
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+
+      - name: The sdist and the wheel
+        run: uv build
+
+      - name: Their metadata
+        run: uvx twine==7.0.0 check --strict dist/*
+
+      # The wheel's METADATA holds the version wherever the repository writes it.
+      - name: The tag is v, then the wheel's version
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(unzip -p dist/*.whl '*.dist-info/METADATA' | sed -n 's/^Version: //p')
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::The tag $TAG is not v$version, the version of the wheel"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # Appendix B.2 of the migration plan: the `## [X.Y.Z]` heading, then
+      # everything up to the next `## ` heading or a `---` line.
+      - name: The changelog's section for it
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          awk -v ver="$VERSION" '
+            /^## / { if (found) exit; if (index($0, "## [" ver "]") == 1) found = 1; next }
+            found && /^---$/ { exit }
+            found
+          ' docs/changelog.md > release-notes.md
+          grep -q '[^[:space:]]' release-notes.md ||
+            { echo "::error::docs/changelog.md has no entry for $VERSION"; exit 1; }
+
+      # Packagers run the tests from the sdist (CONVENTIONS.md § 2).
+      - name: The sdist ships the test data
+        run: tar -tzf dist/*.tar.gz | grep -q '/tests/data/'
+
+      - name: The wheel, installed in a clean environment, runs
+        run: |
+          uv venv --python 3.14 "$RUNNER_TEMP/smoke"
+          uv pip install --python "$RUNNER_TEMP/smoke/bin/python" dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/smoke/bin/plexembler" --version
+          "$RUNNER_TEMP/smoke/bin/plexembler" --help
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: |
+            dist/
+            release-notes.md
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/project/plexembler/${{ needs.build.outputs.version }}/
+    permissions:
+      # Trusted publishing, no stored token: js2264/plexembler is a
+      # trusted publisher of plexembler on PyPI, for this workflow,
+      # release.yml, and the environment pypi. It stays in each repository:
+      # PyPI does not accept a reusable workflow as the publisher.
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+
+  github-release:
+    name: The GitHub release
+    needs: [build, publish]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+
+      - name: vX.Y.Z, with the changelog's section, the sdist and the wheel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --title "$TAG" --notes-file release-notes.md --verify-tag

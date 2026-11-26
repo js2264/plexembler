@@ -1,0 +1,66 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/js2264/plexembler/main/assets/schema_libraries.json",
+    "title": "js2264/plexembler pipeline - params.libraries schema",
+    "description": "The pooled libraries (--libraries): one row per pair of FASTQ files of a library made from a pool of species; the rows of a library are its runs. A relative path is read from the samplesheet's folder, so file paths are strings here and the pipeline checks that they exist (docs/usage.md).",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "library": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+                "errorMessage": "A library's ID: letters, digits, _, . and -, starting with a letter or a digit",
+                "meta": ["id"]
+            },
+            "pool": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9-]*$",
+                "default": "pool",
+                "errorMessage": "A pool's ID: a letter, then letters, digits and hyphens; a pool of the species samplesheet",
+                "meta": ["pool"]
+            },
+            "type": {
+                "type": "string",
+                "enum": ["hic", "wgs", "rnaseq"],
+                "errorMessage": "A library's type: hic, wgs or rnaseq",
+                "meta": ["type"]
+            },
+            "fastq_1": {
+                "type": "string",
+                "pattern": "^\\S+\\.f(ast)?q\\.gz$",
+                "errorMessage": "The first reads of the pairs: a gzipped FASTQ file (.fastq.gz, .fq.gz), without spaces in its path"
+            },
+            "fastq_2": {
+                "type": "string",
+                "pattern": "^\\S+\\.f(ast)?q\\.gz$",
+                "errorMessage": "The second reads of the pairs: a gzipped FASTQ file (.fastq.gz, .fq.gz), without spaces in its path"
+            },
+            "condition": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+                "errorMessage": "An RNA-seq library's condition: letters, digits, _, . and -",
+                "meta": ["condition"]
+            },
+            "replicate": {
+                "type": "integer",
+                "minimum": 1,
+                "errorMessage": "An RNA-seq library's replicate: a whole number, 1 or more",
+                "meta": ["replicate"]
+            },
+            "enzymes": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9]+(,[A-Za-z0-9]+)*$",
+                "errorMessage": "A Hi-C library's restriction enzymes, comma-separated, as Biopython names them (DpnII,HinfI); none for a library made without one (Micro-C)",
+                "meta": ["enzymes"]
+            }
+        },
+        "required": ["library", "type", "fastq_1", "fastq_2"],
+        "if": {
+            "properties": { "type": { "const": "hic" } }
+        },
+        "then": {
+            "required": ["enzymes"]
+        }
+    }
+}

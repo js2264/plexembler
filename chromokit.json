@@ -1,0 +1,24 @@
+{
+  "$comment": "Written by chromokit (https://github.com/js2264/chromokit). The files listed are the kit's: `npx github:js2264/chromokit sync` replaces them and `… check` refuses local edits. Put local changes in your own files instead: your stylesheet, your report template.",
+  "version": "0.2.0",
+  "target": "zensical",
+  "files": {
+    "docs/javascripts/chromokit.js": "sha256:862155458c809b647e6f45ed25cb1134e822817e6e7ceaccbdfdeb36fd40983e",
+    "docs/stylesheets/chromokit.css": "sha256:10ea76f6f2cd79228997f63dbdbfc076580d2c7c6c991c59f4e32cda6302ca45",
+    "overrides/main.html": "sha256:24ce2012e4c3bfcdbd643a57e81c11cc4e645c1597e2f36dda806e03248fcb82",
+    "overrides/partials/cx-page-footer.html": "sha256:c2c73dd0722deab073368444b46e82dd8b13774aa4c6c0ce7305f8c1fac92d1d",
+    "overrides/partials/header.html": "sha256:b0ab045a8d9d749ab9b9736b14947aed2783a27082d2121590217267287277ec",
+    "overrides/partials/search.html": "sha256:e75c9bae1df009516dccca6a83a1763e9962ca07971b33c1c4a36731e7c4d54a"
+  },
+  "report": {
+    "package": "plexembler",
+    "dir": "src/plexembler/_report",
+    "files": {
+      "src/plexembler/_report/__init__.py": "sha256:8cfa74dadb84789245d7d807ca829d9c9c1689ffc02ca9cb49227c402b145021",
+      "src/plexembler/_report/base.html.j2": "sha256:1cc71195ef52e2021f5f6e6bd0e10414df342e077f997356e20a1543f8d5d5b5",
+      "src/plexembler/_report/macros.html.j2": "sha256:2159cd5d416e5de64e2318b7a9271ca20763a5c28e32aa4837cd40d11a4ae6dc",
+      "src/plexembler/_report/report.css": "sha256:8d5accf05eca93dcd5a35881ec1564763e0e7fb841dee052474d3223af7c365f",
+      "src/plexembler/_report/report.js": "sha256:30941e1cfeaa2f86e657a3ac27dadce9ee6deb2e5b7936a52b2c0c3b84e2b1f3"
+    }
+  }
+}

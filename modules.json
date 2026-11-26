@@ -1,0 +1,58 @@
+{
+    "name": "js2264/plexembler",
+    "homePage": "https://github.com/js2264/plexembler",
+    "repos": {
+        "https://github.com/nf-core/modules.git": {
+            "modules": {
+                "nf-core": {
+                    "fastqc": {
+                        "branch": "master",
+                        "git_sha": "f3a7fb3aca1320fcd5e607c36c8c3a4133f2680b",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    },
+                    "multiqc": {
+                        "branch": "master",
+                        "git_sha": "868791e991feaaeff234b79f7910b6b442627529",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    },
+                    "nanoplot": {
+                        "branch": "master",
+                        "git_sha": "9ab17d6c0c6cda0bb4ed8a1ee15173209eb4f881",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    }
+                }
+            },
+            "subworkflows": {
+                "nf-core": {
+                    "utils_nextflow_pipeline": {
+                        "branch": "master",
+                        "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
+                        "installed_by": [
+                            "subworkflows"
+                        ]
+                    },
+                    "utils_nfcore_pipeline": {
+                        "branch": "master",
+                        "git_sha": "c87ca93172a37577c25034898e187b82265d72c8",
+                        "installed_by": [
+                            "subworkflows"
+                        ]
+                    },
+                    "utils_nfschema_plugin": {
+                        "branch": "master",
+                        "git_sha": "63ae4862970211aa03d0b296b0360db469565082",
+                        "installed_by": [
+                            "subworkflows"
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}

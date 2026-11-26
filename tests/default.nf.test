@@ -1,0 +1,46 @@
+nextflow_pipeline {
+
+    name "Test pipeline"
+    script "../main.nf"
+    tag "pipeline"
+
+    test("-profile test") {
+
+        when {
+            params {
+                outdir = "$outputDir"
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                // The nanopore reads' QC, per species.
+                { assert path("$outputDir/species/sp1/qc/nanoplot/sp1_NanoStats.txt").exists() },
+                { assert path("$outputDir/species/sp2/qc/nanoplot/sp2_NanoStats.txt").exists() },
+                // The pooled libraries' QC: both reads of each of the three libraries.
+                { assert file("$outputDir/pools/pool/qc/fastqc").listFiles().findAll { it.name.endsWith('_fastqc.html') }.size() == 6 },
+                { assert path("$outputDir/multiqc/multiqc_report.html").exists() },
+                { assert path("$outputDir/pipeline_info/plexembler_software_mqc_versions.yml").text.contains('NanoPlot') },
+            )
+        }
+    }
+
+    test("-profile test -stub") {
+
+        options "-stub"
+
+        when {
+            params {
+                outdir = "$outputDir"
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert path("$outputDir/multiqc/multiqc_report.html").exists() },
+            )
+        }
+    }
+}

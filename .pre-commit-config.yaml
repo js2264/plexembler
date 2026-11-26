@@ -1,0 +1,33 @@
+# CONVENTIONS.md § 5. ruff's rev is the ruff of uv.lock: CI's lint job fails when they differ.
+#
+# nf-core's modules and subworkflows are installed as they are and never edited here
+# (`nf-core modules patch` records a change): no hook touches them.
+exclude: ^(modules|subworkflows)/nf-core/
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: check-added-large-files
+        args: [--maxkb=5000]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.4
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+  # The pipeline's scripts and configs (AGENTS.md, "Commands"). A local hook: Nextflow is
+  # not a language pre-commit installs, so it runs the `nextflow` on PATH.
+  - repo: local
+    hooks:
+      - id: nextflow-lint
+        name: nextflow lint
+        entry: nextflow lint
+        language: system
+        files: \.(nf|config)$
