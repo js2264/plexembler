@@ -235,3 +235,66 @@ species, verdict, new name and reason), their MultiQC table and its log.
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
 
+### `finalize` { #finalize }
+
+Names a species' scaffolds, as its genome is read: its chromosomes, longest
+first (`<species>_chr01`, …), the `--n-chromosomes` longest scaffolds, or every
+scaffold of `--min-chromosome` bases or more; its mitochondrion,
+`<species>_chrM`, a scaffold made of the contig screen's `<species>_chrM`
+alone (found through the AGP when the scaffolder renamed it); and the others,
+longest first, `<species>_unplaced_01`, ….
+
+```bash
+plexembler finalize yahs_scaffolds_final.fa -a yahs_scaffolds_final.agp -p Scer -n 16 -o Scer/
+```
+
+It writes the genome (`Scer.fa.gz`), its sizes (`Scer.chrom.sizes`), the table
+of names (`Scer.names.tsv`: `name`, `original_name`, `length_bp` and `role`,
+chromosome, organelle or unplaced), the AGP with the new names (`Scer.agp`)
+and its log.
+
+| Option | Default | Description |
+|---|---|---|
+| `FASTA` | (required) | The scaffolds, FASTA, gzipped or not. |
+| `-p, --prefix` | (required) | The species' ID, which starts every name and names the outputs. |
+| `-o, --outdir` | (required) | The folder of the genome, its sizes, names, AGP and the log. |
+| `-a, --agp` | | The scaffolder's AGP, written again with the new names. |
+| `-n, --n-chromosomes` | | The species' number of nuclear chromosomes: its longest scaffolds, named chromosomes. |
+| `--min-chromosome` | `100000` | Without `--n-chromosomes`, the shortest scaffold named a chromosome, in bases. |
+| `--force` | off | Overwrite outputs that exist already. |
+| `-v, --verbose` | off | Debug messages, in the log and on stderr. |
+| `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
+
+### `junctions` { #junctions }
+
+Scores each join of a genome's scaffolds by its Hi-C pairs: the species'
+contact decay P(s), from the pairs whose mates lie in one contig, where no join
+can mislead it; for each join, the pairs across it, a mate within `--window`
+bases on each side, against those the decay expects there. A join is
+`supported` at `--min-ratio` of them or more, `unsupported` below (a misjoin,
+likely: the log warns of each), `thin` when the decay expects too few pairs to
+judge it (`--min-expected`).
+
+```bash
+plexembler junctions Scer.pairs.gz -a Scer.agp -p Scer -o Scer/
+```
+
+The pairs are the species' deduplicated pairs on its genome (4DN pairs,
+pairtools'), and the AGP the genome's, in the same names
+([`finalize`](#finalize)'s). It writes the table of joins
+(`Scer.junctions.tsv`: `scaffold`, `position`, the last base of the join's left
+contig, `left_contig`, `right_contig`, `observed`, `expected`, `ratio` and
+`verdict`), its MultiQC table and its log.
+
+| Option | Default | Description |
+|---|---|---|
+| `PAIRS` | (required) | The species' pairs on its genome, 4DN pairs, gzipped or not. |
+| `-a, --agp` | (required) | The genome's AGP, in the names of the pairs' chromosomes. |
+| `-p, --prefix` | (required) | The species' ID, which names the outputs. |
+| `-o, --outdir` | (required) | The folder of the table of joins, its MultiQC table and the log. |
+| `-w, --window` | `20000` | How far from a join, on each side, a pair's mates may lie, in bases. |
+| `--min-ratio` | `0.2` | The pairs across a join over those expected, below which it is unsupported. |
+| `--min-expected` | `10.0` | The pairs a join is expected to have, below which it is too thin to judge. |
+| `--force` | off | Overwrite outputs that exist already. |
+| `-v, --verbose` | off | Debug messages, in the log and on stderr. |
+| `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
