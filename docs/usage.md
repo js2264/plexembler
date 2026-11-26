@@ -87,6 +87,58 @@ rna-ypd-2,poolA,rnaseq,ypd2_R1.fastq.gz,ypd2_R2.fastq.gz,YPD,2,
 | `condition`, `replicate` | no | An RNA-seq library's condition and replicate, which name the columns of the expression tables (the library's ID and `1` when absent). |
 | `enzymes` | for `hic` | The Hi-C library's restriction enzymes, comma-separated, as Biopython names them (`DpnII,HinfI` for Arima's kit); `none` for a library made without one, such as Micro-C, which rules out instaGRAAL. Quote the value when it holds a comma. |
 
+## An example: three pools
+
+Ten species in three pools, each pool sequenced differently
+([`assets/examples/`](https://github.com/js2264/plexembler/tree/main/assets/examples)):
+
+```csv title="species.csv"
+species,pool,ont,genome_size,ploidy,n_chromosomes,genetic_code
+Scer,poolA,ont/Scer.fastq.gz,12m,1,16,1
+Kmar,poolA,ont/Kmar_run1.fastq.gz,11m,1,8,1
+Kmar,poolA,ont/Kmar_run2.fastq.gz,11m,1,8,1
+Lthe,poolA,ont/Lthe.fastq.gz,10.4m,1,8,1
+Huva,poolA,ont/Huva.fastq.gz,9m,,,1
+Calb,poolB,ont/Calb.fastq.gz,14m,2,8,12
+Dhan,poolB,ont/Dhan.fastq.gz,12m,1,7,12
+Ptan,poolB,ont/Ptan.fastq.gz,13m,1,,26
+Spom,poolC,ont/Spom.fastq.gz,12.6m,1,3,1
+Ylip,poolC,ont/Ylip.fastq.gz,20m,1,6,1
+Pkud,poolC,ont/Pkud.fastq.gz,11m,2,5,1
+```
+
+```csv title="libraries.csv"
+library,pool,type,fastq_1,fastq_2,condition,replicate,enzymes
+A-hic,poolA,hic,poolA/hic_L001_R1.fastq.gz,poolA/hic_L001_R2.fastq.gz,,,"DpnII,HinfI"
+A-hic,poolA,hic,poolA/hic_L002_R1.fastq.gz,poolA/hic_L002_R2.fastq.gz,,,"DpnII,HinfI"
+A-wgs,poolA,wgs,poolA/wgs_R1.fastq.gz,poolA/wgs_R2.fastq.gz,,,
+A-rna-ypd-1,poolA,rnaseq,poolA/rna_ypd1_R1.fastq.gz,poolA/rna_ypd1_R2.fastq.gz,YPD,1,
+A-rna-ypd-2,poolA,rnaseq,poolA/rna_ypd2_R1.fastq.gz,poolA/rna_ypd2_R2.fastq.gz,YPD,2,
+A-rna-heat-1,poolA,rnaseq,poolA/rna_heat1_R1.fastq.gz,poolA/rna_heat1_R2.fastq.gz,heat,1,
+A-rna-heat-2,poolA,rnaseq,poolA/rna_heat2_R1.fastq.gz,poolA/rna_heat2_R2.fastq.gz,heat,2,
+B-hic,poolB,hic,poolB/hic_R1.fastq.gz,poolB/hic_R2.fastq.gz,,,DpnII
+B-wgs,poolB,wgs,poolB/wgs_R1.fastq.gz,poolB/wgs_R2.fastq.gz,,,
+C-microc,poolC,hic,poolC/microc_R1.fastq.gz,poolC/microc_R2.fastq.gz,,,none
+C-rna-ypd-1,poolC,rnaseq,poolC/rna_ypd1_R1.fastq.gz,poolC/rna_ypd1_R2.fastq.gz,YPD,1,
+C-rna-ypd-2,poolC,rnaseq,poolC/rna_ypd2_R1.fastq.gz,poolC/rna_ypd2_R2.fastq.gz,YPD,2,
+```
+
+- `Kmar` has two nanopore runs, and `A-hic` two lanes: rows that share an ID
+  are merged.
+- `Calb` and `Dhan` (CUG-Ser clade) and `Ptan` (CUG-Ala) translate CUG
+  differently: their `genetic_code` is 12 or 26.
+- Empty cells are allowed where a column is optional: `Huva`'s ploidy and
+  chromosome count are unknown.
+
+What each pool's species get, once the pipeline is complete
+([plan](plan.md)):
+
+| Pool | Hi-C | WGS | RNA-seq | Its species get |
+|---|---|---|---|---|
+| poolA | Arima (DpnII, HinfI), two lanes | yes | 2 conditions × 2 | everything: polished and scaffolded genomes, Hi-C maps, annotation with RNA evidence, expression tables |
+| poolB | DpnII | yes | none | scaffolded genomes and maps; genes from protein evidence only; no expression table |
+| poolC | Micro-C (`none`) | none | 1 condition × 2 | genomes polished with nanopore reads only, and a rougher QV, from nanopore k-mers; YaHS only (instaGRAAL needs an enzyme); expression tables |
+
 ## Profiles
 
 `-profile` takes a container engine (`docker`, `apptainer`, `singularity`,

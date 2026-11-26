@@ -78,7 +78,7 @@ waits on the jobs it submits.
 | instaGRAAL, `--instagraal_mode default` | an NVIDIA GPU | `cpu` mode needs none |
 | Helixer, `dorado polish` | a GPU, for speed | optional steps |
 
-These come with their milestones ([implementation plan](plan.md)). Databases
+These come with their milestones ([implementation plan](../plan.md)). Databases
 are given as paths, downloaded once to shared storage; the small ones
 (BUSCO's lineages, OrthoDB's proteins, Rfam) are downloaded by the pipeline
 into a cache folder when no path is given.

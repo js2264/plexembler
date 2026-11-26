@@ -13,7 +13,7 @@ plexembler makes, for each species, a genome reference, its annotation, its
 Hi-C map, its expression table and its report. A run can hold several pools:
 their species never meet.
 
-## The nanopore reads give each contig its species
+## The nanopore reads give each contig its species { #species-prefixed-contigs }
 
 Since each species' nanopore reads are its own, the contigs assembled from them
 belong to it from the start. Every contig is named after its species,

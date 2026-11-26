@@ -20,4 +20,6 @@ follow [semantic versioning](https://semver.org).
   (`<species>_<contig>`), and the command line's log, beside its outputs.
 - **The test profile**: two species of a few dozen kilobases and their pool,
   written by `tests/data/make_test_data.py`.
+- **Example samplesheets** of ten species in three pools, each pool sequenced
+  differently (`assets/examples/`).
 - **The implementation plan**, `docs/plan.md`.

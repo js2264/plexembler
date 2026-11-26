@@ -1,0 +1,13 @@
+library,pool,type,fastq_1,fastq_2,condition,replicate,enzymes
+A-hic,poolA,hic,poolA/hic_L001_R1.fastq.gz,poolA/hic_L001_R2.fastq.gz,,,"DpnII,HinfI"
+A-hic,poolA,hic,poolA/hic_L002_R1.fastq.gz,poolA/hic_L002_R2.fastq.gz,,,"DpnII,HinfI"
+A-wgs,poolA,wgs,poolA/wgs_R1.fastq.gz,poolA/wgs_R2.fastq.gz,,,
+A-rna-ypd-1,poolA,rnaseq,poolA/rna_ypd1_R1.fastq.gz,poolA/rna_ypd1_R2.fastq.gz,YPD,1,
+A-rna-ypd-2,poolA,rnaseq,poolA/rna_ypd2_R1.fastq.gz,poolA/rna_ypd2_R2.fastq.gz,YPD,2,
+A-rna-heat-1,poolA,rnaseq,poolA/rna_heat1_R1.fastq.gz,poolA/rna_heat1_R2.fastq.gz,heat,1,
+A-rna-heat-2,poolA,rnaseq,poolA/rna_heat2_R1.fastq.gz,poolA/rna_heat2_R2.fastq.gz,heat,2,
+B-hic,poolB,hic,poolB/hic_R1.fastq.gz,poolB/hic_R2.fastq.gz,,,DpnII
+B-wgs,poolB,wgs,poolB/wgs_R1.fastq.gz,poolB/wgs_R2.fastq.gz,,,
+C-microc,poolC,hic,poolC/microc_R1.fastq.gz,poolC/microc_R2.fastq.gz,,,none
+C-rna-ypd-1,poolC,rnaseq,poolC/rna_ypd1_R1.fastq.gz,poolC/rna_ypd1_R2.fastq.gz,YPD,1,
+C-rna-ypd-2,poolC,rnaseq,poolC/rna_ypd2_R1.fastq.gz,poolC/rna_ypd2_R2.fastq.gz,YPD,2,

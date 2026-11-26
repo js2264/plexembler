@@ -7,6 +7,7 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 
 ```text
 <outdir>/
+├── chromosomix.store.json   every species' map, genome, tracks and workspace, for chromosomix
 ├── species/<species>/
 │   ├── genome/        <species>.fa.gz (+ .fai, .gzi), <species>.softmasked.fa.gz,
 │   │                  <species>.agp, <species>.chrom.sizes, <species>.chrM.fa.gz
@@ -20,16 +21,21 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 │   ├── tracks/        coverage of the RNA-seq, WGS and nanopore reads (bigWig)
 │   ├── candidates/    every assembler × scaffolder candidate, its checks and its map
 │   ├── qc/            nanoplot/ (now), BUSCO, Merqury, OMArk, contamination, …
+│   ├── <species>.chromosomix.json   the species' view: map, genome, genes, tracks
 │   └── <species>.report.html, .report.txt, .report_mqc.yaml
 ├── pools/<pool>/
 │   ├── qc/            fastqc/ (now): the pooled libraries
 │   ├── deconvolution/ each species' share of each library; ambiguous reads; the
 │   │                  nanopore cross-talk between species
-│   ├── hic/           the pool's map: every species of the pool in one map
+│   ├── hic/           the pool's map, a .metacool whose genomes are its species
 │   └── comparative/   identity between the species, orthogroups, species tree, synteny
 ├── multiqc/           multiqc_report.html (now): every step, every species and pool
 └── pipeline_info/     (now) software versions, Nextflow's reports, parameters
 ```
+
+The results open in [chromosomix](https://chromosomix.app) as they are: connect
+the results folder (or open `chromosomix.store.json` once the results are on a
+bucket), and each species is a card with its view.
 
 ## Now
 
