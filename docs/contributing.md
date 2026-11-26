@@ -134,8 +134,11 @@ bump-my-version sets the version (`pyproject.toml` and `uv.lock`, the
 pipeline's `manifest.version` in `nextflow.config`, `zensical.toml`'s
 `release`, `CITATION.cff`), turns `## Unreleased` into the version's section,
 commits `chore(release): vX.Y.Z` and tags `vX.Y.Z`. The tag starts
-`release.yml`: CI on the tag, the sdist and the wheel checked, PyPI by trusted
-publishing, the GitHub release from the changelog. The pipeline is released by
+`release.yml`: CI and the pipeline's tests on the tag, the sdist and the wheel
+checked, the GitHub release from the changelog, and the image,
+`ghcr.io/js2264/plexembler:X.Y.Z` and `latest`, which the pipeline's own steps
+run in. PyPI's trusted publishing waits for the repository variable
+`PUBLISH_PYPI` to be `true` (docs/plan.md, T1). The pipeline is released by
 the same tag: `nextflow run js2264/plexembler -r vX.Y.Z`. A minor release that
 breaks something says so under *Breaking changes* in its changelog section, and
 comes with `docs/upgrading.md` ([the plan's versions](plan.md#versions-0x-for-good)).

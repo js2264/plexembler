@@ -107,7 +107,7 @@ The repository, and what every later step relies on. Not released.
       column.
 - [ ] GitHub's settings (T5).
 - [ ] The benchmark pool's small set, `test-data-v1` (T2).
-- [ ] The package's container, which M1's local modules need (T1).
+- [x] The package's container, which M1's local modules need (T1).
 
 ## M1 · Contigs, per species · v0.1.0
 
@@ -392,16 +392,19 @@ image on GHCR per release (Decisions), a deviation from CONVENTIONS.md § 15,
 which publishes images only for what pip cannot install. Its reason: the
 pipeline's own steps need a container before the package is anywhere else.
 
-- [ ] `Dockerfile` and `.dockerignore` (the released wheel, on a pinned Python
-      base), and `release.yml`'s image job: `ghcr.io/js2264/plexembler:X.Y.Z` and
+- [x] `Dockerfile` and `.dockerignore` (the released wheel, on a pinned
+      micromamba base; chromokit's template with `image: true`), and
+      `release.yml`'s image job: `ghcr.io/js2264/plexembler:X.Y.Z` and
       `latest`, linux/amd64 and linux/arm64, `docker run … plexembler --version`
       before it is pushed.
-- [ ] PyPI's publishing, opt-in: `release.yml` publishes to PyPI only once the
+- [x] PyPI's publishing, opt-in: `release.yml` publishes to PyPI only once the
       repository variable `PUBLISH_PYPI` is `true` (after PyPI's trusted
       publisher is set up), so that a release does not fail before.
-- [ ] The local modules: `container "ghcr.io/js2264/plexembler:<version>"`, the
-      pipeline's own version; `pipeline.yml` builds that image from the
+- [x] `pipeline.yml` builds `ghcr.io/js2264/plexembler:<version>` from the
       checkout before nf-test, so that a pull request tests its own code.
+- [ ] The local modules that run `plexembler`: `container
+      "ghcr.io/js2264/plexembler:${workflow.manifest.version}"`, and for conda
+      an environment that installs the package at the release's tag (M1).
 
 ### T2 · Test data and the benchmark pool
 

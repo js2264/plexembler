@@ -20,6 +20,9 @@ follow [semantic versioning](https://semver.org).
   `ploidy`, `n_chromosomes`, `busco_lineage`, `genetic_code` and
   `telomere_repeat`; the step that needs one estimates it. A library's ID or
   condition that looks like a number (`37`) is read as text. ([#1](https://github.com/js2264/plexembler/pull/1))
+- **The package's image**, `ghcr.io/js2264/plexembler`, published at each
+  release, which the pipeline's own steps run in; PyPI's publishing is opt-in.
+  ([#1](https://github.com/js2264/plexembler/pull/1))
 - **The reads' QC**: NanoPlot for each species' nanopore reads, FastQC for each
   pooled library, and MultiQC.
 - **`plexembler rename`**, which names each contig after its species

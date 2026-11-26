@@ -9,7 +9,7 @@
 #
 # uv's minor and patch updates come grouped in one pull request, which merges
 # itself once the required checks pass (dependabot-automerge.yml). Major
-# updates come one per pull request, and the actions
+# updates come one per pull request, and the actions and the image's base
 # in a grouped one, for review.
 version: 2
 updates:
@@ -33,3 +33,9 @@ updates:
       github-actions:
         patterns:
           - "*"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2

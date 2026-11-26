@@ -100,6 +100,18 @@ jobs:
         with:
           version: "0.9.5"
 
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+
+      # The pipeline's own steps run in ghcr.io/js2264/plexembler:<its version>
+      # (docs/plan.md, T1): built here from the checkout, so that a pull request
+      # tests its own code rather than the last release's.
+      - name: The package's image, from the checkout
+        run: |
+          version=$(sed -n "s/^    version         = '\(.*\)'$/\1/p" nextflow.config)
+          uv build --wheel
+          docker build -t "ghcr.io/js2264/plexembler:$version" .
+          docker run --rm "ghcr.io/js2264/plexembler:$version" plexembler --version
+
       # Every test: the pipeline's (tests/default.nf.test) and the local
       # subworkflows' and modules'; nf-core's own are ignored (nf-test.config).
       - name: nf-test, with Docker
