@@ -23,8 +23,10 @@ workflow READS_QC {
     //
     FASTQC(ch_libraries)
 
+    // One file per item: FastQC gives a library's two archives together.
     ch_multiqc_files = NANOPLOT.out.txt.map { _meta, txt -> txt }
         .mix(FASTQC.out.zip.map { _meta, zip -> zip })
+        .flatten()
 
     emit:
     nanoplot      = NANOPLOT.out.txt  // channel: [ val(meta), path(txt) ]
