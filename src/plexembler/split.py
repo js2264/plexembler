@@ -189,7 +189,10 @@ class Tally:
     holdout: Counter = field(default_factory=Counter)
     duplicates: Counter = field(default_factory=Counter)
     between: Counter = field(default_factory=Counter)
+    #: Each pair of species an ambiguous pair involves; a pair between three
+    #: species counts for each two of them.
     ambiguous: Counter = field(default_factory=Counter)
+    ambiguous_pairs: int = 0
     unmapped: int = 0
     divergent: int = 0
     mates: Counter = field(default_factory=Counter)
@@ -307,8 +310,14 @@ def split_pairs(
                     involved.add(mate.species)
                     if said == "ambiguous":
                         involved |= mate.alternative_species()
-                key = tuple(sorted(involved))
-                tally.ambiguous[key if len(key) > 1 else (key[0], key[0])] += 1
+                tally.ambiguous_pairs += 1
+                names = sorted(involved)
+                for key in (
+                    itertools.combinations(names, 2)
+                    if len(names) > 1
+                    else [(names[0], names[0])]
+                ):
+                    tally.ambiguous[key] += 1
                 continue
             if "divergent" in verdicts:
                 tally.divergent += 1
@@ -369,7 +378,7 @@ def summary(species: list[str], tally: Tally, kind: str) -> dict:
         "holdout": sum(tally.holdout.values()),
         "duplicates": sum(tally.duplicates.values()),
         "between_species": sum(tally.between.values()),
-        "ambiguous": sum(tally.ambiguous.values()),
+        "ambiguous": tally.ambiguous_pairs,
         "divergent": tally.divergent,
         "unmapped": tally.unmapped,
         "species": {

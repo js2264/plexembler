@@ -15,7 +15,8 @@ AT_RICH = "ATATATATGC" * 100  # 1 kb, 20 % GC
 
 #: A pool of two species. Scer_c1, Scer_c2 and Cgla_c1, Cgla_c2 are their own;
 #: Scer_mito is Scer's mitochondrion; Scer_dup is Cgla's DNA, which Cgla's
-#: contigs hold already; Scer_hic is Cgla's DNA too, which they lack.
+#: contigs hold already; Scer_hic is Cgla's DNA too, which they lack, and
+#: Scer's reads cover thinly.
 CONTIGS = {
     "Scer_c1": GC_RICH * 2,
     "Scer_c2": GC_RICH * 2,
@@ -80,7 +81,7 @@ def pool(tmp_path: Path) -> dict:
     scer.write_text(
         "\n".join(
             depth("Scer_c1", 40) + depth("Scer_c2", 40) + depth("Scer_mito", 200, "m")
-            + depth("Scer_dup", 2) + depth("Scer_hic", 30)
+            + depth("Scer_dup", 2) + depth("Scer_hic", 10)
             # A secondary alignment is not depth.
             + [paf_line("s", 2000, 0, 2000, "Scer_c1", 2000, 0, 2000, primary=False)]
         )
@@ -150,7 +151,7 @@ def test_every_verdict(pool, tmp_path: Path):
         "Scer_c2": ("keep", "Scer_c2"),
         "Scer_mito": ("organelle", "Scer_chrM"),
         "Scer_dup": ("drop", "Scer_dup"),
-        "Scer_hic": ("move", "Cgla_hic"),
+        "Scer_hic": ("move", "Cgla_Scer_hic"),
         "Cgla_c1": ("keep", "Cgla_c1"),
         "Cgla_c2": ("keep", "Cgla_c2"),
     }
@@ -165,9 +166,9 @@ def test_every_verdict(pool, tmp_path: Path):
         ]
     with gzip.open(tmp_path / "out" / "Cgla.screened.fa.gz", "rt") as handle:
         assert [name for name, _ in read_fasta(handle)] == [
+            "Cgla_Scer_hic",
             "Cgla_c1",
             "Cgla_c2",
-            "Cgla_hic",
         ]
     table = (tmp_path / "out" / "poolA.screen.tsv").read_text().splitlines()
     assert table[0].startswith(
@@ -192,7 +193,7 @@ def test_moved_by_depth_without_hic(pool, tmp_path: Path):
     found = screen(pool["fasta"], pool["reads"], None, [], tmp_path / "out", "poolA")
     assert (found["Scer_hic"].verdict, found["Scer_hic"].new_name) == (
         "move",
-        "Cgla_hic",
+        "Cgla_Scer_hic",
     )
     # Thin on its own reads, but no other species' reads cover it: kept.
     assert found["Scer_dup"].verdict == "keep"
@@ -208,8 +209,47 @@ def test_a_second_organelle_and_thresholds(pool, tmp_path: Path):
         "poolA",
         Thresholds(min_contacts=100),
     )
-    # Too few contacts to move it on Hi-C alone; its own reads cover it.
+    # Too few contacts to move it on Hi-C; its own reads, thin, not thin enough
+    # to move it on depth.
     assert found["Scer_hic"].verdict == "keep"
+
+
+def test_hic_alone_moves_no_well_covered_contig(pool, tmp_path: Path):
+    """A species of one contig has no contacts of its own; random ligation
+    gives it some with the others. Its own reads cover it: it stays."""
+    pool["contacts"].write_text(
+        "contig_a\tcontig_b\tpairs\nCgla_c2\tScer_c1\t50\n", encoding="ascii"
+    )
+    found = screen(
+        pool["fasta"],
+        pool["reads"],
+        None,
+        [pool["contacts"]],
+        tmp_path / "out",
+        "poolA",
+    )
+    assert found["Cgla_c2"].contacts == {"Scer": 50}
+    assert found["Cgla_c2"].verdict == "keep"
+    assert found["Scer_c1"].verdict == "keep"
+
+
+def test_a_moved_contig_keeps_its_name(pool, tmp_path: Path):
+    """Moved, a contig is named after the species it goes to, then its own
+    name: never one of that species' contigs' names."""
+    pool["fasta"].write_text(
+        pool["fasta"].read_text().replace(">Scer_hic", ">Scer_c3"), encoding="ascii"
+    )
+    for path in (*pool["reads"].values(), pool["contacts"]):
+        path.write_text(path.read_text().replace("Scer_hic", "Scer_c3"))
+    found = screen(
+        pool["fasta"],
+        pool["reads"],
+        pool["identity"],
+        [pool["contacts"]],
+        tmp_path / "out",
+        "poolA",
+    )
+    assert found["Scer_c3"].new_name == "Cgla_Scer_c3"
 
 
 def test_the_command(pool, tmp_path: Path):
@@ -234,7 +274,7 @@ def test_the_command(pool, tmp_path: Path):
     assert result.exit_code == 0, result.output
     log = next(outdir.glob("poolA.plexembler_*.log")).read_text()
     assert "7 contigs: 1 drop, 4 keep, 1 move, 1 organelle" in log
-    assert "Scer_hic: move (Cgla_hic)" in log
+    assert "Scer_hic: move (Cgla_Scer_hic)" in log
     assert CliRunner().invoke(cli, arguments).exit_code == 1
     bad = CliRunner().invoke(cli, [*arguments[:3], "Scer", *arguments[4:], "--force"])
     assert bad.exit_code == 2

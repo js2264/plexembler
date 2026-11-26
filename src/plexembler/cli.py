@@ -612,6 +612,14 @@ def _species_paf(
     show_default=True,
     help="The fewest Hi-C contacts with another species that move a contig.",
 )
+@click.option(
+    "--hic-own-depth",
+    type=float,
+    default=0.5,
+    show_default=True,
+    help="Its own species' depth on a contig, as a share of their depth, under "
+    "which Hi-C contacts can move it.",
+)
 @_FORCE
 @_VERBOSE
 @_QUIET
@@ -629,6 +637,7 @@ def screen_command(
     other_depth: float,
     hic_ratio: float,
     min_contacts: int,
+    hic_own_depth: float,
     force: bool,
     verbose: bool,
     quiet: bool,
@@ -645,6 +654,7 @@ def screen_command(
         other_depth=other_depth,
         hic_ratio=hic_ratio,
         min_contacts=min_contacts,
+        hic_own_depth=hic_own_depth,
     )
     parameters = {
         "contigs": contigs,

@@ -195,10 +195,14 @@ at 99 % identity or more, and its Hi-C contacts with each species' contigs.
 - `drop`: `--duplicate-share` of it in another species' contigs, its own
   species' reads under `--own-depth` of their depth on it: that species' DNA,
   already in its contigs;
-- `move`: its Hi-C contacts with another species over `--hic-ratio` times its
-  own species' (and `--min-contacts` of them); or its own species' reads under
-  `--own-depth`, another species' at `--other-depth` of theirs: renamed
-  `<that species>_<contig>`;
+- `move`: its own species' reads under `--own-depth` of their depth, another
+  species' at `--other-depth` of theirs; or its own species' reads under
+  `--hic-own-depth` and its Hi-C contacts with another species over
+  `--hic-ratio` times its own species' (and `--min-contacts` of them): renamed
+  after the species it goes to, its name kept (`Cgla_Scer_contig_5`). Hi-C alone
+  moves no contig its own reads cover well: a species of one contig has no
+  contacts of its own, and random ligation gives every contig some with the
+  others;
 - `keep`: the others.
 
 ```bash
@@ -226,6 +230,7 @@ species, verdict, new name and reason), their MultiQC table and its log.
 | `--other-depth` | `0.5` | Another species' reads' depth, in times their usual depth, at which they cover it. |
 | `--hic-ratio` | `2.0` | How many times its Hi-C contacts with another species outnumber its own species'. |
 | `--min-contacts` | `20` | The fewest Hi-C contacts with another species that move a contig. |
+| `--hic-own-depth` | `0.5` | Its own species' depth on a contig, as a share of their depth, under which Hi-C contacts can move it. |
 | `--force` | off | Overwrite outputs that exist already. |
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |

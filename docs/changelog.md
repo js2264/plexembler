@@ -71,8 +71,10 @@ follow [semantic versioning](https://semver.org).
 - **The contig screen**, `plexembler screen`: each contig kept, moved to
   another species of its pool, dropped, or named its species' mitochondrion
   (`<species>_chrM`), from each species' nanopore depth on it, its identity to
-  the other species' contigs and its Hi-C contacts; each species' contigs
-  after it in `species/<species>/contigs/`.
+  the other species' contigs and its Hi-C contacts (which move a contig only
+  when its own species' reads cover it thinly: `--hic-own-depth`); a moved
+  contig is named after the species it goes to, its name kept; each species'
+  contigs after it in `species/<species>/contigs/`.
 - **The test data**, version 2: 30× of nanopore reads per species and 10,000
   WGS pairs, so that the test profile assembles; its second species leaves its
   chemistry and genome size to the pipeline.

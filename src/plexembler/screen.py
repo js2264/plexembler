@@ -22,11 +22,15 @@ And gives a verdict:
 - ``drop``: most of it (``--duplicate-share``) found in another species' contigs,
   and its own species' reads thin on it (under ``--own-depth`` of their depth):
   that species' DNA, which it holds already;
-- ``move``: its Hi-C contacts with another species' contigs more than
-  ``--hic-ratio`` times those with its own (and ``--min-contacts`` of them); or
-  its own species' reads thin on it while another species' reads cover it
-  (``--other-depth`` of their depth): that species' DNA, which it lacks. It is
-  renamed ``<that species>_<contig>``;
+- ``move``: its own species' reads thin on it while another species' reads
+  cover it (``--other-depth`` of their depth); or its own species' reads under
+  ``--hic-own-depth`` of their depth and its Hi-C contacts with another
+  species' contigs more than ``--hic-ratio`` times those with its own (and
+  ``--min-contacts`` of them): that species' DNA, which it lacks. It is renamed
+  ``<that species>_<contig>``, its name kept after the species it goes to
+  (``Cgla_Scer_contig_5``). Hi-C alone moves nothing its own reads cover well:
+  a species of one contig has no contacts of its own, and random ligation
+  gives every contig some with the others;
 - ``keep``: the others.
 """
 
@@ -88,6 +92,7 @@ class Thresholds:
     other_depth: float = 0.5
     hic_ratio: float = 2.0
     min_contacts: int = 20
+    hic_own_depth: float = 0.5
 
 
 def open_text(path: Path) -> TextIO:
@@ -218,11 +223,13 @@ def judge(contigs: dict[str, Contig], thresholds: Thresholds) -> None:
             if (
                 count >= thresholds.min_contacts
                 and count > thresholds.hic_ratio * own_contacts
+                and own_ratio < thresholds.hic_own_depth
             ):
                 move(
                     contig,
                     other,
-                    f"{count} Hi-C contacts with {other}, {own_contacts} with {own}",
+                    f"{count} Hi-C contacts with {other}, {own_contacts} with {own}; "
+                    f"{own}'s reads at {own_ratio:.2f} of their depth",
                 )
                 continue
         if own_ratio < thresholds.own_depth:
@@ -245,7 +252,7 @@ def judge(contigs: dict[str, Contig], thresholds: Thresholds) -> None:
 
 def move(contig: Contig, other: str, reason: str) -> None:
     contig.verdict = "move"
-    contig.new_name = f"{other}_{contig.name.split('_', 1)[1]}"
+    contig.new_name = f"{other}_{contig.name}"
     contig.reason = reason
 
 

@@ -93,6 +93,12 @@ def wgs_lines():
             {"at": ("Scer_ctg1", 2000), "mapq": 3, "xa": "Spar_ctg1,+2000,100M,1;"},
             {"at": ("Scer_ctg1", 2300)},
         ),
+        # Ambiguous between Scer and Spar, its mate in Cgla: three species.
+        *pair(
+            "amb3",
+            {"at": ("Scer_ctg1", 3000), "mapq": 3, "xa": "Spar_ctg1,+3000,100M,1;"},
+            {"at": ("Cgla_ctg1", 3300)},
+        ),
         # A repeat of Scer: an ambiguous pair within one species.
         *pair("rep", {"at": ("Scer_ctg2", 10), "mapq": 0}, {"at": ("Scer_ctg2", 300)}),
         # 10 mismatches in 100 columns: a read of another species.
@@ -124,10 +130,16 @@ def test_species_and_records():
 def test_a_wgs_library(tmp_path: Path):
     species, tally = split_pairs(sam(wgs_lines()), tmp_path, "wgs", "wgs")
     assert species == ["Scer", "Spar", "Cgla"]
-    assert tally.pairs == 8
+    assert tally.pairs == 9
     assert tally.kept == {"Scer": 1, "Cgla": 1}
     assert tally.holdout == {"Scer": 1}
-    assert tally.ambiguous == {("Scer", "Spar"): 1, ("Scer", "Scer"): 1}
+    assert tally.ambiguous_pairs == 3
+    assert tally.ambiguous == {
+        ("Scer", "Spar"): 2,
+        ("Scer", "Scer"): 1,
+        ("Cgla", "Scer"): 1,
+        ("Cgla", "Spar"): 1,
+    }
     assert (tally.divergent, tally.unmapped) == (1, 1)
     assert tally.between == {("Cgla", "Scer"): 1}
     assert names(tmp_path / "Scer.wgs_R1.fastq.gz") == [KEPT]
