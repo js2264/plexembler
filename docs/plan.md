@@ -56,13 +56,13 @@ it applies.
 | Strains | Haploid or homozygous: one collapsed assembly per species. hifiasm, purge_dups and HapHiC are opt-in |
 | Hi-C | Arima's kit (DpnII and HinfI): its four junctions are the default; YaHS and instaGRAAL, in its `cpu` mode, are the scaffolders |
 | Compute | Workstations with and without a GPU, SLURM clusters with and without GPU nodes: every GPU step is opt-in (`-profile gpu`) and has a CPU path |
-| Delivery | A pull request per milestone into `main`, squash-merged by the maintainer |
+| GPU steps | Not tested yet: `dorado polish`, instaGRAAL's MCMC and Helixer are marked experimental, in the docs and in their parameters' help, until their tests (nf-test's tag `gpu`) have been run on a GPU workstation. CI tests the CPU paths |
+| The species of a pool | Of the same genus at most, some pairs at 85 to 95 % ANI: a read goes to a species only when its alignment is unique (`--deconvolve_mapq`) and near-identical (`--deconvolve_min_identity`), and the ambiguous share of each pair of species is reported (M2). Above 95 %, the pair is warned about (M1) |
+| RNA-seq | Counts and TPM per species and library; no differential expression (M5) |
+| Delivery | A pull request per milestone into `main`, squash-merged by the maintainer: each milestone on its own branch, its pull request stacked on the previous milestone's until that one is merged, then rebased onto `main` |
 | Benchmark | Public data of yeasts with T2T references, mixed in silico (T2) |
 | Upstream | hicstuff, instaGRAAL, chromosomix and metacooler are attached: their changes are prepared there (T4, T7), and worked around here until they are released |
 | The package's container | An image on GHCR per release, `ghcr.io/js2264/plexembler:X.Y.Z`, built from the released wheel; PyPI later (T1) |
-
-Still open, and asked when their milestone comes: how close the species of a
-pool are (M2), and the RNA-seq design (M5).
 
 ## How a step is built
 
@@ -134,8 +134,8 @@ usable as a draft genome on its own.
 - [ ] **Contigs named after their species:** `plexembler rename`, in a local
       module `PLEXEMBLER_RENAME`.
 - [ ] **Nanopore polishing** (`--ont_polisher medaka|dorado|none`): Medaka
-      (nf-core `medaka`); `dorado polish` (local, `process_gpu`) for Dorado's
-      BAMs.
+      (nf-core `medaka`); `dorado polish` (local, `process_gpu`, experimental
+      until tested on a GPU) for Dorado's BAMs.
 - [ ] **The genome checks**, a subworkflow `GENOME_QC` that every later stage
       reuses: `gfastats` (contiguity); BUSCO in genome mode, or compleasm, with
       the samplesheet's lineage or BUSCO's choice; Merqury's QV against the
@@ -165,7 +165,10 @@ screened.
       `plexembler split` (pysam, in a local module) gives each pair to the species
       of its best unique alignments: WGS proper pairs, Hi-C pairs whose mates
       both land in one species (pairs between species counted, not kept), at
-      `--deconvolve_mapq` (20). It writes each species' BAM (and FASTQ where a
+      `--deconvolve_mapq` (20) and an identity of at least
+      `--deconvolve_min_identity` (98 %): a read of a region missing from its
+      own species' contigs would otherwise go, unique, to a sister species'
+      copy, 85 to 95 % identical (Decisions). It writes each species' BAM (and FASTQ where a
       tool wants reads) and the pool's numbers: each species' share of each
       library, the ambiguous fraction of each pair of species, the pairs between
       species and the random-ligation rate ε. The pool's channels are grouped
@@ -247,7 +250,8 @@ its Hi-C maps.
       - YaHS (nf-core `yahs`), its motifs from the library's `enzymes`;
       - instaGRAAL, a local module `INSTAGRAAL_ENDTOEND`:
         `instagraal-endtoend contigs.fa pairs.gz -e <enzymes> --mode cpu`, or
-        `--instagraal_mode default` (MCMC and refine) on a GPU (`process_gpu`);
+        `--instagraal_mode default` (MCMC and refine) on a GPU (`process_gpu`,
+        experimental until tested on a GPU);
         not for a library made without an enzyme;
       - HapHiC (local), opt-in, for species with a `ploidy` of 2 or more and
         an `n_chromosomes`.
@@ -307,7 +311,7 @@ mitochondrial genes.
       alignments and OrthoDB's fungal proteins (`--orthodb_proteins`, downloaded
       to the cache when absent). Without RNA-seq: BRAKER on proteins alone, or
       GALBA (local), whichever does better on the benchmark. Helixer (local,
-      GPU) as a second candidate (`--gene_predictors braker,helixer`), scored by
+      GPU, experimental until tested on one) as a second candidate (`--gene_predictors braker,helixer`), scored by
       BUSCO's proteins and OMArk.
 - [ ] **Formats:** AGAT (`agat/convertspgff2gtf`, `agat/spextractsequences`,
       `agat/spstatistics`): GTF and GFF3, locus tags `<species>_000010`, proteins
@@ -332,7 +336,8 @@ BUSCO's genome.
 
 ## M5 · Expression and tracks · v0.5.0
 
-**Goal:** each species' expression table, and its coverage tracks.
+**Goal:** each species' expression tables, counts and TPM, and its coverage
+tracks. Differential expression is out of scope (Decisions).
 
 - [ ] **Counts:** featureCounts on each RNA-seq library's per-species
       alignments, its strandedness from Salmon's library type.
@@ -483,7 +488,7 @@ from M2 on.
 
 ## Questions that change defaults
 
-The first four were answered ([Decisions](#decisions)):
+All answered ([Decisions](#decisions)):
 
 1. ~~**The nanopore chemistry and basecalling**~~: mixed or unknown, a
    `chemistry` column.
@@ -491,10 +496,9 @@ The first four were answered ([Decisions](#decisions)):
 3. ~~**The Hi-C protocol of each pool**~~: Arima.
 4. ~~**Where it runs**~~: all four of workstation and cluster, with and without
    GPUs.
-5. **How close the species of a pool are** (any pair above 95 % ANI?): pool
-   design, `--deconvolve_mapq`. Asked in M2.
-6. **The RNA-seq design** (stranded? how many conditions?): whether differential
-   expression comes in scope. Asked in M5.
+5. ~~**How close the species of a pool are**~~: of the same genus at most, some
+   pairs at 85 to 95 % ANI.
+6. ~~**The RNA-seq design**~~: counts and TPM; no differential expression.
 
 ## Risks
 
