@@ -48,7 +48,7 @@ python_dev: '3.14'
 python_max: '3.14'
 released: '2026-11-26'
 repository: plexembler
-ruff_version: 0.17.4
+ruff_version: 0.17.6
 sdist_test_data: true
 src_layout: true
 status: 3 - Alpha

@@ -26,9 +26,14 @@ def run(*arguments: str):
     return CliRunner().invoke(cli, ["rename", *arguments])
 
 
+#: A terminal's colour codes, which rich-click writes where it sees a terminal (CI).
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
 def plain(output: str) -> str:
-    """The output without rich-click's panel: its borders, and its wrapping."""
-    return " ".join(output.translate(str.maketrans("", "", "│╭╮╰╯─")).split())
+    """The output without rich-click's panel: its colours, borders and wrapping."""
+    text = ANSI.sub("", output)
+    return " ".join(text.translate(str.maketrans("", "", "│╭╮╰╯─")).split())
 
 
 def test_every_contig_starts_with_its_species(fasta: Path, tmp_path: Path):
