@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 #: Raised when what this script writes changes, so that tests can name it.
-VERSION = 1
+VERSION = 2
 HERE = Path(__file__).resolve().parent
 COMPLEMENT = str.maketrans("ACGT", "TGCA")
 
@@ -42,9 +42,13 @@ class Species:
 
 SPECIES = (
     Species(
-        "sp1", {"chr1": 24_000, "chr2": 16_000}, gc=0.38, telomere="TGTGGG", ont_depth=8
+        "sp1",
+        {"chr1": 24_000, "chr2": 16_000},
+        gc=0.38,
+        telomere="TGTGGG",
+        ont_depth=30,
     ),
-    Species("sp2", {"chr1": 30_000}, gc=0.45, telomere="TTAGGG", ont_depth=8),
+    Species("sp2", {"chr1": 30_000}, gc=0.45, telomere="TTAGGG", ont_depth=30),
 )
 
 
@@ -112,7 +116,7 @@ def ont_reads(species: Species, chromosomes, rng):
         start = rng.randint(0, len(chromosome) - length)
         strand = rng.choice("+-")
         read = chromosome[start : start + length]
-        read = mutate(read if strand == "+" else revcomp(read), rng, rate=0.03)
+        read = mutate(read if strand == "+" else revcomp(read), rng, rate=0.02)
         records.append(
             (
                 f"ont_{len(records):05d} {species.name}:{name}:{start}:{strand}",
@@ -129,7 +133,7 @@ def pair(fragment: str, read_length: int) -> tuple[str, str]:
     return fragment[:read_length], revcomp(fragment)[:read_length]
 
 
-def wgs_pairs(genomes, rng, n=1_000, read_length=100):
+def wgs_pairs(genomes, rng, n=10_000, read_length=100):
     r1, r2 = [], []
     for index in range(n):
         species, name, length = pick_position(genomes, rng)
@@ -223,13 +227,12 @@ def main(outdir: Path) -> None:
         write_fastq(outdir / f"pool_{library}_R1.fastq.gz", r1)
         write_fastq(outdir / f"pool_{library}_R2.fastq.gz", r2)
 
+    # sp1 says what it is; sp2 leaves its chemistry and genome size to the
+    # pipeline, which tells them from its reads.
     (outdir / "species.csv").write_text(
-        "species,pool,ont,genome_size,ploidy,n_chromosomes,genetic_code,telomere_repeat\n"
-        + "".join(
-            f"{s.name},pool,{s.name}.ont.fastq.gz,{sum(s.chromosomes.values()) // 1000}k,"
-            f"1,{len(s.chromosomes)},1,{s.telomere}\n"
-            for s in SPECIES
-        )
+        "species,pool,ont,chemistry,genome_size,ploidy,n_chromosomes,genetic_code,telomere_repeat\n"
+        "sp1,pool,sp1.ont.fastq.gz,r10,40k,1,2,1,TGTGGG\n"
+        "sp2,pool,sp2.ont.fastq.gz,NA,NA,1,1,1,TTAGGG\n"
     )
     (outdir / "libraries.csv").write_text(
         "library,pool,type,fastq_1,fastq_2,condition,replicate,enzymes\n"

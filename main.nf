@@ -67,6 +67,7 @@ workflow {
         params.outdir,
         params.input,
         params.libraries,
+        params.assemblers,
         params.help,
         params.help_full,
         params.show_hidden

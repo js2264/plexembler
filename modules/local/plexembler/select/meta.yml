@@ -1,0 +1,97 @@
+name: "plexembler_select"
+description: Keeps one candidate of a step for a species, by its checks or by the samplesheet, and writes the table of candidates
+keywords:
+  - contigs
+  - selection
+  - fasta
+tools:
+  - "plexembler":
+      description: "The commands of plexembler's pipeline"
+      homepage: "https://github.com/js2264/plexembler"
+      documentation: "https://js2264.github.io/plexembler/cli/#select"
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: The species' meta map; meta.keep names a candidate to keep
+    - candidates:
+        type: list
+        description: The candidates' names, the order of the lists below
+    - fastas:
+        type: file
+        description: Each candidate's sequence
+        pattern: "*.{fa,fasta}{,.gz}"
+    - buscos:
+        type: file
+        description: Each candidate's BUSCO short summary, or NO_FILE
+        pattern: "*.{txt,json}"
+    - qvs:
+        type: file
+        description: Each candidate's Merqury QV, or NO_FILE
+        pattern: "*.qv"
+    - stats:
+        type: file
+        description: Each candidate's gfastats summary, or NO_FILE
+        pattern: "*.assembly_summary"
+  - step:
+      type: string
+      description: The step whose candidates these are (assembly)
+output:
+  fasta:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.${step}.fa.gz:
+          type: file
+          description: The kept candidate's sequence
+          pattern: "*.fa.gz"
+  selection:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.${step}.selection.tsv:
+          type: file
+          description: Every candidate's numbers, the one kept and why
+          pattern: "*.selection.tsv"
+  multiqc:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.${step}_selection_mqc.tsv:
+          type: file
+          description: The candidates, for MultiQC
+          pattern: "*_mqc.tsv"
+  log:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - "*.log":
+          type: file
+          description: The command's log
+          pattern: "*.log"
+  versions_plexembler:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

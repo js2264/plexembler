@@ -1,0 +1,79 @@
+name: "plexembler_ani"
+description: The identity between the species of a pool, from skani's pairs
+keywords:
+  - contigs
+  - ani
+  - fasta
+tools:
+  - "plexembler":
+      description: "The commands of plexembler's pipeline"
+      homepage: "https://github.com/js2264/plexembler"
+      documentation: "https://js2264.github.io/plexembler/cli/#ani"
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: The pool's meta map; meta.species lists its species
+    - skani:
+        type: file
+        description: skani's pairs (skani triangle --sparse)
+        pattern: "*.tsv"
+output:
+  matrix:
+    - - meta:
+          type: map
+          description: The pool's meta map
+      - ${meta.id}.ani.tsv:
+          type: file
+          description: The matrix of identities
+          pattern: "*.ani.tsv"
+  pairs:
+    - - meta:
+          type: map
+          description: The pool's meta map
+      - ${meta.id}.ani_pairs.tsv:
+          type: file
+          description: Each pair, its aligned fractions and its verdict
+          pattern: "*.ani_pairs.tsv"
+  multiqc:
+    - - meta:
+          type: map
+          description: The pool's meta map
+      - ${meta.id}.ani_mqc.tsv:
+          type: file
+          description: The pairs, for MultiQC
+          pattern: "*_mqc.tsv"
+  log:
+    - - meta:
+          type: map
+          description: The pool's meta map
+      - "*.log":
+          type: file
+          description: The command's log
+          pattern: "*.log"
+  versions_plexembler:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

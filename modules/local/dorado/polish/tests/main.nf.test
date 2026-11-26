@@ -1,0 +1,41 @@
+nextflow_process {
+
+    name "Test process DORADO_POLISH"
+    script "../main.nf"
+    process "DORADO_POLISH"
+    config "./nextflow.config"
+
+    tag "modules"
+    tag "modules_local"
+    tag "dorado"
+    tag "dorado/polish"
+
+    // Its real test needs a GPU and Dorado's BAMs: it is written with the GPU
+    // tests (docs/plan.md, decisions), which run on a GPU workstation.
+
+    test("a draft and its reads - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                def bam = file("\${launchDir}/sp1.bam")
+                bam.text = 'an unaligned BAM, for the stub'
+                input[0] = [
+                    [ id: 'sp1', candidate: 'flye' ],
+                    [ bam ],
+                    file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true),
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.fasta.size() == 1 },
+            )
+        }
+    }
+}

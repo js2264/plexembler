@@ -8,10 +8,27 @@ The species and the pooled libraries, and where the results go.
 
 | Parameter | Description | Type | Default | Required | Hidden |
 |-----------|-----------|-----------|-----------|-----------|-----------|
-| `input` | The species samplesheet: one row per nanopore run of a species. <details><summary>Help</summary><small>A CSV file with a header: species, pool, ont, and optionally genome_size, ploidy, n_chromosomes, busco_lineage, genetic_code and telomere_repeat. A relative path in it is read from the samplesheet's folder. See the [usage page](https://js2264.github.io/plexembler/usage/#species).</small></details>| `string` |  | True |  |
+| `input` | The species samplesheet: one row per nanopore run of a species. <details><summary>Help</summary><small>A CSV file with a header: species, pool, ont (FASTQ, or Dorado's unaligned BAM), and optionally chemistry, genome_size, ploidy, n_chromosomes, busco_lineage, genetic_code, telomere_repeat and assembler. A relative path in it is read from the samplesheet's folder. See the [usage page](https://js2264.github.io/plexembler/usage/#species).</small></details>| `string` |  | True |  |
 | `libraries` | The pooled libraries samplesheet: one row per pair of FASTQ files of a Hi-C, WGS or RNA-seq library made from a pool of species. <details><summary>Help</summary><small>A CSV file with a header: library, pool, type (hic, wgs or rnaseq), fastq_1, fastq_2, and optionally condition and replicate (rnaseq), enzymes (hic). A relative path in it is read from the samplesheet's folder. See the [usage page](https://js2264.github.io/plexembler/usage/#pooled-libraries).</small></details>| `string` |  | True |  |
 | `outdir` | The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure. | `string` |  | True |  |
 | `multiqc_title` | MultiQC report title. Printed as page header, used for filename if not otherwise specified. | `string` |  |  |  |
+
+## Contigs
+
+Each species' nanopore reads, its assemblies as candidates, their polishing and checks, and the one kept (milestone 1).
+
+| Parameter | Description | Type | Default | Required | Hidden |
+|-----------|-----------|-----------|-----------|-----------|-----------|
+| `ont_min_length` | The shortest nanopore read kept, in bases. | `integer` | 1000 |  |  |
+| `ont_min_quality` | The lowest mean quality of a nanopore read kept; by default 10 for R10 reads, 7 for R9. | `number` |  |  |  |
+| `ont_max_depth` | The depth the nanopore reads are capped at, from the genome size; the longest and best reads are kept. 0 for no cap. <details><summary>Help</summary><small>Filtlong keeps `ont_max_depth` times the genome size, in bases: the samplesheet's `genome_size`, or LRGE's estimate when it is NA.</small></details>| `integer` | 100 |  |  |
+| `save_ont_reads` | Save each species' nanopore reads as they were assembled: filtered and capped. | `boolean` |  |  |  |
+| `assemblers` | The assemblers that run, comma-separated: each one's contigs are a candidate (flye, hifiasm). <details><summary>Help</summary><small>Every candidate is renamed, polished and checked; `plexembler select` keeps one, by BUSCO's single-copy genes, then the QV, then the contig N50, unless the samplesheet's `assembler` names one. hifiasm runs in its `--ont` mode, for R10 reads.</small></details>| `string` | flye |  |  |
+| `ont_polisher` | How the candidates are polished with their species' nanopore reads: medaka, dorado (experimental: a GPU, and Dorado's BAMs), or none. (accepted: `medaka`\|`dorado`\|`none`) <details><summary>Help</summary><small>`dorado` runs `dorado polish` for the species whose `ont` is Dorado's unaligned BAM, and Medaka for the others. It is experimental until it has been tested on a GPU (docs/plan.md).</small></details>| `string` | medaka |  |  |
+| `medaka_model` | Medaka's model; by default r1041_e82_400bps_sup_v5.2.0 for R10 reads, r941_min_sup_g507 for R9. | `string` |  |  |  |
+| `busco_lineage` | The BUSCO lineage of a species whose samplesheet's busco_lineage is NA: auto_euk to let BUSCO choose. | `string` | auto_euk |  |  |
+| `busco_db` | A folder of BUSCO's lineages, downloaded beforehand (`busco --download`), for runs without network. | `string` |  |  |  |
+| `kmer_size` | The k-mers' length, for Merqury's QV and completeness and GenomeScope2. | `integer` | 21 |  |  |
 
 ## Institutional config options
 

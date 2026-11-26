@@ -21,7 +21,8 @@ map, its expression table and its report.
 
 > [!NOTE]
 > plexembler is being built, milestone by milestone: today it reads and checks
-> its samplesheets and the reads. [The implementation plan](https://js2264.github.io/plexembler/plan/)
+> its samplesheets and the reads, and makes each species' contigs, polished,
+> checked, and chosen among its assemblers'. [The implementation plan](https://js2264.github.io/plexembler/plan/)
 > says what comes next.
 
 ## Install

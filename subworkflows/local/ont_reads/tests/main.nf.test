@@ -1,0 +1,88 @@
+nextflow_workflow {
+
+    name "Test subworkflow ONT_READS"
+    script "../main.nf"
+    workflow "ONT_READS"
+
+    tag "subworkflows"
+    tag "subworkflows_local"
+    tag "ont_reads"
+
+    test("a species that says what it is, and one that leaves it to its reads") {
+
+        when {
+            workflow {
+                """
+                input[0] = channel.of(
+                    [
+                        [ id: 'sp1', pool: 'pool', chemistry: 'r10', genome_size: '40k', ploidy: 1, single_end: true ],
+                        [ file('${moduleDir}/../../../tests/data/sp1.ont.fastq.gz', checkIfExists: true) ],
+                    ],
+                    [
+                        [ id: 'sp2', pool: 'pool', chemistry: null, genome_size: null, ploidy: 1, single_end: true ],
+                        [ file('${moduleDir}/../../../tests/data/sp2.ont.fastq.gz', checkIfExists: true) ],
+                    ],
+                )
+                input[1] = 100
+                """
+            }
+        }
+
+        then {
+            def reads = workflow.out.reads.collectEntries { meta, fastq -> [meta.id, [meta, fastq]] }
+            assertAll(
+                { assert workflow.success },
+                { assert reads.keySet() == ['sp1', 'sp2'] as Set },
+                // sp1's values are the samplesheet's.
+                { assert reads.sp1[0].genome_size_bp == 40000 },
+                { assert !reads.sp1[0].genome_size_estimated },
+                { assert !reads.sp1[0].chemistry_estimated },
+                // sp2's, told from its reads: Q15 and above is R10, and LRGE's
+                // estimate of its 30 kb genome.
+                { assert reads.sp2[0].chemistry == 'r10' },
+                { assert reads.sp2[0].chemistry_estimated },
+                { assert reads.sp2[0].genome_size_estimated },
+                { assert reads.sp2[0].genome_size_bp > 20000 && reads.sp2[0].genome_size_bp < 50000 },
+                { assert workflow.out.genome_size.size() == 1 },
+                { assert workflow.out.filtlong_log.size() == 2 },
+                { assert workflow.out.multiqc_files.size() >= 2 },
+            )
+        }
+    }
+
+    test("runs to merge, a Dorado BAM, and no cap - stub") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                def bam = file("\${launchDir}/sp3.bam")
+                bam.text = 'an unaligned BAM, for the stub'
+                input[0] = channel.of(
+                    [
+                        [ id: 'sp1', pool: 'pool', chemistry: 'r10', genome_size: '40k', ploidy: 1, single_end: true ],
+                        [ file('${moduleDir}/../../../tests/data/sp1.ont.fastq.gz', checkIfExists: true) ],
+                    ],
+                    [
+                        [ id: 'sp3', pool: 'pool', chemistry: null, genome_size: '30k', ploidy: 1, single_end: true ],
+                        [ file('${moduleDir}/../../../tests/data/sp2.ont.fastq.gz', checkIfExists: true), bam ],
+                    ],
+                )
+                input[1] = 0
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.out.reads.size() == 2 },
+                // Two runs, a FASTQ and a BAM: merged.
+                { assert workflow.out.raw.find { meta, _fastq -> meta.id == 'sp3' }[1].toString().endsWith('.merged.fastq.gz') },
+                // No cap: Filtlong does not run.
+                { assert workflow.out.filtlong_log.size() == 0 },
+            )
+        }
+    }
+}

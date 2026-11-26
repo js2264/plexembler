@@ -16,6 +16,62 @@ Every tool a step of the pipeline runs, added with its step ([docs/plan.md](docs
 
   > De Coster W, Rademakers R. NanoPack2: population-scale evaluation of long-read sequencing data. Bioinformatics. 2023 May 4;39(5):btad311. doi: 10.1093/bioinformatics/btad311. PubMed PMID: 37171891.
 
+- [SAMtools](https://doi.org/10.1093/gigascience/giab008)
+
+  > Danecek P, Bonfield JK, Liddle J, Marshall J, Ohan V, Pollard MO, Whitwham A, Keane T, McCarthy SA, Davies RM, Li H. Twelve years of SAMtools and BCFtools. GigaScience. 2021 Feb 16;10(2):giab008. doi: 10.1093/gigascience/giab008.
+
+- [chopper](https://doi.org/10.1093/bioinformatics/btad311)
+
+  > De Coster W, Rademakers R. NanoPack2: population-scale evaluation of long-read sequencing data. Bioinformatics. 2023 May 4;39(5):btad311. doi: 10.1093/bioinformatics/btad311.
+
+- [Filtlong](https://github.com/rrwick/Filtlong)
+
+  > Wick RR. Filtlong: quality filtering tool for long reads. GitHub.
+
+- [LRGE](https://doi.org/10.1101/2024.11.27.625777)
+
+  > Hall MB, Coin LJM. Genome size estimation from long read overlaps. bioRxiv. 2024. doi: 10.1101/2024.11.27.625777.
+
+- [Flye](https://doi.org/10.1038/s41587-019-0072-8)
+
+  > Kolmogorov M, Yuan J, Lin Y, Pevzner PA. Assembly of long, error-prone reads using repeat graphs. Nat Biotechnol. 2019 May;37(5):540-546. doi: 10.1038/s41587-019-0072-8.
+
+- [hifiasm](https://doi.org/10.1038/s41592-020-01056-5)
+
+  > Cheng H, Concepcion GT, Feng X, Zhang H, Li H. Haplotype-resolved de novo assembly using phased assembly graphs with hifiasm. Nat Methods. 2021 Feb;18(2):170-175. doi: 10.1038/s41592-020-01056-5.
+
+- [gfatools](https://github.com/lh3/gfatools)
+
+  > Li H. gfatools: tools for manipulating sequence graphs in the GFA and rGFA formats. GitHub.
+
+- [Medaka](https://github.com/nanoporetech/medaka)
+
+  > Oxford Nanopore Technologies. Medaka: sequence correction provided by ONT Research. GitHub.
+
+- [Dorado](https://github.com/nanoporetech/dorado)
+
+  > Oxford Nanopore Technologies. Dorado: Oxford Nanopore's basecaller, aligner and polisher. GitHub.
+
+- [gfastats](https://doi.org/10.1093/bioinformatics/btac460)
+
+  > Formenti G, Abueg L, Brajuka A, Brajuka N, Gallardo-Alba C, Giani A, Fedrigo O, Jarvis ED. Gfastats: conversion, evaluation and manipulation of genome sequences using assembly graphs. Bioinformatics. 2022 Aug 10;38(17):4214-4216. doi: 10.1093/bioinformatics/btac460.
+
+- [BUSCO](https://doi.org/10.1093/molbev/msab199)
+
+  > Manni M, Berkeley MR, Seppey M, Simão FA, Zdobnov EM. BUSCO Update: Novel and Streamlined Workflows along with Broader and Deeper Phylogenetic Coverage for Scoring of Eukaryotic, Prokaryotic, and Viral Genomes. Mol Biol Evol. 2021 Sep 27;38(10):4647-4654. doi: 10.1093/molbev/msab199.
+
+- [Merqury](https://doi.org/10.1186/s13059-020-02134-9)
+
+  > Rhie A, Walenz BP, Koren S, Phillippy AM. Merqury: reference-free quality, completeness, and phasing assessment for genome assemblies. Genome Biol. 2020 Sep 14;21(1):245. doi: 10.1186/s13059-020-02134-9.
+
+- [GenomeScope 2.0](https://doi.org/10.1038/s41467-020-14998-3)
+
+  > Ranallo-Benavidez TR, Jaron KS, Schatz MC. GenomeScope 2.0 and Smudgeplot for reference-free profiling of polyploid genomes. Nat Commun. 2020 Mar 18;11(1):1432. doi: 10.1038/s41467-020-14998-3.
+
+- [skani](https://doi.org/10.1038/s41592-023-02018-3)
+
+  > Shaw J, Yu YW. Fast and robust metagenomic sequence comparison through sparse chaining with skani. Nat Methods. 2023 Nov;20(11):1661-1665. doi: 10.1038/s41592-023-02018-3.
+
 - [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
 
 > Andrews, S. (2010). FastQC: A Quality Control Tool for High Throughput Sequence Data [Online].

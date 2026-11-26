@@ -3,7 +3,10 @@
     IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-include { READS_QC               } from '../subworkflows/local/reads_qc'
+include { ONT_READS              } from '../subworkflows/local/ont_reads'
+include { FASTQC                 } from '../modules/nf-core/fastqc/main'
+include { KMERS                  } from '../subworkflows/local/kmers'
+include { CONTIGS                } from '../subworkflows/local/contigs'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -30,15 +33,52 @@ workflow PLEXEMBLER {
 
     def ch_versions = channel.empty()
     def ch_multiqc_files = channel.empty()
-    //
-    // SUBWORKFLOW: the reads as they come, nanopore per species, pooled per library
-    //
-    READS_QC(ch_species, ch_libraries)
-    ch_multiqc_files = ch_multiqc_files.mix(READS_QC.out.multiqc_files)
 
     //
-    // The steps to come, milestone by milestone (docs/plan.md): assembly per
-    // species; the pooled libraries split between the species (POOL_DECONVOLVE);
+    // SUBWORKFLOW: each species' nanopore reads, as one FASTQ, checked, filtered
+    // and capped; its chemistry and genome size when the samplesheet left them NA
+    //
+    ONT_READS(ch_species, params.ont_max_depth)
+    ch_multiqc_files = ch_multiqc_files.mix(ONT_READS.out.multiqc_files)
+
+    //
+    // MODULE: the pooled libraries' reads as they come, a library's runs together
+    //
+    FASTQC(ch_libraries)
+    ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.map { _meta, zip -> zip }.flatten())
+
+    //
+    // SUBWORKFLOW: the k-mers of each species' nanopore reads, and of each pool's WGS reads
+    //
+    def ch_wgs_reads = ch_libraries
+        .filter { meta, _reads -> meta.type == 'wgs' }
+        .map { meta, reads -> [meta.pool, reads] }
+        .groupTuple()
+        .map { pool, reads -> [[id: pool], reads.flatten()] }
+    KMERS(ONT_READS.out.reads, ch_wgs_reads, params.kmer_size)
+
+    //
+    // SUBWORKFLOW: each species' contigs, every assembler's a candidate, polished,
+    // checked, one kept; and the identity between the species of each pool
+    //
+    def ch_bams = ch_species
+        .map { meta, ont -> [meta, [ont].flatten().findAll { file -> file.name.endsWith('.bam') }] }
+        .filter { _meta, bams -> bams }
+    CONTIGS(
+        ONT_READS.out.reads,
+        ch_bams,
+        KMERS.out.ont_db,
+        KMERS.out.wgs_db,
+        params.assemblers.tokenize(','),
+        params.ont_polisher,
+        params.busco_lineage,
+        params.busco_db ? file(params.busco_db, checkIfExists: true) : [],
+    )
+    ch_multiqc_files = ch_multiqc_files.mix(CONTIGS.out.multiqc_files)
+
+    //
+    // The steps to come, milestone by milestone (docs/plan.md): the pooled
+    // libraries split between the species (POOL_DECONVOLVE); short-read
     // polishing, contig screening, Hi-C scaffolding, maps, annotation,
     // expression and the report of each species.
     //

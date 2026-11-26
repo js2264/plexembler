@@ -39,7 +39,7 @@ nf-core pipelines schema docs nextflow_schema.json --output docs/parameters.md -
 ```text
 main.nf, workflows/          the pipeline: its entry, and the workflow of the steps
 subworkflows/local/          plexembler's subworkflows, one folder each, with tests/
-modules/local/               plexembler's modules (none yet), nf-core's form
+modules/local/               plexembler's modules, nf-core's form, each with tests/
 modules/nf-core/, subworkflows/nf-core/   installed by nf-core/tools, never edited
 conf/                        base (resources), modules (args, publishing), test profiles
 assets/                      the samplesheets' schemas, MultiQC's config
@@ -48,6 +48,7 @@ src/plexembler/              the Python package: the commands the pipeline's ste
 src/plexembler/_report/      chromokit's report kit: never edited (chromokit sync replaces it)
 tests/                       pytest (test_*.py) and the pipeline's nf-test (default.nf.test)
 tests/data/                  the test data, and make_test_data.py, which writes them
+benchmarks/                  the benchmark pool's generator and checks (benchmarks/README.md)
 docs/                        the site's pages; docs/plan.md is the implementation plan
 ```
 
@@ -101,6 +102,11 @@ docs/                        the site's pages; docs/plan.md is the implementatio
   entry. A command that writes outputs takes `-o`, `--force`, `-p/--prefix`,
   `-v` and `-q`, and writes its log with `plexembler._log.run_log`.
 - **Changing the test data:** edit `tests/data/make_test_data.py`, raise its
-  `VERSION` when the files change, run it, and commit the files with it.
+  `VERSION` when the files change, run it, and commit the files with it. The
+  benchmark's data is never committed: raise `GENERATOR_VERSION` in
+  `benchmarks/make_benchmark_data.py`, and `benchmarks.yml` publishes the new
+  release `benchmark-data-v<N>`.
+- **A milestone is done** when its boxes are ticked and its "Done when" passes
+  on the benchmark: `python benchmarks/evaluate.py --milestone <N>`.
 - **Reviewing a pull request:** as a whole, against these rules; run the tests
   at its head.

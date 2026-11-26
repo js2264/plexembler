@@ -1,0 +1,75 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "genome_qc"
+description: The checks of a species' sequence at every stage - contiguity (gfastats), gene completeness (BUSCO), QV against the pool's WGS k-mers (or the species' nanopore k-mers) and completeness against the species' nanopore k-mers (Merqury)
+keywords:
+  - qc
+  - busco
+  - merqury
+  - gfastats
+components:
+  - gfastats
+  - busco/busco
+  - merqury/merqury
+input:
+  - ch_sequences:
+      type: file
+      description: |
+        The sequences to check; meta.id the species, meta.pool its pool, meta.busco_lineage its lineage or null
+        Structure: [ val(meta), path(fasta) ]
+      pattern: "*.{fa,fasta}{,.gz}"
+  - ch_ont_db:
+      type: directory
+      description: |
+        Each species' nanopore k-mers
+        Structure: [ val(meta), path(meryl) ]
+  - ch_wgs_db:
+      type: directory
+      description: |
+        Each pool's WGS k-mers; meta.id the pool
+        Structure: [ val(meta), path(meryl) ]
+  - busco_lineage:
+      type: string
+      description: The lineage of a species without one; auto_euk to let BUSCO choose
+  - busco_db:
+      type: directory
+      description: BUSCO's lineages downloaded beforehand, or [] to download them
+output:
+  - stats:
+      type: file
+      description: |
+        gfastats' summary
+        Structure: [ val(meta), path(summary) ]
+      pattern: "*.assembly_summary"
+  - busco:
+      type: file
+      description: |
+        BUSCO's short summary
+        Structure: [ val(meta), path(txt) ]
+      pattern: "short_summary.*.txt"
+  - busco_json:
+      type: file
+      description: |
+        BUSCO's short summary, as JSON
+        Structure: [ val(meta), path(json) ]
+      pattern: "short_summary.*.json"
+  - qv:
+      type: file
+      description: |
+        Merqury's QV, and the k-mers it was counted against (wgs or ont)
+        Structure: [ val(meta), path(qv), val(kmers) ]
+      pattern: "*.qv"
+  - completeness:
+      type: file
+      description: |
+        Merqury's completeness against the species' nanopore k-mers
+        Structure: [ val(meta), path(stats) ]
+      pattern: "*.completeness.stats"
+  - multiqc_files:
+      type: file
+      description: |
+        The files MultiQC reads
+        Structure: [ path(file) ]
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"
