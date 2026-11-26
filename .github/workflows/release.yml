@@ -32,9 +32,17 @@ jobs:
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+  # The pipeline, released by the same tag: its lint and its tests on the
+  # tagged commit (pipeline.yml).
+  pipeline:
+    name: The pipeline on the tag
+    uses: ./.github/workflows/pipeline.yml # zizmor: ignore[self-repository]
+    permissions:
+      contents: read
+
   build:
     name: Build and verify
-    needs: ci
+    needs: [ci, pipeline]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:

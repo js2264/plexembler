@@ -1,0 +1,106 @@
+name: Pipeline
+
+# The Nextflow pipeline, as ci.yml tests the package (CONVENTIONS.md § 6):
+# `nextflow lint` and nf-core's lint, the parameters page and the version
+# checked against their sources, then nf-test with Docker on the oldest
+# Nextflow the pipeline supports (manifest.nextflowVersion) and the newest.
+# On pushes to main, every pull request, by hand, every week, and from
+# release.yml on a tag.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+  schedule:
+    # Weekly: the newest Nextflow and nf-core's tools move between our changes.
+    - cron: "41 5 * * 1"
+
+permissions:
+  contents: read
+
+# As ci.yml: a newer push cancels the run it supersedes, never a tag's.
+concurrency:
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  NXF_ANSI_LOG: false
+  # nf-core/tools, as .nf-core.yml names it.
+  NF_CORE_TOOLS: "4.2.2"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: nf-core/setup-nextflow@c66f1bfa2dc817ae23f4b34eaa26fa5f1453ca71 # v3.1.0
+        with:
+          version: latest-everything
+
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+
+      - name: nextflow lint
+        run: nextflow lint .
+
+      # The version is written twice (pyproject.toml, nextflow.config's
+      # manifest), and bump-my-version changes both: they must agree.
+      - name: The pipeline's version is the package's
+        run: |
+          package=$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)
+          pipeline=$(sed -n "s/^    version         = '\(.*\)'$/\1/p" nextflow.config)
+          if [ -z "$package" ] || [ "$package" != "$pipeline" ]; then
+            echo "::error::nextflow.config's manifest.version ($pipeline) is not pyproject.toml's version ($package)"
+            exit 1
+          fi
+
+      - name: nf-core lint
+        run: uvx --from "nf-core==$NF_CORE_TOOLS" nf-core pipelines lint --dir .
+
+      - name: docs/parameters.md is nextflow_schema.json's
+        run: |
+          uvx --from "nf-core==$NF_CORE_TOOLS" nf-core pipelines schema docs nextflow_schema.json --output docs/parameters.md --force
+          git diff --exit-code docs/parameters.md ||
+            { echo "::error::docs/parameters.md is out of date: run nf-core pipelines schema docs nextflow_schema.json --output docs/parameters.md --force"; exit 1; }
+
+  nf-test:
+    name: nf-test, Nextflow ${{ matrix.nextflow }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest Nextflow manifest.nextflowVersion allows, and the newest.
+        nextflow: ["26.04.0", "latest-everything"]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: nf-core/setup-nextflow@c66f1bfa2dc817ae23f4b34eaa26fa5f1453ca71 # v3.1.0
+        with:
+          version: ${{ matrix.nextflow }}
+
+      - uses: nf-core/setup-nf-test@4069fbbaabe94c08faba4ad261bfa88225ba133f # v2.1.0
+        with:
+          version: "0.9.5"
+
+      # Every test: the pipeline's (tests/default.nf.test) and the local
+      # subworkflows' and modules'; nf-core's own are ignored (nf-test.config).
+      - name: nf-test, with Docker
+        run: nf-test test --ci --verbose --profile +docker

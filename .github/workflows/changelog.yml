@@ -21,12 +21,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: A change to src/plexembler/ comes with a changelog entry
+      # The package (src/plexembler/), and the pipeline: its scripts, its local
+      # modules and subworkflows, its configs, schemas and assets.
+      - name: A change to the package or the pipeline comes with a changelog entry
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           changed=$(git diff --name-only "$BASE"...HEAD)
-          if grep -q '^src/plexembler/' <<<"$changed" && ! grep -qx 'docs/changelog.md' <<<"$changed"; then
-            echo "::error::src/plexembler/ changed but docs/changelog.md did not. Add an entry under Unreleased, or label the pull request no-changelog."
+          code='^(src/plexembler/|main\.nf$|workflows/|subworkflows/local/|modules/local/|conf/|assets/|bin/|nextflow\.config$|nextflow_schema\.json$)'
+          if grep -qE "$code" <<<"$changed" && ! grep -qx 'docs/changelog.md' <<<"$changed"; then
+            echo "::error::the package or the pipeline changed but docs/changelog.md did not. Add an entry under Unreleased, or label the pull request no-changelog."
             exit 1
           fi
