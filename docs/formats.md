@@ -21,6 +21,52 @@ table of their names: tab-separated, with a header.
 | `original_name` | Its name before (the first word of its FASTA header) |
 | `length_bp` | Its length, in bases |
 
+## The candidates table { #candidates-table }
+
+What [`plexembler select`](cli.md#select) reads: tab-separated, with a header,
+a row per candidate. A relative path is read from the table's folder; an empty
+cell, or `NA`, is a check the candidate does not have, which leaves its rule
+out.
+
+| Column | Required | Description |
+|---|---|---|
+| `candidate` | yes | The candidate's name: the tool that made it (`flye`, `hifiasm`) |
+| `fasta` | yes | Its sequence, FASTA, gzipped or not |
+| `busco` | no | BUSCO's short summary (`.txt` or `.json`), or compleasm's `summary.txt` |
+| `qv` | no | Merqury's `.qv` file |
+| `stats` | no | gfastats' summary, tabular (`--tabular`) or not |
+
+## The selection table { #selection-table }
+
+What [`plexembler select`](cli.md#select) writes beside the kept sequence,
+`<species>.<step>.selection.tsv`: tab-separated, with a header, a row per
+candidate in the order of the candidates table; `NA` for a number the
+candidate lacks.
+
+| Column | Description |
+|---|---|
+| `candidate` | The candidate's name |
+| `kept` | `yes` for the candidate kept, `no` for the others |
+| `busco_complete`, `busco_single`, `busco_duplicated`, `busco_fragmented`, `busco_missing` | BUSCO's classes, in percent of `busco_n` |
+| `busco_n` | The BUSCO lineage's number of genes |
+| `qv` | Merqury's QV (`inf` when it found no error) |
+| `contigs`, `contig_n50`, `total_length` | gfastats' number of contigs, contig N50 and total length, in bases |
+| `reason` | For the kept candidate, the rule that kept it: `the most single-copy complete BUSCOs`, `the highest QV`, `the longest contig N50`, `named by the samplesheet`, `the only candidate`, or a tie on every rule |
+
+## The identity pairs { #identity-pairs }
+
+What [`plexembler ani`](cli.md#ani) writes for a pool, `<pool>.ani_pairs.tsv`:
+tab-separated, with a header, a row per pair of species, each pair once (the
+first species first in alphabetical order). Its matrix, `<pool>.ani.tsv`, has
+the same identities, a row and a column per species, `100.00` on its diagonal.
+
+| Column | Description |
+|---|---|
+| `species_a`, `species_b` | The pair's species |
+| `ani` | skani's average nucleotide identity, in percent; `NA` below skani's floor, about 80 % |
+| `aligned_fraction_a`, `aligned_fraction_b` | The share of each genome that skani aligned, in percent |
+| `verdict` | `too close` (above `--warn-above`, 95 %), `same genus` (from `--genus-above`, 85 %), or `distinct` |
+
 ## The report of a species
 
 `plexembler report` (milestone 6 of the [plan](plan.md)) writes the report of
