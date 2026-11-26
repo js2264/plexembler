@@ -14,6 +14,10 @@ follow [semantic versioning](https://semver.org).
 - **Two samplesheets**: the species and their nanopore runs (`--input`), and the
   pooled Hi-C, WGS and RNA-seq libraries (`--libraries`), checked against each
   other. A relative path in them is read from the samplesheet's folder.
+- **Unknown values**: `NA`, or an empty cell, in a species' `genome_size`,
+  `ploidy`, `n_chromosomes`, `busco_lineage`, `genetic_code` and
+  `telomere_repeat`; the step that needs one estimates it. A library's ID or
+  condition that looks like a number (`37`) is read as text.
 - **The reads' QC**: NanoPlot for each species' nanopore reads, FastQC for each
   pooled library, and MultiQC.
 - **`plexembler rename`**, which names each contig after its species

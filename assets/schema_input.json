@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://raw.githubusercontent.com/js2264/plexembler/main/assets/schema_input.json",
     "title": "js2264/plexembler pipeline - params.input schema",
-    "description": "The species (--input): one row per nanopore run of a species; the rows of a species are its runs. A relative path is read from the samplesheet's folder, so file paths are strings here and the pipeline checks that they exist (docs/usage.md).",
+    "description": "The species (--input): one row per nanopore run of a species; the rows of a species are its runs. A relative path is read from the samplesheet's folder, so file paths are strings here and the pipeline checks that they exist (docs/usage.md). An unknown value is NA, or an empty cell.",
     "type": "array",
     "items": {
         "type": "object",
@@ -11,14 +11,18 @@
                 "type": "string",
                 "pattern": "^[A-Za-z][A-Za-z0-9-]*$",
                 "errorMessage": "A species' ID: a letter, then letters, digits and hyphens (no underscore: it starts the name of every contig of the species, <species>_<contig>)",
-                "meta": ["id"]
+                "meta": [
+                    "id"
+                ]
             },
             "pool": {
                 "type": "string",
                 "pattern": "^[A-Za-z][A-Za-z0-9-]*$",
                 "default": "pool",
                 "errorMessage": "A pool's ID: a letter, then letters, digits and hyphens",
-                "meta": ["pool"]
+                "meta": [
+                    "pool"
+                ]
             },
             "ont": {
                 "type": "string",
@@ -26,44 +30,101 @@
                 "errorMessage": "The species' nanopore reads: a FASTQ file (.fastq, .fq, gzipped or not), without spaces in its path"
             },
             "genome_size": {
-                "type": "string",
-                "pattern": "^\\d+(\\.\\d+)?[kKmMgG]?$",
-                "errorMessage": "The expected genome size, in bases, with an optional k, m or g (12m)",
-                "meta": ["genome_size"]
+                "type": [
+                    "integer",
+                    "string"
+                ],
+                "minimum": 1,
+                "pattern": "^(\\d+(\\.\\d+)?[kKmMgG]?|NA)$",
+                "errorMessage": "The expected genome size, in bases, with an optional k, m or g (12m); NA when unknown",
+                "meta": [
+                    "genome_size"
+                ]
             },
             "ploidy": {
-                "type": "integer",
+                "type": [
+                    "integer",
+                    "string"
+                ],
                 "minimum": 1,
-                "errorMessage": "The expected ploidy: a whole number, 1 or more",
-                "meta": ["ploidy"]
+                "pattern": "^NA$",
+                "errorMessage": "The expected ploidy: a whole number, 1 or more; NA when unknown",
+                "meta": [
+                    "ploidy"
+                ]
             },
             "n_chromosomes": {
-                "type": "integer",
+                "type": [
+                    "integer",
+                    "string"
+                ],
                 "minimum": 1,
-                "errorMessage": "The expected number of nuclear chromosomes: a whole number, 1 or more",
-                "meta": ["n_chromosomes"]
+                "pattern": "^NA$",
+                "errorMessage": "The expected number of nuclear chromosomes: a whole number, 1 or more; NA when unknown",
+                "meta": [
+                    "n_chromosomes"
+                ]
             },
             "busco_lineage": {
                 "type": "string",
-                "pattern": "^[a-z0-9_.]+$",
-                "errorMessage": "A BUSCO lineage dataset, as `busco --list-datasets` names it",
-                "meta": ["busco_lineage"]
+                "pattern": "^([a-z0-9_.]+|NA)$",
+                "errorMessage": "A BUSCO lineage dataset, as `busco --list-datasets` names it; NA to let BUSCO choose",
+                "meta": [
+                    "busco_lineage"
+                ]
             },
             "genetic_code": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 33,
-                "default": 1,
-                "errorMessage": "The NCBI translation table of the nuclear genes: 1, or 12 for the CUG-Ser clade, 26 for the CUG-Ala clade",
-                "meta": ["genetic_code"]
+                "type": [
+                    "integer",
+                    "string"
+                ],
+                "enum": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    9,
+                    10,
+                    11,
+                    12,
+                    13,
+                    14,
+                    15,
+                    16,
+                    21,
+                    22,
+                    23,
+                    24,
+                    25,
+                    26,
+                    27,
+                    28,
+                    29,
+                    30,
+                    31,
+                    32,
+                    33,
+                    "NA"
+                ],
+                "errorMessage": "An NCBI translation table for the nuclear genes: 1, or 12 for the CUG-Ser clade, 26 for the CUG-Ala clade; NA when unknown",
+                "meta": [
+                    "genetic_code"
+                ]
             },
             "telomere_repeat": {
                 "type": "string",
-                "pattern": "^[ACGTacgt]+$",
-                "errorMessage": "The telomeric repeat unit, in bases (TGTGGG); found from the reads when absent",
-                "meta": ["telomere_repeat"]
+                "pattern": "^([ACGTacgt]+|NA)$",
+                "errorMessage": "The telomeric repeat unit, in bases (TGTGGG); NA, or empty, to find it from the reads",
+                "meta": [
+                    "telomere_repeat"
+                ]
             }
         },
-        "required": ["species", "ont"]
+        "required": [
+            "species",
+            "ont"
+        ]
     }
 }
