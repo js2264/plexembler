@@ -50,6 +50,11 @@ follow [semantic versioning](https://semver.org).
 - **`plexembler select`**, which keeps one candidate of a step by its checks
   and writes why; **`plexembler ani`**, the identity between the species of a
   pool (skani), with a warning above 95 %.
+- **The benchmark pool** (`-profile benchmark`): three yeasts, two of a genus,
+  their nanopore reads and their pool's WGS and Arima Hi-C simulated from their
+  references by `benchmarks/make_benchmark_data.py`, published as the release
+  `benchmark-data-v1`; `benchmarks/evaluate.py` checks a milestone's "Done
+  when" on its results.
 - **The test data**, version 2: 30× of nanopore reads per species and 10,000
   WGS pairs, so that the test profile assembles; its second species leaves its
   chemistry and genome size to the pipeline.
