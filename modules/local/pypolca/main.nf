@@ -14,7 +14,7 @@ process PYPOLCA {
     output:
     tuple val(meta), path("${prefix}.fa.gz") , emit: fasta
     tuple val(meta), path("${prefix}.report"), emit: report
-    tuple val("${task.process}"), val('pypolca'), eval("pypolca --version 2>&1 | sed 's/^.*version //'"), emit: versions_pypolca, topic: versions
+    tuple val("${task.process}"), val('pypolca'), eval("pypolca --version 2>/dev/null | sed -n 's/^.*version //p'"), emit: versions_pypolca, topic: versions
 
     when:
     task.ext.when == null || task.ext.when

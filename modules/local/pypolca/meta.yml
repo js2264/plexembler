@@ -48,7 +48,7 @@ output:
       - pypolca:
           type: string
           description: The tool
-      - "pypolca --version 2>&1 | sed 's/^.*version //'":
+      - "pypolca --version 2>/dev/null | sed -n 's/^.*version //p'":
           type: eval
           description: Its version
 topics:
@@ -59,7 +59,7 @@ topics:
       - pypolca:
           type: string
           description: The tool
-      - "pypolca --version 2>&1 | sed 's/^.*version //'":
+      - "pypolca --version 2>/dev/null | sed -n 's/^.*version //p'":
           type: eval
           description: Its version
 authors:

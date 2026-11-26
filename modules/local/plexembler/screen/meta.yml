@@ -74,6 +74,16 @@ output:
       - "plexembler --version | sed 's/.* //'":
           type: eval
           description: Its version
+  versions_samtools:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - samtools:
+          type: string
+          description: The tool
+      - "samtools version | sed '1!d;s/.* //'":
+          type: eval
+          description: Its version
 topics:
   versions:
     - - ${task.process}:
@@ -83,6 +93,15 @@ topics:
           type: string
           description: The tool
       - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+    - - ${task.process}:
+          type: string
+          description: The process
+      - samtools:
+          type: string
+          description: The tool
+      - "samtools version | sed '1!d;s/.* //'":
           type: eval
           description: Its version
 authors:

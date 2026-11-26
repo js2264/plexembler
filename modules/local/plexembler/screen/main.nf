@@ -17,6 +17,7 @@ process PLEXEMBLER_SCREEN {
     tuple val(meta), path("${meta.id}.screen_mqc.tsv") , emit: multiqc
     tuple val(meta), path("*.log")                     , emit: log
     tuple val("${task.process}"), val('plexembler'), eval("plexembler --version | sed 's/.* //'"), emit: versions_plexembler, topic: versions
+    tuple val("${task.process}"), val('samtools'), eval("samtools version | sed '1!d;s/.* //'"), emit: versions_samtools, topic: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -36,6 +37,11 @@ process PLEXEMBLER_SCREEN {
         -p ${meta.id} \\
         -o . \\
         ${args}
+    # bgzip, so that each species' contigs can be indexed where they lie.
+    for fasta in *.screened.fa.gz; do
+        zcat \${fasta} | bgzip -@ ${task.cpus} > bgzipped.fa.gz
+        mv bgzipped.fa.gz \${fasta}
+    done
     """
 
     stub:
