@@ -90,6 +90,9 @@ lint:
     # bump-my-version's pattern for CITATION.cff's date: its doubled braces are
     # a format string's escapes (chromokit's template).
     - pyproject.toml
+    # docker/metadata-action's tag pattern (`type=semver,pattern={{version}}`),
+    # in the image job of chromokit's template.
+    - .github/workflows/release.yml
   # The tests read tests/data/ through the test profile (CONVENTIONS.md § 13),
   # not nf-core/test-datasets: no test-data base paths.
   nf_test_content:
