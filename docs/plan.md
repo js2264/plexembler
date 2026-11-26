@@ -45,6 +45,25 @@ interface, and that is the freedom kept.
 - **nf-core releases a pipeline from 1.0.0**, so plexembler stays
   nf-core-compatible rather than becoming an nf-core pipeline (T6).
 
+## Decisions
+
+Taken on 2026-11-26, from the maintainer's answers; each is written again where
+it applies.
+
+| Topic | Decision |
+|---|---|
+| Nanopore data | Mixed or unknown chemistries: a samplesheet column `chemistry` (`r10`, `r9`, or `NA`, told from the reads' median quality), R10.4.1 assumed until then |
+| Strains | Haploid or homozygous: one collapsed assembly per species. hifiasm, purge_dups and HapHiC are opt-in |
+| Hi-C | Arima's kit (DpnII and HinfI): its four junctions are the default; YaHS and instaGRAAL, in its `cpu` mode, are the scaffolders |
+| Compute | Workstations with and without a GPU, SLURM clusters with and without GPU nodes: every GPU step is opt-in (`-profile gpu`) and has a CPU path |
+| Delivery | A pull request per milestone into `main`, squash-merged by the maintainer |
+| Benchmark | Public data of yeasts with T2T references, mixed in silico (T2) |
+| Upstream | hicstuff, instaGRAAL, chromosomix and metacooler are attached: their changes are prepared there (T4, T7), and worked around here until they are released |
+| The package's container | An image on GHCR per release, `ghcr.io/js2264/plexembler:X.Y.Z`, built from the released wheel; PyPI later (T1) |
+
+Still open, and asked when their milestone comes: how close the species of a
+pool are (M2), and the RNA-seq design (M5).
+
 ## How a step is built
 
 Every box below is done when all of this is:
@@ -84,6 +103,8 @@ The repository, and what every later step relies on. Not released.
 - [x] CI: the package (`ci.yml`), the pipeline (`pipeline.yml`: lint, nf-core
       lint, nf-test on Nextflow 26.04.0 and the newest), the docs, the
       changelog check, the release, Dependabot.
+- [x] Unknown values (`NA`) in the species samplesheet, and its `chemistry`
+      column.
 - [ ] GitHub's settings (T5).
 - [ ] The benchmark pool's small set, `test-data-v1` (T2).
 - [ ] The package's container, which M1's local modules need (T1).
@@ -96,18 +117,20 @@ usable as a draft genome on its own.
 - [ ] **Nanopore input.** FASTQ or Dorado's unaligned BAM (`samtools fastq -T '*'`,
       keeping its tags); filtered by length and quality (`chopper`); capped at
       `--ont_max_depth` (100×) of the longest reads (`filtlong --target_bases`,
-      or `rasusa`). The samplesheet's `ont` takes `.bam`.
+      or `rasusa`). The samplesheet's `ont` takes `.bam`. The species'
+      `chemistry` sets Flye's mode (`--nano-hq` for `r10`, `--nano-raw` for
+      `r9`) and Medaka's model; `NA` is told from the reads' median quality
+      (Q15 and above: `r10`).
 - [ ] **What the samplesheet leaves unknown** (`NA`): the genome size, from the
       nanopore reads (LRGE), before the depth cap needs it; the ploidy, from the
       k-mer spectrum of the species' nanopore reads (GenomeScope2, Smudgeplot),
       then of its own WGS reads once M2 has split them, the species treated as
       haploid until then. Each estimate is reported as one, beside what the
       samplesheet gave when it gave something.
-- [ ] **Assemblers, as candidates** (`--assemblers flye,hifiasm`): Flye
-      `--nano-hq` by default, `--genome-size` from the samplesheet or its
-      estimate; hifiasm
-      `--ont` for heterozygous species, its haplotypes kept as candidates
-      (nf-core: `flye`, `hifiasm`).
+- [ ] **Assemblers, as candidates** (`--assemblers flye`, by default): Flye,
+      `--genome-size` from the samplesheet or its estimate; hifiasm `--ont`
+      opt-in (`--assemblers flye,hifiasm`), for R10 reads, its haplotypes kept
+      as candidates for a heterozygous species (nf-core: `flye`, `hifiasm`).
 - [ ] **Contigs named after their species:** `plexembler rename`, in a local
       module `PLEXEMBLER_RENAME`.
 - [ ] **Nanopore polishing** (`--ont_polisher medaka|dorado|none`): Medaka
@@ -226,8 +249,8 @@ its Hi-C maps.
         `instagraal-endtoend contigs.fa pairs.gz -e <enzymes> --mode cpu`, or
         `--instagraal_mode default` (MCMC and refine) on a GPU (`process_gpu`);
         not for a library made without an enzyme;
-      - HapHiC (local), for species with a `ploidy` of 2 or more and an
-        `n_chromosomes`.
+      - HapHiC (local), opt-in, for species with a `ploidy` of 2 or more and
+        an `n_chromosomes`.
 - [ ] **Layouts as AGP:** `plexembler agp`: instaGRAAL's `final_info_frags.txt`
       to AGP (until instaGRAAL writes one, T4); AGP to FASTA, checked against the
       contigs.
@@ -364,14 +387,21 @@ Spearman's ρ ≥ 0.9 for every species.
 
 ### T1 · The package's container
 
-The local modules that run `plexembler <command>` need it in a container.
+The local modules that run `plexembler <command>` need it in a container: an
+image on GHCR per release (Decisions), a deviation from CONVENTIONS.md § 15,
+which publishes images only for what pip cannot install. Its reason: the
+pipeline's own steps need a container before the package is anywhere else.
 
-- [ ] PyPI's trusted publisher for `plexembler` (`release.yml`, environment
-      `pypi`), then v0.1.0 on PyPI; its bioconda recipe (CONVENTIONS.md § 0), whose
-      BioContainers image the modules use. Until bioconda has it, the Seqera
-      Containers image of the PyPI release.
-- [ ] Until v0.1.0 is out, CI builds an image of the checkout and the tests use
-      it (`pipeline.yml`), so that a pull request tests its own code.
+- [ ] `Dockerfile` and `.dockerignore` (the released wheel, on a pinned Python
+      base), and `release.yml`'s image job: `ghcr.io/js2264/plexembler:X.Y.Z` and
+      `latest`, linux/amd64 and linux/arm64, `docker run … plexembler --version`
+      before it is pushed.
+- [ ] PyPI's publishing, opt-in: `release.yml` publishes to PyPI only once the
+      repository variable `PUBLISH_PYPI` is `true` (after PyPI's trusted
+      publisher is set up), so that a release does not fail before.
+- [ ] The local modules: `container "ghcr.io/js2264/plexembler:<version>"`, the
+      pipeline's own version; `pipeline.yml` builds that image from the
+      checkout before nf-test, so that a pull request tests its own code.
 
 ### T2 · Test data and the benchmark pool
 
@@ -450,18 +480,18 @@ from M2 on.
 
 ## Questions that change defaults
 
-1. **The nanopore chemistry and basecalling** (R10.4.1 and Dorado SUP? BAMs with
-   move tables?): the assembler, `dorado polish`, Merqury on nanopore k-mers.
-2. **The strains** (haploid lab strains, wild diploids, hybrids): purge_dups,
-   hifiasm's haplotypes, HapHiC.
-3. **The Hi-C protocol of each pool** (Arima, DpnII, Micro-C): which scaffolders
-   run.
-4. **How close the species of a pool are** (any pair above 95 % ANI?): pool
-   design, `--deconvolve_mapq`.
-5. **The RNA-seq design** (stranded? how many conditions?): whether differential
-   expression comes in scope.
-6. **Where it runs** (the workstation's size, the cluster and its profile): the
-   labels' defaults in `conf/base.config`.
+The first four were answered ([Decisions](#decisions)):
+
+1. ~~**The nanopore chemistry and basecalling**~~: mixed or unknown, a
+   `chemistry` column.
+2. ~~**The strains**~~: haploid or homozygous.
+3. ~~**The Hi-C protocol of each pool**~~: Arima.
+4. ~~**Where it runs**~~: all four of workstation and cluster, with and without
+   GPUs.
+5. **How close the species of a pool are** (any pair above 95 % ANI?): pool
+   design, `--deconvolve_mapq`. Asked in M2.
+6. **The RNA-seq design** (stranded? how many conditions?): whether differential
+   expression comes in scope. Asked in M5.
 
 ## Risks
 
