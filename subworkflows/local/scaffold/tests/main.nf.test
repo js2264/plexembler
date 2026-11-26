@@ -1,0 +1,43 @@
+nextflow_workflow {
+
+    name "Test subworkflow SCAFFOLD"
+    script "../main.nf"
+    workflow "SCAFFOLD"
+
+    tag "subworkflows"
+    tag "subworkflows_local"
+    tag "scaffold"
+
+    test("a species with Hi-C and one without - stub") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                def hic = [
+                    file('${moduleDir}/../../../tests/data/pool_hic_R1.fastq.gz', checkIfExists: true),
+                    file('${moduleDir}/../../../tests/data/pool_hic_R2.fastq.gz', checkIfExists: true),
+                ]
+                input[0] = channel.of(
+                    [ [ id: 'sp1', pool: 'poolA', n_chromosomes: 2 ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ],
+                    [ [ id: 'sp2', pool: 'poolB', n_chromosomes: null ], file('${moduleDir}/../../../tests/data/truth/sp2.fa', checkIfExists: true) ],
+                )
+                input[1] = channel.of(
+                    [ [ id: 'sp1', pool: 'poolA', library: 'hic', type: 'hic', enzymes: 'DpnII,HinfI', holdout: false ], hic ],
+                    [ [ id: 'sp1', pool: 'poolA', library: 'hic', type: 'hic', enzymes: 'DpnII,HinfI', holdout: true ], hic ],
+                )
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                // Both species finished; only sp1 scaffolded.
+                { assert workflow.out.genome.size() == 2 },
+                { assert workflow.out.hic.size() == 1 },
+            )
+        }
+    }
+}

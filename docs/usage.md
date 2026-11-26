@@ -63,7 +63,7 @@ Huva,poolA,ont/Huva.fastq.gz,NA,NA,NA,NA
 | `chemistry` | no | The nanopore chemistry: `r10` (R10.4.1, Dorado SUP or HAC) or `r9` (R9.4.1 and older). It sets Flye's mode (`--nano-hq`, `--nano-raw`), Medaka's model and chopper's lowest quality. | told from the reads' median quality, NanoPlot's: Q15 and above is `r10` |
 | `genome_size` | no | The expected genome size, in bases, with an optional `k`, `m` or `g` (`12m`). The nanopore reads are capped at `--ont_max_depth` times it. | estimated from the nanopore reads by LRGE (`species/<species>/estimates/`) |
 | `ploidy` | no | The expected ploidy. A haploid species' assemblies keep no other haplotype's contigs (Flye's `--no-alt-contigs`, hifiasm's `-l0`). | haploid; GenomeScope2's fit of the nanopore k-mers hints at heterozygosity (nanopore errors inflate it), the species' own short reads tell it (milestone 2), and allele balance (milestone 6) |
-| `n_chromosomes` | no | The expected number of nuclear chromosomes: a check of the scaffolds, and HapHiC's input. | scaffolds judged without it; HapHiC skipped (milestone 3) |
+| `n_chromosomes` | no | The expected number of nuclear chromosomes: the genome's longest scaffolds, that many, are named its chromosomes ([`plexembler finalize`](cli.md#finalize)); HapHiC's input (to come). | every scaffold of `--min_chromosome` bases (100 kb) or more is a chromosome |
 | `busco_lineage` | no | A BUSCO lineage (`busco --list-datasets`), such as `saccharomycetes_odb12`. | `--busco_lineage`: `auto_euk` by default, BUSCO's choice |
 | `genetic_code` | no | The NCBI translation table of the nuclear genes: `1`, `12` for the CUG-Ser clade, `26` for the CUG-Ala clade. | inferred from the genome; `1` until then (milestone 4) |
 | `telomere_repeat` | no | The telomeric repeat unit (`TGTGGG`). | found from the reads (milestone 3) |
@@ -201,6 +201,22 @@ species' copy, 85 to 95 % identical.
   dropped, or named its species' mitochondrion, from each species' nanopore
   depth on it, its identity to the other species' contigs and its Hi-C
   contacts ([`plexembler screen`](cli.md#screen)).
+
+## Chromosomes
+
+Each species' screened contigs become its genome (milestone 3 of the
+[plan](plan.md); [the parameters](parameters.md#chromosomes)): the pool split
+again on them, each species scaffolded with its own Hi-C pairs (YaHS, told the
+restriction motifs of the library's `enzymes`), the scaffolds named, the
+chromosomes first ([`plexembler finalize`](cli.md#finalize)), and its Hi-C map
+made on the genome (pairtools, cooler; its finest bin `--map_resolution`,
+1 kb). A Micro-C library (`enzymes` `none`) scaffolds too, without motifs. A
+species whose pool has no Hi-C library is not scaffolded: its genome is its
+contigs, named the same way.
+
+The scaffolds are YaHS's, uncurated. The steps that check and correct them
+(the junctions' support on the map, the telomeres, a second scaffolder) are to
+come; until then, look at each species' map before trusting its chromosomes.
 
 ## Profiles
 

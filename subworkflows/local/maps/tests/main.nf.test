@@ -1,0 +1,42 @@
+nextflow_workflow {
+
+    name "Test subworkflow MAPS"
+    script "../main.nf"
+    workflow "MAPS"
+
+    tag "subworkflows"
+    tag "subworkflows_local"
+    tag "maps"
+
+    test("a species' map - stub") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                def sizes = file("\${launchDir}/sp1.chrom.sizes")
+                sizes.text = 'sp1_chr01\\t24000\\nsp1_chr02\\t16000\\n'
+                input[0] = channel.of([ [ id: 'sp1' ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ])
+                input[1] = channel.of([ [ id: 'sp1' ], sizes ])
+                input[2] = channel.of([
+                    [ id: 'sp1' ],
+                    [
+                        file('${moduleDir}/../../../tests/data/pool_hic_R1.fastq.gz', checkIfExists: true),
+                        file('${moduleDir}/../../../tests/data/pool_hic_R2.fastq.gz', checkIfExists: true),
+                    ],
+                ])
+                input[3] = 1000
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.out.mcool.size() == 1 },
+                { assert workflow.out.pairs.size() == 1 },
+            )
+        }
+    }
+}

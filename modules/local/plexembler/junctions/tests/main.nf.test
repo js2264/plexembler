@@ -1,0 +1,61 @@
+nextflow_process {
+
+    name "Test process PLEXEMBLER_JUNCTIONS"
+    script "../main.nf"
+    process "PLEXEMBLER_JUNCTIONS"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plexembler"
+    tag "plexembler/junctions"
+
+    test("a join with too few pairs to judge") {
+
+        when {
+            process {
+                """
+                def agp = file("\${launchDir}/sp1.agp")
+                agp.text = [
+                    ['sp1_chr01', 1, 1000, 1, 'W', 'sp1_contig_1', 1, 1000, '+'],
+                    ['sp1_chr01', 1001, 1100, 2, 'N', 100, 'scaffold', 'yes', 'proximity_ligation'],
+                    ['sp1_chr01', 1101, 2100, 3, 'W', 'sp1_contig_2', 1, 1000, '+'],
+                ].collect { row -> row.join('\\t') }.join('\\n') + '\\n'
+                def pairs = file("\${launchDir}/sp1.pairs")
+                pairs.text = [
+                    '## pairs format v1.0',
+                    ['r1', 'sp1_chr01', 10, 'sp1_chr01', 300, '+', '-', 'UU'].join('\\t'),
+                    ['r2', 'sp1_chr01', 900, 'sp1_chr01', 1200, '+', '-', 'UU'].join('\\t'),
+                ].join('\\n') + '\\n'
+                input[0] = [ [ id: 'sp1' ], pairs, agp ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.table[0][1]).readLines()[1].endsWith('thin') },
+            )
+        }
+    }
+
+    test("a join - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [ [ id: 'sp1' ], file('${moduleDir}/main.nf'), file('${moduleDir}/main.nf') ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.table.size() == 1 },
+            )
+        }
+    }
+}

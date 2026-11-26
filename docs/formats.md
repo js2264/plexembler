@@ -67,6 +67,20 @@ the same identities, a row and a column per species, `100.00` on its diagonal.
 | `aligned_fraction_a`, `aligned_fraction_b` | The share of each genome that skani aligned, in percent |
 | `verdict` | `too close` (above `--warn-above`, 95 %), `same genus` (from `--genus-above`, 85 %), or `distinct` |
 
+## The genome's names { #genome-names }
+
+What [`plexembler finalize`](cli.md#finalize) writes beside a species' genome,
+`<species>.names.tsv`: tab-separated, with a header, a row per sequence of the
+genome, in its order: the chromosomes, longest first, then the organelle, then
+the unplaced scaffolds, longest first.
+
+| Column | Description |
+|---|---|
+| `name` | Its name in the genome: `<species>_chr01`, …, `<species>_chrM`, `<species>_unplaced_01`, … |
+| `original_name` | Its name in the scaffolder's output (`scaffold_1`, …), or the contig's, for a species finished from its contigs |
+| `length_bp` | Its length, in bases |
+| `role` | `chromosome`, `organelle` or `unplaced` |
+
 ## The report of a species
 
 `plexembler report` (milestone 6 of the [plan](plan.md)) writes the report of

@@ -191,6 +191,29 @@
                 }
             }
         },
+        "chromosomes_options": {
+            "title": "Chromosomes",
+            "type": "object",
+            "fa_icon": "fas fa-dna",
+            "description": "Each species scaffolded with its own Hi-C pairs, its scaffolds named, and its Hi-C map (milestone 3).",
+            "properties": {
+                "min_chromosome": {
+                    "type": "integer",
+                    "default": 100000,
+                    "minimum": 1,
+                    "description": "A species without n_chromosomes: the shortest scaffold named a chromosome, in bases.",
+                    "help_text": "When the samplesheet gives a species' n_chromosomes, its longest scaffolds, that many, are its chromosomes; the others are unplaced (docs/output.md, The genome).",
+                    "fa_icon": "fas fa-ruler-horizontal"
+                },
+                "map_resolution": {
+                    "type": "integer",
+                    "default": 1000,
+                    "minimum": 1,
+                    "description": "The finest bin of each species' Hi-C map, in bases; the map is zoomed out from it.",
+                    "fa_icon": "fas fa-th"
+                }
+            }
+        },
         "institutional_config_options": {
             "title": "Institutional config options",
             "type": "object",
@@ -340,6 +363,9 @@
         },
         {
             "$ref": "#/$defs/pool_options"
+        },
+        {
+            "$ref": "#/$defs/chromosomes_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"

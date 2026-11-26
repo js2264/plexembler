@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "scaffold"
+description: Each species scaffolded with its own Hi-C pairs (YaHS) and finished (plexembler finalize); a species without Hi-C, finished from its contigs
+keywords:
+  - scaffolding
+  - hi-c
+  - yahs
+components:
+  - cat/fastq
+  - bwamem2/index
+  - bwamem2/mem
+  - samtools/faidx
+  - yahs
+  - plexembler/finalize
+input:
+  - ch_contigs:
+      type: file
+      description: |
+        Each species' screened contigs. Structure: [ val(meta), path(fasta) ]
+  - ch_reads:
+      type: file
+      description: |
+        Each species' split reads (pool_deconvolve). Structure: [ val(meta), [ path(R1), path(R2) ] ]
+output:
+  - genome:
+      type: file
+      description: |
+        Each species' genome, bgzipped. Structure: [ val(meta), path(fasta) ]
+  - fai:
+      type: file
+      description: |
+        Its index. Structure: [ val(meta), path(fai) ]
+  - sizes:
+      type: file
+      description: |
+        Its chromosome sizes. Structure: [ val(meta), path(sizes) ]
+  - agp:
+      type: file
+      description: |
+        Its AGP, the scaffolded species. Structure: [ val(meta), path(agp) ]
+  - hic:
+      type: file
+      description: |
+        Each species' Hi-C pairs. Structure: [ val(meta), [ path(R1), path(R2) ] ]
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"
