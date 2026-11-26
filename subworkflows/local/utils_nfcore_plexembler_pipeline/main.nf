@@ -287,6 +287,11 @@ def toolCitationText() {
             "Merqury and meryl (Rhie et al. 2020),",
             "GenomeScope 2.0 (Ranallo-Benavidez et al. 2020),",
             "skani (Shaw and Yu 2023),",
+            "bwa-mem2 (Vasimuddin et al. 2019),",
+            "BWA (Li and Durbin 2009),",
+            "Polypolish (Wick and Holt 2022),",
+            "pypolca (Bouras et al. 2024),",
+            "minimap2 (Li 2018),",
             "FastQC (Andrews 2010),",
             "MultiQC (Ewels et al. 2016)",
             "."
@@ -311,6 +316,11 @@ def toolBibliographyText() {
             "<li>Rhie, A., Walenz, B. P., Koren, S., & Phillippy, A. M. (2020). Merqury: reference-free quality, completeness, and phasing assessment for genome assemblies. Genome Biology, 21(1), 245. doi: 10.1186/s13059-020-02134-9</li>",
             "<li>Ranallo-Benavidez, T. R., Jaron, K. S., & Schatz, M. C. (2020). GenomeScope 2.0 and Smudgeplot for reference-free profiling of polyploid genomes. Nature Communications, 11(1), 1432. doi: 10.1038/s41467-020-14998-3</li>",
             "<li>Shaw, J., & Yu, Y. W. (2023). Fast and robust metagenomic sequence comparison through sparse chaining with skani. Nature Methods, 20(11), 1661-1665. doi: 10.1038/s41592-023-02018-3</li>",
+            "<li>Vasimuddin, M., Misra, S., Li, H., & Aluru, S. (2019). Efficient Architecture-Aware Acceleration of BWA-MEM for Multicore Systems. IEEE IPDPS, 314-324. doi: 10.1109/IPDPS.2019.00041</li>",
+            "<li>Li, H., & Durbin, R. (2009). Fast and accurate short read alignment with Burrows-Wheeler transform. Bioinformatics, 25(14), 1754-1760. doi: 10.1093/bioinformatics/btp324</li>",
+            "<li>Wick, R. R., & Holt, K. E. (2022). Polypolish: Short-read polishing of long-read bacterial genome assemblies. PLoS Computational Biology, 18(1), e1009802. doi: 10.1371/journal.pcbi.1009802</li>",
+            "<li>Bouras, G., et al. (2024). How low can you go? Short-read polishing of Oxford Nanopore bacterial genome assemblies. Microbial Genomics, 10(6), 001254. doi: 10.1099/mgen.0.001254</li>",
+            "<li>Li, H. (2018). Minimap2: pairwise alignment for nucleotide sequences. Bioinformatics, 34(18), 3094-3100. doi: 10.1093/bioinformatics/bty191</li>",
             "<li>Andrews S, (2010) FastQC, URL: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/).</li>",
             "<li>Ewels, P., Magnusson, M., Lundin, S., & Käller, M. (2016). MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics , 32(19), 3047–3048. doi: /10.1093/bioinformatics/btw354</li>"
         ].join(' ').trim()

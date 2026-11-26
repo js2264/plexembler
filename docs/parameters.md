@@ -30,6 +30,19 @@ Each species' nanopore reads, its assemblies as candidates, their polishing and 
 | `busco_db` | A folder of BUSCO's lineages, downloaded beforehand (`busco --download`), for runs without network. | `string` |  |  |  |
 | `kmer_size` | The k-mers' length, for Merqury's QV and completeness and GenomeScope2. | `integer` | 21 |  |  |
 
+## The pool, split
+
+Each pooled library split between its pool's species, and each species polished with its own short reads (milestone 2).
+
+| Parameter | Description | Type | Default | Required | Hidden |
+|-----------|-----------|-----------|-----------|-----------|-----------|
+| `deconvolve_mapq` | A read's lowest mapping quality to be given to a species: below, it is ambiguous. | `integer` | 20 |  |  |
+| `deconvolve_min_identity` | A read's lowest identity to its species' contig: below, it is a read of another species. <details><summary>Help</summary><small>A read of a region missing from its own species' contigs aligns, unique, to a sister species' copy, 85 to 95 % identical: the identity, not the mapping quality, catches it (docs/plan.md, Decisions).</small></details>| `number` | 0.98 |  |  |
+| `polish_reads` | The short reads each species is polished with: auto (its WGS pairs, or its Hi-C reads cut at their junctions when its pool has no WGS library), wgs or hic. (accepted: `auto`\|`wgs`\|`hic`) | `string` | auto |  |  |
+| `sr_polisher` | Short-read polishing: Polypolish, then pypolca, kept only if it raises the QV; or none. (accepted: `polypolish,pypolca`\|`none`) | `string` | polypolish,pypolca |  |  |
+| `polish_holdout` | The share of each library's pairs kept apart from the polishing, whose k-mers the QV guard counts against. | `number` | 0.1 |  |  |
+| `save_split_reads` | Save each species' split reads, of each pooled library. | `boolean` |  |  |  |
+
 ## Institutional config options
 
 Parameters used to describe centralised config profiles. These should not be edited.

@@ -132,6 +132,65 @@
                 }
             }
         },
+        "pool_options": {
+            "title": "The pool, split",
+            "type": "object",
+            "fa_icon": "fas fa-object-ungroup",
+            "description": "Each pooled library split between its pool's species, and each species polished with its own short reads (milestone 2).",
+            "properties": {
+                "deconvolve_mapq": {
+                    "type": "integer",
+                    "default": 20,
+                    "minimum": 0,
+                    "maximum": 60,
+                    "description": "A read's lowest mapping quality to be given to a species: below, it is ambiguous.",
+                    "fa_icon": "fas fa-filter"
+                },
+                "deconvolve_min_identity": {
+                    "type": "number",
+                    "default": 0.98,
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "A read's lowest identity to its species' contig: below, it is a read of another species.",
+                    "help_text": "A read of a region missing from its own species' contigs aligns, unique, to a sister species' copy, 85 to 95 % identical: the identity, not the mapping quality, catches it (docs/plan.md, Decisions).",
+                    "fa_icon": "fas fa-percentage"
+                },
+                "polish_reads": {
+                    "type": "string",
+                    "default": "auto",
+                    "enum": [
+                        "auto",
+                        "wgs",
+                        "hic"
+                    ],
+                    "description": "The short reads each species is polished with: auto (its WGS pairs, or its Hi-C reads cut at their junctions when its pool has no WGS library), wgs or hic.",
+                    "fa_icon": "fas fa-random"
+                },
+                "sr_polisher": {
+                    "type": "string",
+                    "default": "polypolish,pypolca",
+                    "enum": [
+                        "polypolish,pypolca",
+                        "none"
+                    ],
+                    "description": "Short-read polishing: Polypolish, then pypolca, kept only if it raises the QV; or none.",
+                    "fa_icon": "fas fa-magic"
+                },
+                "polish_holdout": {
+                    "type": "number",
+                    "default": 0.1,
+                    "minimum": 0,
+                    "maximum": 0.5,
+                    "description": "The share of each library's pairs kept apart from the polishing, whose k-mers the QV guard counts against.",
+                    "fa_icon": "fas fa-hand-paper"
+                },
+                "save_split_reads": {
+                    "type": "boolean",
+                    "description": "Save each species' split reads, of each pooled library.",
+                    "fa_icon": "fas fa-save"
+                }
+            }
+        },
         "institutional_config_options": {
             "title": "Institutional config options",
             "type": "object",
@@ -278,6 +337,9 @@
         },
         {
             "$ref": "#/$defs/contigs_options"
+        },
+        {
+            "$ref": "#/$defs/pool_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"

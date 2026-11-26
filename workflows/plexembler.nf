@@ -7,6 +7,9 @@ include { ONT_READS              } from '../subworkflows/local/ont_reads'
 include { FASTQC                 } from '../modules/nf-core/fastqc/main'
 include { KMERS                  } from '../subworkflows/local/kmers'
 include { CONTIGS                } from '../subworkflows/local/contigs'
+include { POOL_DECONVOLVE        } from '../subworkflows/local/pool_deconvolve'
+include { POLISH_SR              } from '../subworkflows/local/polish_sr'
+include { SCREEN                 } from '../subworkflows/local/screen'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -62,7 +65,7 @@ workflow PLEXEMBLER {
     // checked, one kept; and the identity between the species of each pool
     //
     def ch_bams = ch_species
-        .map { meta, ont -> [meta, [ont].flatten().findAll { file -> file.name.endsWith('.bam') }] }
+        .map { meta, ont -> [meta, [ont].flatten().findAll { run -> run.name.endsWith('.bam') }] }
         .filter { _meta, bams -> bams }
     CONTIGS(
         ONT_READS.out.reads,
@@ -77,10 +80,31 @@ workflow PLEXEMBLER {
     ch_multiqc_files = ch_multiqc_files.mix(CONTIGS.out.multiqc_files)
 
     //
-    // The steps to come, milestone by milestone (docs/plan.md): the pooled
-    // libraries split between the species (POOL_DECONVOLVE); short-read
-    // polishing, contig screening, Hi-C scaffolding, maps, annotation,
-    // expression and the report of each species.
+    // SUBWORKFLOW: each pooled library split between its pool's species, on their contigs
+    //
+    POOL_DECONVOLVE(CONTIGS.out.contigs, ch_libraries, 'contigs')
+    ch_multiqc_files = ch_multiqc_files.mix(POOL_DECONVOLVE.out.multiqc_files)
+
+    //
+    // SUBWORKFLOW: each species polished with its own short reads, when that raises its QV
+    //
+    def ch_polished = CONTIGS.out.contigs
+    if (params.sr_polisher != 'none') {
+        POLISH_SR(CONTIGS.out.contigs, POOL_DECONVOLVE.out.reads, params.polish_reads, params.kmer_size)
+        ch_polished = POLISH_SR.out.contigs
+        ch_multiqc_files = ch_multiqc_files.mix(POLISH_SR.out.multiqc_files)
+    }
+
+    //
+    // SUBWORKFLOW: each contig kept, moved to another species of its pool, or
+    // dropped; each species' organelle named
+    //
+    SCREEN(ch_polished, ONT_READS.out.reads, POOL_DECONVOLVE.out.contacts)
+    ch_multiqc_files = ch_multiqc_files.mix(SCREEN.out.multiqc_files)
+
+    //
+    // The steps to come, milestone by milestone (docs/plan.md): Hi-C
+    // scaffolding, maps, annotation, expression and the report of each species.
     //
 
     //

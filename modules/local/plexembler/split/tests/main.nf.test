@@ -1,0 +1,67 @@
+nextflow_process {
+
+    name "Test process PLEXEMBLER_SPLIT"
+    script "../main.nf"
+    process "PLEXEMBLER_SPLIT"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plexembler"
+    tag "plexembler/split"
+
+    test("a Hi-C library's pairs, two species") {
+
+        when {
+            process {
+                """
+                def seq = 'ACGTACGTAC' * 10
+                def qual = 'I' * 100
+                def record = { name, flag, contig, pos -> [name, flag, contig, pos, 60, '100M', '=', 1, 0, seq, qual, 'NM:i:0'].join('\\t') }
+                def sam = file("\${launchDir}/pool.hic.sam")
+                sam.text = [
+                    '@SQ\\tSN:Scer_ctg1\\tLN:10000',
+                    '@SQ\\tSN:Spar_ctg1\\tLN:10000',
+                    record('a', 65, 'Scer_ctg1', 100), record('a', 129, 'Scer_ctg1', 5000),
+                    record('b', 65, 'Spar_ctg1', 100), record('b', 129, 'Spar_ctg1', 6000),
+                    record('c', 65, 'Scer_ctg1', 900), record('c', 129, 'Spar_ctg1', 900),
+                ].join('\\n') + '\\n'
+                input[0] = [ [ id: 'hic', pool: 'poolA', type: 'hic', species: ['Scer', 'Spar'] ], sam ]
+                """
+            }
+        }
+
+        then {
+            def numbers = new groovy.json.JsonSlurper().parse(path(process.out.json[0][1]).toFile())
+            assertAll(
+                { assert process.success },
+                { assert numbers.pairs == 3 },
+                { assert numbers.between_species == 1 },
+                { assert process.out.contacts.size() == 1 },
+            )
+        }
+    }
+
+    test("a WGS library - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                def bam = file("\${launchDir}/pool.wgs.bam")
+                bam.text = 'stub'
+                input[0] = [ [ id: 'wgs', pool: 'poolA', type: 'wgs', species: ['Scer', 'Spar'] ], bam ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                // Each species' pairs and those held out, two files each.
+                { assert process.out.reads[0][1].size() == 8 },
+                { assert process.out.contacts.size() == 0 },
+            )
+        }
+    }
+}

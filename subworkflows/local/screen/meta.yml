@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "screen"
+description: The contig screen - each contig of a pool kept, moved to another species, dropped, or named an organelle, from nanopore depths, identity between species and Hi-C contacts
+keywords:
+  - contamination
+  - screen
+  - organelle
+components:
+  - find/concatenate
+  - minimap2/align
+  - plexembler/screen
+input:
+  - ch_contigs:
+      type: file
+      description: |
+        Each species' contigs. Structure: [ val(meta), path(fasta) ]
+  - ch_reads:
+      type: file
+      description: |
+        Each species' nanopore reads. Structure: [ val(meta), path(fastq) ]
+  - ch_contacts:
+      type: file
+      description: |
+        Each pool's Hi-C contacts between contigs (meta.pool). Structure: [ val(meta), path(tsv) ]
+output:
+  - contigs:
+      type: file
+      description: |
+        Each species' screened contigs. Structure: [ val(meta), path(fasta) ]
+  - table:
+      type: file
+      description: |
+        Each pool's verdicts. Structure: [ val(meta), path(tsv) ]
+  - multiqc_files:
+      type: file
+      description: |
+        The files MultiQC reads. Structure: [ path(file) ]
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

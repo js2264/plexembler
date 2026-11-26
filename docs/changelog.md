@@ -43,7 +43,8 @@ follow [semantic versioning](https://semver.org).
   tags kept, and a new column, `assembler`, names the candidate to keep.
 - **What the samplesheet leaves NA, estimated**: the chemistry from the reads'
   median quality, the genome size by LRGE; and GenomeScope2's fit of each
-  species' nanopore k-mers, which says whether it looks heterozygous.
+  species' nanopore k-mers, a hint of its heterozygosity (nanopore errors
+  inflate it).
 - **The QV of each candidate** against its pool's WGS k-mers, or its own
   nanopore k-mers when the pool has no WGS library; its completeness against
   its own nanopore k-mers.
@@ -55,6 +56,23 @@ follow [semantic versioning](https://semver.org).
   references by `benchmarks/make_benchmark_data.py`, published as the release
   `benchmark-data-v1`; `benchmarks/evaluate.py` checks a milestone's "Done
   when" on its results.
+- **The pool, split** (milestone 2): each pooled WGS and Hi-C library aligned
+  to every species' contigs of its pool at once (bwa-mem2) and split between
+  them by `plexembler split`: a pair to a species when both mates are unique
+  (`--deconvolve_mapq`) and near-identical (`--deconvolve_min_identity`); the
+  ambiguous pairs of each pair of species, the pairs between species and the
+  Hi-C random-ligation rate (epsilon) counted, under
+  `pools/<pool>/deconvolution/`.
+- **Short-read polishing**: each species with its WGS pairs, or, in a pool
+  without WGS, its Hi-C reads cut at their ligation junctions (`plexembler
+  digest`); Polypolish then pypolca, kept only when the QV against pairs held
+  out of the polishing rises (`plexembler select --step polish`);
+  `--polish_reads`, `--sr_polisher`, `--polish_holdout`.
+- **The contig screen**, `plexembler screen`: each contig kept, moved to
+  another species of its pool, dropped, or named its species' mitochondrion
+  (`<species>_chrM`), from each species' nanopore depth on it, its identity to
+  the other species' contigs and its Hi-C contacts; each species' contigs
+  after it in `species/<species>/contigs/`.
 - **The test data**, version 2: 30× of nanopore reads per species and 10,000
   WGS pairs, so that the test profile assembles; its second species leaves its
   chemistry and genome size to the pipeline.

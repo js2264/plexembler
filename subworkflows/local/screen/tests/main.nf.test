@@ -1,0 +1,42 @@
+nextflow_workflow {
+
+    name "Test subworkflow SCREEN"
+    script "../main.nf"
+    workflow "SCREEN"
+
+    tag "subworkflows"
+    tag "subworkflows_local"
+    tag "screen"
+
+    test("a pool of two species, with and without Hi-C - stub") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                def contacts = file("\${launchDir}/pool.hic.contacts.tsv")
+                contacts.text = 'contig_a\\tcontig_b\\tpairs\\n'
+                input[0] = channel.of(
+                    [ [ id: 'sp1', pool: 'pool' ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ],
+                    [ [ id: 'sp2', pool: 'pool' ], file('${moduleDir}/../../../tests/data/truth/sp2.fa', checkIfExists: true) ],
+                )
+                input[1] = channel.of(
+                    [ [ id: 'sp1', pool: 'pool' ], file('${moduleDir}/../../../tests/data/sp1.ont.fastq.gz', checkIfExists: true) ],
+                    [ [ id: 'sp2', pool: 'pool' ], file('${moduleDir}/../../../tests/data/sp2.ont.fastq.gz', checkIfExists: true) ],
+                )
+                input[2] = channel.of([ [ id: 'hic', pool: 'pool' ], contacts ])
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.out.contigs.size() == 2 },
+                { assert workflow.out.contigs.every { meta, _fasta -> meta.pool == 'pool' } },
+                { assert workflow.out.table.size() == 1 },
+            )
+        }
+    }
+}

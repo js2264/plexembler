@@ -1,0 +1,60 @@
+nextflow_process {
+
+    name "Test process PLEXEMBLER_DIGEST"
+    script "../main.nf"
+    process "PLEXEMBLER_DIGEST"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plexembler"
+    tag "plexembler/digest"
+
+    test("a species' Hi-C reads") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'sp1', enzymes: 'DpnII' ],
+                    [
+                        file('${moduleDir}/../../../../tests/data/pool_hic_R1.fastq.gz', checkIfExists: true),
+                        file('${moduleDir}/../../../../tests/data/pool_hic_R2.fastq.gz', checkIfExists: true),
+                    ],
+                ]
+                """
+            }
+        }
+
+        then {
+            def numbers = new groovy.json.JsonSlurper().parse(path(process.out.json[0][1]).toFile())
+            assertAll(
+                { assert process.success },
+                { assert numbers.reads == 2000 },
+                { assert numbers.pieces > 0 },
+            )
+        }
+    }
+
+    test("a species' Hi-C reads - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'sp1', enzymes: 'DpnII,HinfI' ],
+                    [ file('${moduleDir}/../../../../tests/data/pool_hic_R1.fastq.gz', checkIfExists: true) ],
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.reads.size() == 1 },
+            )
+        }
+    }
+}

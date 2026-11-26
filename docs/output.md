@@ -21,8 +21,11 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 │   ├── expression/    <species>.counts.tsv, <species>.tpm.tsv: genes × RNA-seq libraries
 │   ├── variation/     heterozygous sites, ploidy and per-chromosome depth
 │   ├── tracks/        coverage of the RNA-seq, WGS and nanopore reads (bigWig)
-│   ├── candidates/    assembly/<assembler>/ (now): every candidate, its checks; later
-│   │                  every scaffolder's, with its map
+│   ├── contigs/       (now) <species>.contigs.fa.gz: polished with its short reads,
+│   │                  screened, its organelle named <species>_chrM
+│   ├── polish/        (now) the short-read polishing's choice; the Hi-C reads' digestion
+│   ├── candidates/    assembly/<assembler>/ and polish/ (now): every candidate, its
+│   │                  checks; later every scaffolder's, with its map
 │   ├── estimates/     (now) what the samplesheet left NA: the genome size (LRGE);
 │   │                  the k-mer spectrum's fit (GenomeScope2)
 │   ├── reads/         (now, with --save_ont_reads) the nanopore reads as assembled
@@ -32,8 +35,9 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 ├── pools/<pool>/
 │   ├── qc/            fastqc/ (now): the pooled libraries
 │   ├── ani/           (now) the identity between the pool's species (skani)
-│   ├── deconvolution/ each species' share of each library; ambiguous reads; the
-│   │                  nanopore cross-talk between species
+│   ├── deconvolution/ (now) each library split between the species: their shares,
+│   │                  ambiguous pairs, pairs between species, epsilon
+│   ├── screen/        (now) each contig's verdict: kept, moved, dropped, organelle
 │   ├── hic/           the pool's map, a .metacool whose genomes are its species
 │   └── comparative/   orthogroups, species tree, synteny
 ├── multiqc/           multiqc_report.html (now): every step, every species and pool
@@ -114,11 +118,52 @@ says so.
 report of each read of each pooled library (`<library>_1_fastqc.html`,
 `<library>_2_fastqc.html`), the library's runs together.
 
+### The pool, split
+
+`pools/<pool>/deconvolution/contigs/`: each WGS and Hi-C library of the pool,
+aligned to every species' contigs at once (bwa-mem2) and split between the
+species by [`plexembler split`](cli.md#split): `<pool>.<library>.split.tsv`,
+each species' pairs, share, held-out pairs and duplicates;
+`<pool>.<library>.split.json`, every number, with the ambiguous pairs of each
+pair of species, the pairs between species and, for Hi-C, the random-ligation
+rate epsilon; `<pool>.<library>.contacts.tsv` (Hi-C), the unique pairs between
+contigs; and the command's log. The split reads are not kept: each step that
+needs them makes them again from the alignments.
+
+### Short-read polishing
+
+Each species' contigs, polished with its own short reads: its WGS pairs, or,
+when its pool has no WGS library, its Hi-C reads cut at their junctions
+([`plexembler digest`](cli.md#digest)). Polypolish, then pypolca; each kept only
+if its QV, against the k-mers of the pairs held out of the polishing, beats the
+draft's.
+
+- `species/<species>/polish/`: the choice, `<species>.polish.selection.tsv`
+  ([format](formats.md#selection-table)), the kept sequence
+  (`<species>.polish.fa.gz`), and, for Hi-C, the digestion's numbers
+  (`<species>.digest.json`: the reads with 0, 1 and 2 or more junctions, a
+  measure of the library's ligation).
+- `species/<species>/candidates/polish/`: Polypolish's and pypolca's
+  sequences, and their QVs and the draft's (`qc/merqury/*.holdout.qv`).
+
+### The contig screen
+
+[`plexembler screen`](cli.md#screen) weighs each contig's nanopore depth by
+species, its identity to the other species' contigs and its Hi-C contacts.
+
+- `pools/<pool>/screen/<pool>.screen.tsv`: each contig's signals, verdict
+  (`keep`, `move`, `drop`, `organelle`), new name and reason.
+- `species/<species>/contigs/<species>.contigs.fa.gz`: the species' contigs
+  after the screen, those moved in from another species included, its
+  mitochondrion named `<species>_chrM`: what milestone 3 scaffolds.
+
 ### MultiQC
 
 `multiqc/multiqc_report.html`: the reads' QC, each candidate's BUSCO and
 gfastats numbers, the table of candidates of every species, the identity
-between the species of every pool, and the software versions, in one report,
+between the species of every pool, each library's split, each species'
+polishing and its Hi-C reads' digestion, the contig screen, and the software
+versions, in one report,
 with the methods' description and its references.
 
 ### Pipeline information

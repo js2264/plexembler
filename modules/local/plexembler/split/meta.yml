@@ -1,0 +1,95 @@
+name: "plexembler_split"
+description: Splits a pooled library between its pool's species, from its alignments to every species' contigs
+keywords:
+  - deconvolution
+  - pool
+  - plexembler
+tools:
+  - "plexembler":
+      description: "The commands of plexembler's pipeline"
+      homepage: "https://github.com/js2264/plexembler"
+      documentation: "https://js2264.github.io/plexembler/cli/#split"
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: The library's meta map (id, pool, type, species)
+    - alignments:
+        type: file
+        description: bwa-mem2's alignments to the pool's contigs, a pair's records together
+        pattern: "*.{bam,sam}"
+output:
+  reads:
+    - - meta:
+          type: map
+          description: The library's meta map
+      - "*_R{1,2}.fastq.gz":
+          type: file
+          description: Each species' pairs, and those held out
+          pattern: "*_R{1,2}.fastq.gz"
+  table:
+    - - meta:
+          type: map
+          description: The library's meta map
+      - "*.split.tsv":
+          type: file
+          description: Each species' pairs, share, held out and duplicates
+          pattern: "*.split.tsv"
+  json:
+    - - meta:
+          type: map
+          description: The library's meta map
+      - "*.split.json":
+          type: file
+          description: Every number of the split, epsilon for Hi-C
+          pattern: "*.split.json"
+  multiqc:
+    - - meta:
+          type: map
+          description: The library's meta map
+      - "*.split_mqc.tsv":
+          type: file
+          description: The split, for MultiQC
+          pattern: "*.split_mqc.tsv"
+  contacts:
+    - - meta:
+          type: map
+          description: The library's meta map
+      - "*.contacts.tsv":
+          type: file
+          description: A Hi-C library's unique pairs between two contigs
+          pattern: "*.contacts.tsv"
+  log:
+    - - meta:
+          type: map
+          description: The library's meta map
+      - "*.log":
+          type: file
+          description: The command's log
+          pattern: "*.log"
+  versions_plexembler:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

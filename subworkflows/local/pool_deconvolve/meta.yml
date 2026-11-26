@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "pool_deconvolve"
+description: A pool's WGS and Hi-C libraries split between its species - every species' contigs in one reference, each library aligned to it at once, each pair given to a species
+keywords:
+  - deconvolution
+  - pool
+  - bwa-mem2
+components:
+  - cat/fastq
+  - find/concatenate
+  - bwamem2/index
+  - bwamem2/mem
+  - plexembler/split
+input:
+  - ch_contigs:
+      type: file
+      description: |
+        Each species' contigs, named <species>_<contig>. Structure: [ val(meta), path(fasta) ]
+  - ch_libraries:
+      type: file
+      description: |
+        The pooled libraries. Structure: [ val(meta), [ path(fastq) ] ]
+  - stage:
+      type: string
+      description: |
+        The contigs' stage, which names the pool's reference
+output:
+  - reads:
+      type: file
+      description: |
+        Each species' pairs of each library, and those held out (meta.holdout). Structure: [ val(meta), [ path(R1), path(R2) ] ]
+  - split:
+      type: file
+      description: |
+        Each library's numbers. Structure: [ val(meta), path(json) ]
+  - table:
+      type: file
+      description: |
+        Each library's table. Structure: [ val(meta), path(tsv) ]
+  - reference:
+      type: file
+      description: |
+        Each pool's reference. Structure: [ val(meta), path(fasta) ]
+  - contacts:
+      type: file
+      description: |
+        Each Hi-C library's contacts between contigs. Structure: [ val(meta), path(tsv) ]
+  - multiqc_files:
+      type: file
+      description: |
+        The files MultiQC reads. Structure: [ path(file) ]
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

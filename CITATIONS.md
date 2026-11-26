@@ -72,6 +72,26 @@ Every tool a step of the pipeline runs, added with its step ([docs/plan.md](docs
 
   > Shaw J, Yu YW. Fast and robust metagenomic sequence comparison through sparse chaining with skani. Nat Methods. 2023 Nov;20(11):1661-1665. doi: 10.1038/s41592-023-02018-3.
 
+- [bwa-mem2](https://doi.org/10.1109/IPDPS.2019.00041)
+
+  > Vasimuddin M, Misra S, Li H, Aluru S. Efficient Architecture-Aware Acceleration of BWA-MEM for Multicore Systems. IEEE IPDPS. 2019:314-324. doi: 10.1109/IPDPS.2019.00041.
+
+- [BWA](https://doi.org/10.1093/bioinformatics/btp324)
+
+  > Li H, Durbin R. Fast and accurate short read alignment with Burrows-Wheeler transform. Bioinformatics. 2009 Jul 15;25(14):1754-60. doi: 10.1093/bioinformatics/btp324.
+
+- [Polypolish](https://doi.org/10.1371/journal.pcbi.1009802)
+
+  > Wick RR, Holt KE. Polypolish: Short-read polishing of long-read bacterial genome assemblies. PLoS Comput Biol. 2022 Jan 24;18(1):e1009802. doi: 10.1371/journal.pcbi.1009802.
+
+- [pypolca](https://doi.org/10.1099/mgen.0.001254)
+
+  > Bouras G, Judd LM, Edwards RA, Vreugde S, Stinear TP, Wick RR. How low can you go? Short-read polishing of Oxford Nanopore bacterial genome assemblies. Microb Genom. 2024 Jun;10(6):001254. doi: 10.1099/mgen.0.001254.
+
+- [minimap2](https://doi.org/10.1093/bioinformatics/bty191)
+
+  > Li H. Minimap2: pairwise alignment for nucleotide sequences. Bioinformatics. 2018 Sep 15;34(18):3094-3100. doi: 10.1093/bioinformatics/bty191.
+
 - [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
 
 > Andrews, S. (2010). FastQC: A Quality Control Tool for High Throughput Sequence Data [Online].

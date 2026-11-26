@@ -1,0 +1,91 @@
+name: "plexembler_screen"
+description: Keeps, moves or drops each contig of a pool, and names its organelles
+keywords:
+  - contamination
+  - pool
+  - plexembler
+tools:
+  - "plexembler":
+      description: "The commands of plexembler's pipeline"
+      homepage: "https://github.com/js2264/plexembler"
+      documentation: "https://js2264.github.io/plexembler/cli/#screen"
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: The pool's meta map; meta.species its species
+    - contigs:
+        type: file
+        description: Every species' contigs of the pool
+        pattern: "*.{fa,fasta}{,.gz}"
+    - reads:
+        type: file
+        description: Each species' nanopore reads aligned to the contigs, in the order of meta.species
+        pattern: "*.paf"
+    - identity:
+        type: file
+        description: The contigs aligned to each other
+        pattern: "*.paf"
+    - contacts:
+        type: file
+        description: The pool's Hi-C contacts between contigs
+        pattern: "*.contacts.tsv"
+output:
+  fasta:
+    - - meta:
+          type: map
+          description: The pool's meta map
+      - "*.screened.fa.gz":
+          type: file
+          description: Each species' screened contigs
+          pattern: "*.screened.fa.gz"
+  table:
+    - - meta:
+          type: map
+          description: The pool's meta map
+      - "*.screen.tsv":
+          type: file
+          description: Each contig's signals, verdict and new name
+          pattern: "*.screen.tsv"
+  multiqc:
+    - - meta:
+          type: map
+          description: The pool's meta map
+      - "*.screen_mqc.tsv":
+          type: file
+          description: The screen, for MultiQC
+          pattern: "*.screen_mqc.tsv"
+  log:
+    - - meta:
+          type: map
+          description: The pool's meta map
+      - "*.log":
+          type: file
+          description: The command's log
+          pattern: "*.log"
+  versions_plexembler:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"
