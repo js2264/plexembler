@@ -215,6 +215,17 @@ screened.
       coverage makes a QV from its k-mers pessimistic); the polished version is
       kept only if it is better (`plexembler select --step polish`: the draft,
       Polypolish's and pypolca's QVs). pypolca runs `--careful`.
+- [ ] **A polishing guard that sees past the held-out pairs' sampling.** On the
+      benchmark pool the held-out pairs are 3 to 4× of each genome, at which 3
+      to 7 % of a genome's 21-mers are missing from them by chance: the QV reads
+      about 24 to 27 whatever the genome's true quality, and a polishing's gain or
+      harm moves it by hundredths. There, measured against the references, the
+      WGS pairs' polishing fixed 2 of Scer's 3 indels and 2 of Spar's 9 errors,
+      and the Hi-C reads' added errors (Spar: 36 mismatches and 10 indels;
+      Scer: 20 mismatches and 2 indels); the QV saw neither, and the guard's
+      tolerance (1 QV) kept every draft: the small gains lost, the harm
+      avoided. To try: the assembly-only k-mers the candidates differ in,
+      rather than their QVs; a larger hold-out when the coverage allows it.
 - [ ] **Micro-C** (`enzymes` is `none`) has no junction sequence to cut at:
       such a pool's species stay polished with nanopore reads alone, by default.
       Polishing with the clipped local alignments of its reads (primary and
@@ -480,6 +491,10 @@ pipeline's own steps need a container before the package is anywhere else.
       nothing. v2 needs drafts broken where the scaffolds must join them
       (shorter reads, or contigs cut before scaffolding), the references'
       annotations for M4 (gffcompare), and RNA-seq with known levels for M5.
+      And drafts with errors for the short-read polishing to fix: v1's (Badread
+      at 98 %, Flye, Medaka) have under one mismatch or indel per 100 kb outside
+      a misjoined subtelomere, so no polishing is kept and M2's Hi-C check, a
+      gain against WGS's, is not judged.
 - [ ] **`test_full`**: an in-silico pool of public data (nanopore, Hi-C, Illumina,
       RNA-seq) of five to ten yeasts with T2T references, subsampled and mixed,
       on Zenodo; run by hand on a cluster before each release, its numbers on

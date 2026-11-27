@@ -53,8 +53,8 @@ nothing to judge reads "not judged"). Each milestone's checks are its "Done
 when": milestone 1, the kept contigs (BUSCO against the reference's, QV,
 misassemblies); milestone 2, the two splits (on the contigs, then on the
 screened contigs) and their epsilon, the screened contigs and the polishing
-(`--hic-results`: a second run, polished with the Hi-C reads,
-`--polish_reads hic`); milestone 3, each genome's chromosomes against the
+(its QV, and its errors against the reference, QUAST's; `--hic-results`: a
+second run, polished with the Hi-C reads, `--polish_reads hic`); milestone 3, each genome's chromosomes against the
 reference's (whole, end to end), its misassemblies and its flagged joins.
 
 ## To come
