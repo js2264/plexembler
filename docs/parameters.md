@@ -52,6 +52,33 @@ Each species scaffolded with its own Hi-C pairs, its scaffolds named, and its Hi
 | `min_chromosome` | A species without n_chromosomes: the shortest scaffold named a chromosome, in bases. <details><summary>Help</summary><small>When the samplesheet gives a species' n_chromosomes, its longest scaffolds, that many, are its chromosomes; the others are unplaced (docs/output.md, The genome).</small></details>| `integer` | 100000 |  |  |
 | `map_resolution` | The finest bin of each species' Hi-C map, in bases; the map is zoomed out from it. | `integer` | 1000 |  |  |
 
+## Annotation
+
+Each species' repeats, genes and non-coding RNAs, and each pooled RNA-seq library split between the species (milestone 4).
+
+| Parameter | Description | Type | Default | Required | Hidden |
+|-----------|-----------|-----------|-----------|-----------|-----------|
+| `repeats` | Each species' repeats: found de novo (RepeatModeler) and masked soft (RepeatMasker), or none. (accepted: `repeatmodeler`\|`none`) | `string` | repeatmodeler |  |  |
+| `gene_predictor` | Each species' genes: BRAKER3 (--fungus) with its RNA-seq alignments and --orthodb_proteins, AUGUSTUS ab initio for a species with neither; augustus for AUGUSTUS alone; or none. (accepted: `braker`\|`augustus`\|`none`) <details><summary>Help</summary><small>BRAKER3 trains GeneMark and AUGUSTUS on the species itself, from its RNA-seq, related proteins, or both. A species with neither is predicted ab initio by AUGUSTUS with --augustus_species, a species it was trained on.</small></details>| `string` | braker |  |  |
+| `augustus_species` | The species AUGUSTUS predicts ab initio with: one it was trained on (augustus --species=help), as close as can be. | `string` | saccharomyces_cerevisiae_S288C |  |  |
+| `orthodb_proteins` | Proteins of related species for BRAKER3, such as OrthoDB's partition of the fungi (Fungi.fa.gz). | `string` |  |  |  |
+
+## Expression and tracks
+
+Each species' counts and TPM, genes by RNA-seq libraries, and its coverage tracks (milestone 5).
+
+| Parameter | Description | Type | Default | Required | Hidden |
+|-----------|-----------|-----------|-----------|-----------|-----------|
+| `rnaseq_strandedness` | The pooled RNA-seq libraries' strandedness: reverse (dUTP, Illumina's stranded kits), forward, or unstranded. (accepted: `reverse`\|`forward`\|`unstranded`) | `string` | reverse |  |  |
+
+## Reports and the browser
+
+Each species' report, and chromosomix's store of the results (milestone 6).
+
+| Parameter | Description | Type | Default | Required | Hidden |
+|-----------|-----------|-----------|-----------|-----------|-----------|
+| `browser_base` | Where the results will be served (https://.../results/), when they go on a bucket: the store's base, which its relative paths join. <details><summary>Help</summary><small>Without it, the store's paths are relative to it: the results open in chromosomix with their folder connected, or wherever they are served beside it.</small></details>| `string` |  |  |  |
+
 ## Institutional config options
 
 Parameters used to describe centralised config profiles. These should not be edited.

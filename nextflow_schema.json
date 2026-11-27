@@ -214,6 +214,84 @@
                 }
             }
         },
+        "annotation_options": {
+            "title": "Annotation",
+            "type": "object",
+            "fa_icon": "fas fa-tags",
+            "description": "Each species' repeats, genes and non-coding RNAs, and each pooled RNA-seq library split between the species (milestone 4).",
+            "properties": {
+                "repeats": {
+                    "type": "string",
+                    "default": "repeatmodeler",
+                    "enum": [
+                        "repeatmodeler",
+                        "none"
+                    ],
+                    "description": "Each species' repeats: found de novo (RepeatModeler) and masked soft (RepeatMasker), or none.",
+                    "fa_icon": "fas fa-redo"
+                },
+                "gene_predictor": {
+                    "type": "string",
+                    "default": "braker",
+                    "enum": [
+                        "braker",
+                        "augustus",
+                        "none"
+                    ],
+                    "description": "Each species' genes: BRAKER3 (--fungus) with its RNA-seq alignments and --orthodb_proteins, AUGUSTUS ab initio for a species with neither; augustus for AUGUSTUS alone; or none.",
+                    "help_text": "BRAKER3 trains GeneMark and AUGUSTUS on the species itself, from its RNA-seq, related proteins, or both. A species with neither is predicted ab initio by AUGUSTUS with --augustus_species, a species it was trained on.",
+                    "fa_icon": "fas fa-dna"
+                },
+                "augustus_species": {
+                    "type": "string",
+                    "default": "saccharomyces_cerevisiae_S288C",
+                    "description": "The species AUGUSTUS predicts ab initio with: one it was trained on (augustus --species=help), as close as can be.",
+                    "fa_icon": "fas fa-paw"
+                },
+                "orthodb_proteins": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "pattern": "^\\S+\\.(fa|faa|fasta)(\\.gz)?$",
+                    "description": "Proteins of related species for BRAKER3, such as OrthoDB's partition of the fungi (Fungi.fa.gz).",
+                    "fa_icon": "fas fa-file-alt"
+                }
+            }
+        },
+        "expression_options": {
+            "title": "Expression and tracks",
+            "type": "object",
+            "fa_icon": "fas fa-chart-bar",
+            "description": "Each species' counts and TPM, genes by RNA-seq libraries, and its coverage tracks (milestone 5).",
+            "properties": {
+                "rnaseq_strandedness": {
+                    "type": "string",
+                    "default": "reverse",
+                    "enum": [
+                        "reverse",
+                        "forward",
+                        "unstranded"
+                    ],
+                    "description": "The pooled RNA-seq libraries' strandedness: reverse (dUTP, Illumina's stranded kits), forward, or unstranded.",
+                    "fa_icon": "fas fa-exchange-alt"
+                }
+            }
+        },
+        "report_options": {
+            "title": "Reports and the browser",
+            "type": "object",
+            "fa_icon": "fas fa-file-alt",
+            "description": "Each species' report, and chromosomix's store of the results (milestone 6).",
+            "properties": {
+                "browser_base": {
+                    "type": "string",
+                    "pattern": "^https?://\\S+$",
+                    "description": "Where the results will be served (https://.../results/), when they go on a bucket: the store's base, which its relative paths join.",
+                    "help_text": "Without it, the store's paths are relative to it: the results open in chromosomix with their folder connected, or wherever they are served beside it.",
+                    "fa_icon": "fas fa-globe"
+                }
+            }
+        },
         "institutional_config_options": {
             "title": "Institutional config options",
             "type": "object",
@@ -366,6 +444,15 @@
         },
         {
             "$ref": "#/$defs/chromosomes_options"
+        },
+        {
+            "$ref": "#/$defs/annotation_options"
+        },
+        {
+            "$ref": "#/$defs/expression_options"
+        },
+        {
+            "$ref": "#/$defs/report_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"

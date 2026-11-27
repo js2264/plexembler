@@ -1,0 +1,112 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "plexembler_genes"
+description: Names a species' gene models and writes its annotation - GFF3, GTF, proteins translated with its genetic code, CDS
+keywords:
+  - annotation
+  - genes
+  - gff3
+tools:
+  - "plexembler":
+      description: "The companion package of js2264/plexembler"
+      homepage: "https://js2264.github.io/plexembler/"
+      documentation: "https://js2264.github.io/plexembler/cli/#genes"
+      tool_dev_url: "https://github.com/js2264/plexembler"
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: The species' meta map; meta.genetic_code, NCBI's table
+    - genome:
+        type: file
+        description: The genome the models lie on
+        pattern: "*.{fa,fasta}{,.gz}"
+    - models:
+        type: file
+        description: The gene models, GTF or GFF3
+        pattern: "*.{gtf,gff,gff3}"
+  - source:
+      type: string
+      description: What predicted the genes, the GFF3's second column
+output:
+  gff3:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.gff3.gz:
+          type: file
+          description: The genes, GFF3
+          pattern: "*.gff3.gz"
+  gtf:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.gtf.gz:
+          type: file
+          description: The genes, GTF
+          pattern: "*.gtf.gz"
+  proteins:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.proteins.faa.gz:
+          type: file
+          description: The proteins, translated with the species' genetic code
+          pattern: "*.proteins.faa.gz"
+  cds:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.cds.fna.gz:
+          type: file
+          description: The CDS
+          pattern: "*.cds.fna.gz"
+  table:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.genes.tsv:
+          type: file
+          description: Each gene, its transcripts, place, lengths and old name
+          pattern: "*.genes.tsv"
+  multiqc:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.genes_mqc.tsv:
+          type: file
+          description: The genes' numbers, for MultiQC
+          pattern: "*.genes_mqc.tsv"
+  log:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - "*.log":
+          type: file
+          description: The command's log
+          pattern: "*.log"
+  versions_plexembler:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

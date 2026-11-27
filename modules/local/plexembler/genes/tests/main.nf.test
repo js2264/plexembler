@@ -1,0 +1,56 @@
+nextflow_process {
+
+    name "Test process PLEXEMBLER_GENES"
+    script "../main.nf"
+    process "PLEXEMBLER_GENES"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plexembler"
+    tag "plexembler/genes"
+
+    test("a gene, its CUG a serine in table 12") {
+
+        when {
+            process {
+                """
+                def genome = file("\${launchDir}/sp1.fa")
+                genome.text = '>sp1_chr01\\n' + 'C' * 10 + 'ATGAAACTGTGGGGGTAA' + 'C' * 30 + '\\n'
+                def models = file("\${launchDir}/braker.gtf")
+                models.text = ['sp1_chr01', 'AUGUSTUS', 'CDS', 11, 28, '.', '+', 0, 'transcript_id "g1.t1"; gene_id "g1";'].join('\\t') + '\\n'
+                input[0] = [ [ id: 'sp1', genetic_code: 12 ], genome, models ]
+                input[1] = 'BRAKER3'
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.proteins[0][1]).linesGzip == ['>sp1_000010-T1', 'MKSWG'] },
+                { assert path(process.out.table[0][1]).readLines()[1].startsWith('sp1_000010\t1\tsp1_chr01\t11\t28') },
+            )
+        }
+    }
+
+    test("a gene - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [ [ id: 'sp1' ], file('${moduleDir}/main.nf'), file('${moduleDir}/main.nf') ]
+                input[1] = 'AUGUSTUS'
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.gff3.size() == 1 },
+            )
+        }
+    }
+}

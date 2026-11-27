@@ -1,0 +1,41 @@
+nextflow_workflow {
+
+    name "Test subworkflow ANNOTATION"
+    script "../main.nf"
+    workflow "ANNOTATION"
+
+    tag "subworkflows"
+    tag "subworkflows_local"
+    tag "annotation"
+
+    test("two species, AUGUSTUS ab initio - stub") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                input[0] = channel.of(
+                    [ [ id: 'sp1', pool: 'pool', genetic_code: 1 ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ],
+                    [ [ id: 'sp2', pool: 'pool', genetic_code: 12 ], file('${moduleDir}/../../../tests/data/truth/sp2.fa', checkIfExists: true) ],
+                )
+                input[1] = channel.empty()
+                input[2] = 'none'
+                input[3] = 'augustus'
+                input[4] = 'saccharomyces_cerevisiae_S288C'
+                input[5] = []
+                input[6] = 'eukaryota_odb12'
+                input[7] = []
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.out.gff3.size() == 2 },
+                { assert workflow.out.trnas.size() == 2 },
+            )
+        }
+    }
+}

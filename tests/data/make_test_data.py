@@ -2,7 +2,9 @@
 
 The pipeline's plumbing is tested on these files (conf/test.config, nf-test):
 two species of a few dozen kilobases, each with telomeric repeats at its
-chromosomes' ends; a few nanopore reads of each; and three paired-end
+chromosomes' ends and genes every 6 kb (open reading frames of yeast's codon
+usage, which AUGUSTUS's yeast model finds); a few nanopore reads of each; and
+three paired-end
 libraries made from the pool of both, Hi-C, WGS and RNA-seq, with a little
 noise between the species, as a real pool has. Every read's name says where
 it comes from (``species:chromosome:position:strand``), which tests of the
@@ -24,9 +26,27 @@ from dataclasses import dataclass
 from pathlib import Path
 
 #: Raised when what this script writes changes, so that tests can name it.
-VERSION = 3
+VERSION = 4
 HERE = Path(__file__).resolve().parent
 COMPLEMENT = str.maketrans("ACGT", "TGCA")
+
+#: Saccharomyces cerevisiae's codon usage, per thousand codons (Kazusa), its
+#: stop codons left out: the planted genes' codons.
+CODON_USAGE = dict(
+    zip(
+        ["TTT", "TTC", "TTA", "TTG", "CTT", "CTC", "CTA", "CTG", "ATT", "ATC", "ATA", "ATG", "GTT", "GTC", "GTA", "GTG", "TCT", "TCC", "TCA", "TCG", "CCT", "CCC", "CCA", "CCG", "ACT", "ACC", "ACA", "ACG", "GCT", "GCC", "GCA", "GCG", "TAT", "TAC", "CAT", "CAC", "CAA", "CAG", "AAT", "AAC", "AAA", "AAG", "GAT", "GAC", "GAA", "GAG", "TGT", "TGC", "TGG", "CGT", "CGC", "CGA", "CGG", "AGT", "AGC", "AGA", "AGG", "GGT", "GGC", "GGA", "GGG"],
+        (
+            26.1, 18.4, 26.2, 27.2, 12.3, 5.4, 13.4, 10.5, 30.1, 17.2, 17.8, 20.9,
+            22.1, 11.8, 11.8, 10.8, 23.5, 14.2, 18.7, 8.6, 13.5, 6.8, 18.3, 5.3,
+            20.3, 12.7, 17.8, 8.0, 21.2, 12.6, 16.2, 6.2, 18.8, 14.8, 13.6, 7.8,
+            27.3, 12.1, 35.7, 24.8, 41.9, 30.8, 37.6, 20.2, 45.6, 19.2, 8.1, 4.8,
+            10.4, 6.4, 2.6, 3.0, 1.7, 14.2, 9.8, 21.3, 9.2, 23.9, 9.8, 10.9, 6.0,
+        ),
+        strict=True,
+    )
+)  # fmt: skip
+#: Where the genes are: every 6 kb from 2 kb, 1.5 kb each (an ATG, 498 codons, TAA).
+GENE_START, GENE_STEP, GENE_LENGTH = 2_000, 6_000, 1_500
 
 
 @dataclass(frozen=True)
@@ -65,6 +85,28 @@ def genome(species: Species, rng: random.Random) -> dict[str, str]:
         body = "".join(rng.choices("ACGT", weights=(at, gc, gc, at), k=length - 600))
         chromosomes[name] = revcomp(cap) + body + cap
     return chromosomes
+
+
+def plant_genes(genomes, rng: random.Random) -> list[tuple]:
+    """Genes in every chromosome, each on a strand of its own, at a level of
+    its own: ``(species, chromosome, start, length, strand, level)``, start
+    0-based."""
+    codons, weights = list(CODON_USAGE), list(CODON_USAGE.values())
+    genes = []
+    for species, chromosomes in genomes.items():
+        for name, seq in chromosomes.items():
+            for start in range(GENE_START, len(seq) - 3_000, GENE_STEP):
+                strand = rng.choice("+-")
+                body = rng.choices(codons, weights=weights, k=GENE_LENGTH // 3 - 2)
+                orf = "ATG" + "".join(body) + "TAA"
+                if strand == "-":
+                    orf = revcomp(orf)
+                seq = seq[:start] + orf + seq[start + GENE_LENGTH :]
+                genes.append(
+                    (species, name, start, GENE_LENGTH, strand, rng.uniform(1, 20))
+                )
+            chromosomes[name] = seq
+    return genes
 
 
 def mutate(sequence: str, rng: random.Random, rate: float) -> str:
@@ -180,15 +222,8 @@ def hic_pairs(genomes, rng, n=1_000, read_length=100, noise=0.05):
     return r1, r2
 
 
-def rnaseq_pairs(genomes, rng, n=1_000, read_length=100):
-    """Reads of a few genes per species, at different levels, from a stranded library."""
-    genes = []
-    for species, chromosomes in genomes.items():
-        for name, seq in chromosomes.items():
-            for start in range(2_000, len(seq) - 3_000, 6_000):
-                genes.append(
-                    (species, name, start, 1_500, rng.choice("+-"), rng.uniform(1, 20))
-                )
+def rnaseq_pairs(genomes, rng, n=1_000, read_length=100, genes=()):
+    """Reads of the planted genes, at their levels, from a stranded library."""
     r1, r2 = [], []
     for index in range(n):
         species, name, start, length, strand, _ = rng.choices(
@@ -212,9 +247,15 @@ def main(outdir: Path) -> None:
     rng = random.Random(f"plexembler-test-data-v{VERSION}")
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / "truth").mkdir(exist_ok=True)
-    genomes = {}
+    genomes = {species.name: genome(species, rng) for species in SPECIES}
+    genes = plant_genes(genomes, rng)
+    with (outdir / "truth" / "genes.tsv").open("w") as table:
+        table.write("species\tchromosome\tstart\tend\tstrand\tlevel\n")
+        for species, name, start, length, strand, level in genes:
+            table.write(
+                f"{species}\t{name}\t{start + 1}\t{start + length}\t{strand}\t{level:.3f}\n"
+            )
     for species in SPECIES:
-        genomes[species.name] = genome(species, rng)
         with (outdir / "truth" / f"{species.name}.fa").open("w") as fasta:
             for name, seq in genomes[species.name].items():
                 fasta.write(f">{name}\n")
@@ -229,16 +270,21 @@ def main(outdir: Path) -> None:
         ("wgs", wgs_pairs),
         ("rnaseq", rnaseq_pairs),
     ):
-        r1, r2 = make(genomes, rng)
+        r1, r2 = (
+            make(genomes, rng, genes=genes)
+            if library == "rnaseq"
+            else make(genomes, rng)
+        )
         write_fastq(outdir / f"pool_{library}_R1.fastq.gz", r1)
         write_fastq(outdir / f"pool_{library}_R2.fastq.gz", r2)
 
     # sp1 says what it is; sp2 leaves its chemistry and genome size to the
-    # pipeline, which tells them from its reads.
+    # pipeline, which tells them from its reads, and is of the CUG-Ser clade
+    # (table 12): its proteins' CUGs are serines.
     (outdir / "species.csv").write_text(
         "species,pool,ont,chemistry,genome_size,ploidy,n_chromosomes,genetic_code,telomere_repeat\n"
         "sp1,pool,sp1.ont.fastq.gz,r10,40k,1,2,1,TGTGGG\n"
-        "sp2,pool,sp2.ont.fastq.gz,NA,NA,1,1,1,TTAGGG\n"
+        "sp2,pool,sp2.ont.fastq.gz,NA,NA,1,1,12,TTAGGG\n"
     )
     (outdir / "libraries.csv").write_text(
         "library,pool,type,fastq_1,fastq_2,condition,replicate,enzymes\n"

@@ -300,3 +300,45 @@ def test_the_command(tmp_path: Path):
     )
     assert failed.exit_code == 1
     assert "without its mate" in failed.output
+
+
+def test_an_rnaseq_library(tmp_path: Path):
+    """STAR's alignments: each species' pairs written as SAM of its own
+    sequences; a multimapper's secondary records say between which species."""
+    lines = [
+        *pair("r1", {"at": ("Scer_ctg1", 100), "cigar": "40M500N60M"}, {"at": ("Scer_ctg1", 900)}),
+        # Unique in Cgla.
+        *pair("r2", {"at": ("Cgla_ctg1", 100)}, {"at": ("Cgla_ctg1", 400)}),
+        # A multimapper: its primary in Scer, its secondary in Spar.
+        *pair("r3", {"at": ("Scer_ctg2", 100), "mapq": 3}, {"at": ("Scer_ctg2", 400), "mapq": 3}),
+        *pair(
+            "r3",
+            {"at": ("Spar_ctg1", 100), "mapq": 3, "flag": 256},
+            {"at": ("Spar_ctg1", 400), "mapq": 3, "flag": 256},
+        ),
+        # The same pair twice: RNA-seq keeps it.
+        *pair("r4", {"at": ("Scer_ctg1", 100), "cigar": "40M500N60M"}, {"at": ("Scer_ctg1", 900)}),
+    ]  # fmt: skip
+    _, tally = split_pairs(sam(lines), tmp_path, "rna", "rnaseq", holdout=0.5)
+    assert tally.kept == {"Scer": 2, "Cgla": 1}
+    assert tally.holdout == {}
+    assert tally.ambiguous == {("Scer", "Spar"): 1}
+    with gzip.open(tmp_path / "Scer.rna.sam.gz", "rt") as handle:
+        written = handle.read().splitlines()
+    header = [line for line in written if line.startswith("@")]
+    assert [line.split("\t")[1] for line in header if line.startswith("@SQ")] == [
+        "SN:Scer_ctg1",
+        "SN:Scer_ctg2",
+    ]
+    records = [line.split("\t") for line in written if not line.startswith("@")]
+    assert [(r[0], r[5]) for r in records][:2] == [("r1", "40M500N60M"), ("r1", "100M")]
+    assert len(records) == 4
+    assert not list(tmp_path.glob("*.fastq.gz"))
+
+
+def test_a_read_with_three_primary_records(tmp_path: Path):
+    lines = pair("a", {"at": ("Scer_ctg1", 1)}, {"at": ("Scer_ctg1", 9)})
+    lines.append(lines[0])
+    _, pairs = read_sam(sam(lines))
+    with pytest.raises(ValueError, match="more than two"):
+        list(pairs)

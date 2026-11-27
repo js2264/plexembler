@@ -28,6 +28,22 @@ output:
           type: file
           description: Each species' pairs, and those held out
           pattern: "*_R{1,2}.fastq.gz"
+  bam:
+    - - meta:
+          type: map
+          description: The library's meta map
+      - "*.bam":
+          type: file
+          description: RNA-seq, each species' alignments, sorted
+          pattern: "*.bam"
+  bai:
+    - - meta:
+          type: map
+          description: The library's meta map
+      - "*.bam.bai":
+          type: file
+          description: Their indexes
+          pattern: "*.bam.bai"
   table:
     - - meta:
           type: map

@@ -1,0 +1,89 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "annotation"
+description: Each species' repeats (RepeatModeler, RepeatMasker), genes (BRAKER3, or AUGUSTUS ab initio) named by plexembler genes, BUSCO on its proteins, tRNAs and rRNAs
+keywords:
+  - annotation
+  - genes
+  - repeats
+components:
+  - find/concatenate
+  - repeatmodeler/builddatabase
+  - repeatmodeler/repeatmodeler
+  - repeatmasker/repeatmasker
+  - samtools/merge
+  - braker3
+  - augustus
+  - plexembler/genes
+  - busco/busco
+  - trnascanse
+  - barrnap
+input:
+  - ch_genomes:
+      type: file
+      description: |
+        Each species' genome. Structure: [ val(meta), path(fasta) ]
+  - ch_bams:
+      type: file
+      description: |
+        Each species' RNA-seq alignments, a library each. Structure: [ val(meta), path(bam), path(bai) ]
+  - repeats:
+      type: string
+      description: |
+        repeatmodeler, or none
+  - predictor:
+      type: string
+      description: |
+        braker, augustus, or none
+  - augustus_species:
+      type: string
+      description: |
+        AUGUSTUS's trained species, for ab initio predictions
+  - proteins:
+      type: file
+      description: |
+        Proteins of related species for BRAKER3, or []
+  - busco_lineage:
+      type: string
+      description: |
+        The lineage of a species whose samplesheet gives none
+  - busco_db:
+      type: directory
+      description: |
+        BUSCO's lineages, downloaded, or []
+output:
+  - masked:
+      type: file
+      description: |
+        Each species' genome, plain, soft-masked when repeats are masked. Structure: [ val(meta), path(fasta) ]
+  - gff3:
+      type: file
+      description: |
+        Each species' genes, GFF3. Structure: [ val(meta), path(gff3) ]
+  - gtf:
+      type: file
+      description: |
+        Each species' genes, GTF. Structure: [ val(meta), path(gtf) ]
+  - proteins:
+      type: file
+      description: |
+        Each species' proteins. Structure: [ val(meta), path(faa) ]
+  - genes:
+      type: file
+      description: |
+        Each species' table of genes. Structure: [ val(meta), path(tsv) ]
+  - trnas:
+      type: file
+      description: |
+        Each species' tRNAs, GFF. Structure: [ val(meta), path(gff) ]
+  - rrnas:
+      type: file
+      description: |
+        Each species' rRNAs, GFF. Structure: [ val(meta), path(gff) ]
+  - multiqc_files:
+      type: file
+      description: |
+        The files MultiQC reads. Structure: [ path(file) ]
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

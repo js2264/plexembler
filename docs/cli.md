@@ -133,13 +133,24 @@ share, held out and duplicates), its numbers (`poolA.wgs.split.json`: with the
 ambiguous pairs of each pair of species, the pairs between species, and
 epsilon), its MultiQC table and its log.
 
+An RNA-seq library (`-t rnaseq`) is aligned by STAR to the pool's genomes,
+whose sequences are each species' own: each species' pairs are written as the
+alignments they are, `<species>.<library>.sam.gz`, its header holding that
+species' sequences alone, ready to sort and count. STAR writes no alternative
+hits: a multimapper's secondary records say between which species it is
+ambiguous. RNA-seq keeps its duplicates and holds no pair out.
+
+```bash
+samtools view -h poolA.rna-ypd-1.bam | plexembler split - -p poolA -o split/ -l rna-ypd-1 -t rnaseq
+```
+
 | Option | Default | Description |
 |---|---|---|
 | `SAM` | (required) | The alignments, SAM, gzipped or not; `-` for stdin. |
 | `-p, --prefix` | (required) | The pool's ID, which names the tables and the log. |
-| `-o, --outdir` | (required) | The folder of each species' FASTQ files, the tables and the log. |
-| `-l, --library` | (required) | The library's ID, which names each species' FASTQ files. |
-| `-t, --type` | (required) | `wgs`, or `hic`, which drops duplicates, counts the contacts between contigs and estimates epsilon. |
+| `-o, --outdir` | (required) | The folder of each species' FASTQ (or SAM) files, the tables and the log. |
+| `-l, --library` | (required) | The library's ID, which names each species' FASTQ (or SAM) files. |
+| `-t, --type` | (required) | The library's type: wgs; hic, which drops duplicates, counts the contacts between contigs and estimates epsilon; or rnaseq, STAR's alignments, written as each species' SAM. |
 | `--min-mapq` | `20` | A mate's lowest mapping quality: below, it is ambiguous. |
 | `--min-identity` | `0.98` | A mate's lowest identity to its contig: below, it is divergent, a read of another species. |
 | `--holdout` | `0.1` | The share of the library's pairs kept apart, for the QV guard. |
@@ -300,3 +311,36 @@ contig, `left_contig`, `right_contig`, `observed`, `expected`, `ratio` and
 | `--force` | off | Overwrite outputs that exist already. |
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
+
+### `genes` { #genes }
+
+Names a species' gene models and writes its annotation. It reads a predictor's
+models, GTF (BRAKER's) or GFF3 (AUGUSTUS's), and names the genes in the
+genome's order, `<species>_000010`, `<species>_000020`, … (a step of 10, room
+for genes found later), their transcripts `<species>_000010-T1`, …. The stop
+codon goes in the CDS.
+
+```bash
+plexembler genes Scer.softmasked.fa.gz braker.gtf -p Scer -o Scer/ -g 1 -s BRAKER3
+```
+
+It writes the annotation as GFF3 and GTF (`Scer.gff3.gz`, `Scer.gtf.gz`: each
+gene, transcript, exon and CDS), the proteins (`Scer.proteins.faa.gz`),
+translated with the species' genetic code, and the CDS (`Scer.cds.fna.gz`); a
+table of the genes (`Scer.genes.tsv`: `gene`, `transcripts`, `chromosome`,
+`start`, `end`, `strand`, `exons`, `protein_length` and `original_name`), its
+MultiQC table and its log. A protein with a stop codon inside is warned about:
+the genetic code may be wrong.
+
+| Option | Default | Description |
+|---|---|---|
+| `GENOME` | (required) | The genome the models lie on, FASTA, gzipped or not. |
+| `MODELS` | (required) | The gene models, GTF or GFF3. |
+| `-p, --prefix` | (required) | The species' ID, which starts every gene's name and names the outputs. |
+| `-o, --outdir` | (required) | The folder of the annotation and the log. |
+| `-g, --genetic-code` | `1` | NCBI's translation table of the species' genes: 12 for the CUG-Ser clade, 26 for CUG-Ala. |
+| `-s, --source` | `plexembler` | The GFF3 and GTF files' second column: what predicted the genes. |
+| `--force` | off | Overwrite outputs that exist already. |
+| `-v, --verbose` | off | Debug messages, in the log and on stderr. |
+| `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
+

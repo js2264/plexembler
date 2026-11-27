@@ -7,32 +7,35 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 
 ```text
 <outdir>/
-├── chromosomix.store.json   every species' map, genome, tracks and workspace, for chromosomix
+├── chromosomix.store.json   (now) every species' map, genome and tracks, for chromosomix
 ├── species/<species>/
 │   ├── assembly/      (now) <species>.assembly.fa.gz: the kept contigs, polished;
 │   │                  the table of candidates
 │   ├── genome/        (now) <species>.fa.gz (+ .fai, .gzi), <species>.agp,
-│   │                  <species>.chrom.sizes, <species>.names.tsv, qc/; later
-│   │                  <species>.softmasked.fa.gz, <species>.chrM.fa.gz
-│   ├── annotation/    <species>.gtf.gz, <species>.gff3.gz, <species>.proteins.faa.gz,
-│   │                  <species>.cds.fna.gz, <species>.functions.tsv, repeats, ncRNA, tRNA,
-│   │                  telomeres.bed, centromeres.bed, chrM.gff3
+│   │                  <species>.chrom.sizes, <species>.names.tsv,
+│   │                  <species>.softmasked.fa, qc/; later <species>.chrM.fa.gz
+│   ├── annotation/    (now) <species>.gtf.gz, <species>.gff3.gz, <species>.proteins.faa.gz,
+│   │                  <species>.cds.fna.gz, <species>.genes.tsv, repeats/, ncrna/, qc/;
+│   │                  later <species>.functions.tsv, telomeres.bed, centromeres.bed, chrM.gff3
+│   ├── rnaseq/        (now) <species>.<library>.bam (+ .bai): its pairs of each pooled
+│   │                  RNA-seq library, on its genome
 │   ├── hic/           (now) <species>.mcool, <species>.pairs.gz and their stats;
 │   │                  later <species>.hic, <species>.pretext, maps (PNG), contact decay
-│   ├── expression/    <species>.counts.tsv, <species>.tpm.tsv: genes × RNA-seq libraries
+│   ├── expression/    (now) <species>.counts.tsv, <species>.tpm.tsv: genes × RNA-seq libraries
 │   ├── variation/     heterozygous sites, ploidy and per-chromosome depth
-│   ├── tracks/        coverage of the RNA-seq, WGS and nanopore reads (bigWig)
+│   ├── tracks/        (now) coverage of the RNA-seq, by strand, and the nanopore reads'
+│   │                  depth (bigWig); later the WGS'
 │   ├── contigs/       (now) <species>.contigs.fa.gz: polished with its short reads,
 │   │                  screened, its organelle named <species>_chrM
 │   ├── polish/        (now) the short-read polishing's choice; the Hi-C reads' digestion
-│   ├── candidates/    assembly/<assembler>/, polish/ and scaffold/yahs/ (now): every
-│   │                  candidate, its checks; later every scaffolder's, with its map
+│   ├── candidates/    assembly/<assembler>/, polish/, scaffold/yahs/ and genes/ (now):
+│   │                  every candidate, its checks; later every scaffolder's, with its map
 │   ├── estimates/     (now) what the samplesheet left NA: the genome size (LRGE);
 │   │                  the k-mer spectrum's fit (GenomeScope2)
 │   ├── reads/         (now, with --save_ont_reads) the nanopore reads as assembled
 │   ├── qc/            nanoplot/ and filtlong/ (now), OMArk, contamination, …
-│   ├── <species>.chromosomix.json   the species' view: map, genome, genes, tracks
-│   └── <species>.report.html, .report.txt, .report_mqc.yaml
+│   ├── <species>.chromosomix.json   the species' view: map, genome, genes, tracks (to come)
+│   └── <species>.report.html, .report.txt, .report_mqc.yaml (now)
 ├── pools/<pool>/
 │   ├── qc/            fastqc/ (now): the pooled libraries
 │   ├── ani/           (now) the identity between the pool's species (skani)
@@ -201,6 +204,87 @@ and zoomed out, balanced ([cooler](https://github.com/open2c/cooler)).
   and their numbers (`<species>.pairs.stat`); the parse's numbers, duplicates
   included (`<species>.pairsam.stat`).
 
+### The pooled RNA-seq, split
+
+Each pooled RNA-seq library, aligned by [STAR](https://github.com/alexdobin/STAR)
+to its pool's genomes at once (introns capped at 5 kb), and split between the
+species by [`plexembler split --type rnaseq`](cli.md#split): each species' pairs
+are the alignments they were, on its genome already.
+
+- `species/<species>/rnaseq/<species>.<library>.bam` (and `.bai`): the
+  species' pairs of the library, sorted.
+- `pools/<pool>/deconvolution/rnaseq/`: each library's split, as for the WGS
+  and Hi-C libraries, and STAR's report of each (`star/<library>.Log.final.out`).
+
+### Annotation
+
+Each species' repeats, found de novo by
+[RepeatModeler2](https://github.com/Dfam-consortium/RepeatModeler) and masked
+soft by [RepeatMasker](https://www.repeatmasker.org) (`--repeats`); its genes,
+predicted by [BRAKER3](https://github.com/Gaius-Augustus/BRAKER) (`--fungus`)
+with its RNA-seq alignments and `--orthodb_proteins`, or by
+[AUGUSTUS](https://github.com/Gaius-Augustus/Augustus) ab initio with
+`--augustus_species` when it has neither; named and written by
+[`plexembler genes`](cli.md#genes); its tRNAs and rRNAs.
+
+- `species/<species>/annotation/`: the genes, `<species>.gff3.gz` and
+  `<species>.gtf.gz`, named `<species>_000010`, … in the genome's order; the
+  proteins, `<species>.proteins.faa.gz`, translated with the species'
+  `genetic_code`; the CDS, `<species>.cds.fna.gz`; the table of genes,
+  `<species>.genes.tsv`; its MultiQC table and the command's log.
+- `species/<species>/annotation/repeats/`: RepeatModeler's families
+  (`*-families.fa`), RepeatMasker's table and its repeats (`<species>.out`,
+  `.tbl`, `.gff`).
+- `species/<species>/genome/<species>.softmasked.fa`: the genome, its repeats in
+  lower case.
+- `species/<species>/annotation/ncrna/`: [tRNAscan-SE](https://github.com/UCSC-LoweLab/tRNAscan-SE)'s
+  tRNAs (`trnascan/<species>.tsv`, `.gff`, `.stats`) and
+  [barrnap](https://github.com/tseemann/barrnap)'s rRNAs (`barrnap/<species>.gff`).
+- `species/<species>/annotation/qc/busco/`: BUSCO on the proteins.
+- `species/<species>/candidates/genes/`: the predictor's own files
+  (`braker3/braker.gtf`, `.aa`, `.codingseq`, `.log`; `augustus/<species>.augustus.gff3`).
+
+### Expression and tracks
+
+Each species' read pairs of each pooled RNA-seq library, counted on its genes
+by [featureCounts](https://subread.sourceforge.net) (exons, by gene,
+`--rnaseq_strandedness`), and its tables written by
+[`plexembler expression`](cli.md#expression).
+
+- `species/<species>/expression/<species>.counts.tsv`: the pairs, genes by
+  libraries, each library's column named `<condition>_<replicate>`, after each
+  gene's length.
+- `species/<species>/expression/<species>.tpm.tsv`: the TPM, within the
+  species, from the counts and the genes' lengths.
+- `species/<species>/expression/featurecounts/`: featureCounts' table and its
+  summary.
+- `species/<species>/tracks/`: [deepTools](https://deeptools.readthedocs.io)'
+  bigWigs: each library's coverage of the genes on each strand, in counts per
+  million (`<species>.<library>.forward.bigWig`, `.reverse.bigWig`), and the
+  nanopore reads' depth on the genome (`<species>.ont.bigWig`).
+
+### Reports
+
+[`plexembler report`](cli.md#report) gathers what the pipeline made of each
+species ([format](formats.md#the-report-of-a-species)).
+
+- `species/<species>/<species>.report.html`: its page: the assembly's
+  candidates and choice, the polishing, its share of each pooled library, the
+  screen, its chromosomes, BUSCO and QV, its joins, genes and expression.
+- `species/<species>/<species>.report.txt`: every number of it, for scripts.
+- `species/<species>/<species>.report_mqc.yaml`: its row of MultiQC's General
+  Statistics table.
+
+### The browser
+
+`chromosomix.store.json`, at the top of the results:
+[chromosomix](https://chromosomix.app)'s store
+([`plexembler browser`](cli.md#browser)), a card per species, its genome and
+Hi-C map each with its genes and tracks placed, every file named by its path in
+the results. Connect the results folder in chromosomix's app; or, once the
+results are on a bucket, open chromosomix.app with `?store=<its URL>`, the
+run's `--browser_base` its address.
+
 ### MultiQC
 
 `multiqc/multiqc_report.html`: the reads' QC, each candidate's BUSCO and
@@ -208,7 +292,10 @@ gfastats numbers, the table of candidates of every species, the identity
 between the species of every pool, each library's split (the first, on the
 contigs), each species' polishing and its Hi-C reads' digestion, the contig
 screen, each genome's BUSCO and gfastats numbers and its joins' verdicts, each
-map's pairs, and the software versions, in one report,
+map's pairs, each RNA-seq library's split and STAR's report, each species'
+genes and BUSCO on its proteins, featureCounts' assignments and each
+library's pairs on genes, each species' row of the General Statistics (its
+report), and the software versions, in one report,
 with the methods' description and its references.
 
 ### Pipeline information

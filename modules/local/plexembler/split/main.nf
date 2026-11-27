@@ -7,11 +7,14 @@ process PLEXEMBLER_SPLIT {
 
     input:
     // A pooled library (meta.id, meta.pool, meta.type), and its alignments to
-    // the pool's contigs as bwa-mem2 writes them: a pair's records together.
+    // the pool's contigs (bwa-mem2) or genomes (STAR, RNA-seq), a read's
+    // records together.
     tuple val(meta), path(alignments)
 
     output:
     tuple val(meta), path("*_R{1,2}.fastq.gz")              , emit: reads, optional: true
+    tuple val(meta), path("*.bam")                          , emit: bam, optional: true
+    tuple val(meta), path("*.bam.bai")                      , emit: bai, optional: true
     tuple val(meta), path("${meta.pool}.${meta.id}.split.tsv")   , emit: table
     tuple val(meta), path("${meta.pool}.${meta.id}.split.json")  , emit: json
     tuple val(meta), path("${meta.pool}.${meta.id}.split_mqc.tsv"), emit: multiqc
@@ -33,11 +36,22 @@ process PLEXEMBLER_SPLIT {
             -l ${meta.id} \\
             -t ${meta.type} \\
             ${args}
+    # RNA-seq: each species' alignments, sorted and indexed.
+    for sam in *.${meta.id}.sam.gz; do
+        [ -e "\${sam}" ] || continue
+        samtools sort -@ ${task.cpus} -o "\${sam%.sam.gz}.bam" "\${sam}"
+        samtools index "\${sam%.sam.gz}.bam"
+        rm "\${sam}"
+    done
     """
 
     stub:
     """
     for species in ${(meta.species ?: ['sp']).join(' ')}; do
+        if [ "${meta.type}" = "rnaseq" ]; then
+            touch \${species}.${meta.id}.bam \${species}.${meta.id}.bam.bai
+            continue
+        fi
         echo "" | gzip -n > \${species}.${meta.id}_R1.fastq.gz
         echo "" | gzip -n > \${species}.${meta.id}_R2.fastq.gz
         echo "" | gzip -n > \${species}.${meta.id}.holdout_R1.fastq.gz

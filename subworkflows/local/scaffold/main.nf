@@ -87,6 +87,7 @@ workflow SCAFFOLD {
     genome  = PLEXEMBLER_FINALIZE.out.fasta  // channel: [ val(meta), path(fasta) ], bgzipped, every species
     fai     = PLEXEMBLER_FINALIZE.out.fai    // channel: [ val(meta), path(fai) ]
     sizes   = PLEXEMBLER_FINALIZE.out.sizes  // channel: [ val(meta), path(sizes) ]
+    names   = PLEXEMBLER_FINALIZE.out.names  // channel: [ val(meta), path(tsv) ], each genome's names, lengths and roles
     agp     = PLEXEMBLER_FINALIZE.out.agp    // channel: [ val(meta), path(agp) ], the scaffolded species
     hic     = ch_hic_pairs                   // channel: [ val(meta), [ path(R1), path(R2) ] ], each species' Hi-C pairs
 }

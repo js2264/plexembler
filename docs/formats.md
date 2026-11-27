@@ -99,11 +99,33 @@ MultiQC column changes or goes.
 
 | Section | Key | Unit | MultiQC column |
 |---|---|---|---|
+| `report` | `format_version`, `sample`, `pool`, `files`, `plexembler_report_version`, `written` |  |  |
+| `assembly` | `candidates`, `kept`, `reason`, `contigs`, `contig_n50` | bp (N50) |  |
+| `polishing` | `kept`, `qv`, `reason` |  |  |
+| `screen` | `keep`, `move`, `drop`, `organelle` | contigs |  |
+| `genome` | `length_bp` | bp |  |
+| `genome` | `length_mb` | Mb | Genome (Mb) |
+| `genome` | `chromosomes` |  | Chromosomes |
+| `genome` | `chromosomes_bp`, `organelles`, `unplaced` | bp; sequences |  |
+| `quality` | `busco_complete` | % | BUSCO (%) |
+| `quality` | `busco_single`, `busco_duplicated`, `busco_fragmented`, `busco_missing`, `busco_n` | %; genes |  |
+| `quality` | `qv` | Phred | QV |
+| `scaffolding` | `joins`, `supported`, `unsupported`, `thin` | joins |  |
+| `annotation` | `genes` |  | Genes |
+| `annotation` | `transcripts`, `genes_with_introns` |  |  |
+| `annotation` | `proteins_busco_complete` | % | BUSCO, proteins (%) |
+| `expression` | `libraries`, `pairs_on_genes` | pairs |  |
+
+And its tables: `candidates` (each assembly candidate's `candidate`, `kept`,
+`busco_complete`, `qv`, `contigs`, `contig_n50`, `total_length`), `libraries`
+(the species' `pairs` and `share` of each pooled library), `chromosomes` (each
+sequence's `name`, `length_bp`, `role`, `original_name`) and `expression`
+(each library's `pairs_on_genes`).
 
 ### `<sample>.report_mqc.yaml` { #report_mqcyaml }
 
-[MultiQC](https://multiqc.info)'s custom content (`id: plexembler`):
-the sample's row of its General Statistics table.
+[MultiQC](https://multiqc.info)'s custom content (`id: plexembler_report`):
+the species' row of its General Statistics table, the columns above.
 
 ### `<sample>.report.html` { #reporthtml }
 

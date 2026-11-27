@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "augustus"
+description: Predicts a genome's genes ab initio, with one of AUGUSTUS's trained species
+keywords:
+  - annotation
+  - genes
+  - ab initio
+tools:
+  - "augustus":
+      description: "AUGUSTUS: gene prediction in eukaryotic genomes"
+      homepage: "https://github.com/Gaius-Augustus/Augustus"
+      documentation: "https://github.com/Gaius-Augustus/Augustus/blob/master/docs/RUNNING-AUGUSTUS.md"
+      tool_dev_url: "https://github.com/Gaius-Augustus/Augustus"
+      doi: "10.1093/bioinformatics/btn013"
+      licence: ["Artistic-1.0"]
+      identifier: "biotools:augustus"
+input:
+  - - meta:
+        type: map
+        description: The species' meta map
+    - fasta:
+        type: file
+        description: The genome, soft-masked, gzipped or not
+        pattern: "*.{fa,fasta}{,.gz}"
+  - species:
+      type: string
+      description: One of AUGUSTUS's trained species, such as saccharomyces_cerevisiae_S288C
+output:
+  gff3:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${prefix}.gff3:
+          type: file
+          description: The genes, GFF3
+          pattern: "*.gff3"
+  versions_augustus:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - augustus:
+          type: string
+          description: The tool
+      - "augustus --version 2>&1 | sed -n 's/AUGUSTUS (\\(.*\\)) is a gene .*/\\1/p'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - augustus:
+          type: string
+          description: The tool
+      - "augustus --version 2>&1 | sed -n 's/AUGUSTUS (\\(.*\\)) is a gene .*/\\1/p'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

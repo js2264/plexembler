@@ -15,6 +15,11 @@ include { SCAFFOLD               } from '../subworkflows/local/scaffold'
 include { GENOME_QC as GENOME_QC_FINAL } from '../subworkflows/local/genome_qc'
 include { MAPS                   } from '../subworkflows/local/maps'
 include { PLEXEMBLER_JUNCTIONS   } from '../modules/local/plexembler/junctions/main'
+include { RNASEQ                 } from '../subworkflows/local/rnaseq'
+include { ANNOTATION             } from '../subworkflows/local/annotation'
+include { EXPRESSION             } from '../subworkflows/local/expression'
+include { PLEXEMBLER_REPORT      } from '../modules/local/plexembler/report/main'
+include { PLEXEMBLER_BROWSER     } from '../modules/local/plexembler/browser/main'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -94,9 +99,11 @@ workflow PLEXEMBLER {
     // SUBWORKFLOW: each species polished with its own short reads, when that raises its QV
     //
     def ch_polished = CONTIGS.out.contigs
+    def ch_polish_selection = channel.empty()
     if (params.sr_polisher != 'none') {
         POLISH_SR(CONTIGS.out.contigs, POOL_DECONVOLVE.out.reads, params.polish_reads, params.kmer_size)
         ch_polished = POLISH_SR.out.contigs
+        ch_polish_selection = POLISH_SR.out.selection
         ch_multiqc_files = ch_multiqc_files.mix(POLISH_SR.out.multiqc_files)
     }
 
@@ -149,9 +156,86 @@ workflow PLEXEMBLER {
     ch_multiqc_files = ch_multiqc_files.mix(PLEXEMBLER_JUNCTIONS.out.multiqc.map { _meta, table -> table })
 
     //
-    // The steps to come, milestone by milestone (docs/plan.md): annotation,
-    // expression and the report of each species.
+    // SUBWORKFLOW: each pooled RNA-seq library split between its species, on
+    // their genomes
     //
+    RNASEQ(SCAFFOLD.out.genome, ch_libraries)
+    ch_multiqc_files = ch_multiqc_files.mix(RNASEQ.out.multiqc_files)
+
+    //
+    // SUBWORKFLOW: each species' repeats, genes and non-coding RNAs
+    //
+    ANNOTATION(
+        SCAFFOLD.out.genome,
+        RNASEQ.out.bams,
+        params.repeats,
+        params.gene_predictor,
+        params.augustus_species,
+        params.orthodb_proteins ? file(params.orthodb_proteins, checkIfExists: true) : [],
+        params.busco_lineage,
+        params.busco_db ? file(params.busco_db, checkIfExists: true) : [],
+    )
+    ch_multiqc_files = ch_multiqc_files.mix(ANNOTATION.out.multiqc_files)
+
+    //
+    // SUBWORKFLOW: each species' expression tables and its tracks
+    //
+    EXPRESSION(
+        RNASEQ.out.bams,
+        ANNOTATION.out.gtf
+            .map { meta, gtf -> [meta.id, meta, gtf] }
+            .join(ANNOTATION.out.with_genes)
+            .map { _id, meta, gtf, _genes -> [meta, gtf] },
+        SCAFFOLD.out.genome,
+        ONT_READS.out.reads,
+        params.rnaseq_strandedness,
+    )
+    ch_multiqc_files = ch_multiqc_files.mix(EXPRESSION.out.multiqc_files)
+
+    //
+    // MODULE: each species' report, from the files the pipeline wrote for it
+    // and its pool
+    //
+    def ch_species_pool = SCAFFOLD.out.genome.map { meta, _fasta -> [meta.id, meta.pool] }
+    def ch_species_files = CONTIGS.out.selection.map { meta, table -> [meta.id, table] }
+        .mix(ch_polish_selection.map { meta, table -> [meta.id, table] })
+        .mix(SCAFFOLD.out.names.map { meta, table -> [meta.id, table] })
+        .mix(GENOME_QC_FINAL.out.busco.map { meta, summary -> [meta.id, summary] })
+        .mix(GENOME_QC_FINAL.out.qv.map { meta, qv, _kmers -> [meta.id, qv] })
+        .mix(PLEXEMBLER_JUNCTIONS.out.table.map { meta, table -> [meta.id, table] })
+        .mix(ANNOTATION.out.genes.map { meta, table -> [meta.id, table] })
+        .mix(ANNOTATION.out.proteins_busco.map { meta, summary -> [meta.id, summary] })
+        .mix(EXPRESSION.out.counts.map { meta, table -> [meta.id, table] })
+    def ch_pool_files = POOL_DECONVOLVE.out.table.map { meta, table -> [meta.pool, table] }
+        .mix(RNASEQ.out.table.map { meta, table -> [meta.pool, table] })
+        .mix(SCREEN.out.table.map { meta, table -> [meta.pool ?: meta.id, table] })
+    def ch_report = ch_species_files
+        .mix(
+            ch_species_pool
+                .map { id, pool -> [pool, id] }
+                .combine(ch_pool_files, by: 0)
+                .map { _pool, id, file -> [id, file] }
+        )
+        .groupTuple()
+        .join(ch_species_pool)
+        .map { id, files, pool -> [[id: id, pool: pool], files] }
+    PLEXEMBLER_REPORT(ch_report)
+    ch_multiqc_files = ch_multiqc_files.mix(PLEXEMBLER_REPORT.out.multiqc.map { _meta, yaml -> yaml })
+
+    //
+    // MODULE: chromosomix's store of the results: each species' genome, map
+    // and tracks, by their paths in the results
+    //
+    def ch_browser_files = SCAFFOLD.out.genome.map { meta, fasta -> "${meta.id}=species/${meta.id}/genome/${fasta.name}".toString() }
+        .mix(MAPS.out.mcool.map { meta, mcool -> "${meta.id}=species/${meta.id}/hic/${mcool.name}".toString() })
+        .mix(ANNOTATION.out.gff3.map { meta, gff3 -> "${meta.id}=species/${meta.id}/annotation/${gff3.name}".toString() })
+        .mix(EXPRESSION.out.rnaseq_tracks.mix(EXPRESSION.out.ont_tracks).map { meta, track -> "${meta.id}=species/${meta.id}/tracks/${track.name}".toString() })
+        .collect()
+    PLEXEMBLER_BROWSER(
+        SCAFFOLD.out.genome.map { meta, _fasta -> "${meta.id}=${meta.pool}".toString() }.collect(),
+        ch_browser_files,
+    )
+
 
     //
     // Collate and save software versions

@@ -1,0 +1,51 @@
+nextflow_workflow {
+
+    name "Test subworkflow RNASEQ"
+    script "../main.nf"
+    workflow "RNASEQ"
+
+    tag "subworkflows"
+    tag "subworkflows_local"
+    tag "rnaseq"
+
+    test("a pool's RNA-seq library, split - stub") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                input[0] = channel.of(
+                    [ [ id: 'sp1', pool: 'pool' ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ],
+                    [ [ id: 'sp2', pool: 'pool' ], file('${moduleDir}/../../../tests/data/truth/sp2.fa', checkIfExists: true) ],
+                )
+                input[1] = channel.of(
+                    [
+                        [ id: 'rna-ypd-1', pool: 'pool', type: 'rnaseq', condition: 'YPD', replicate: 1, single_end: false ],
+                        [
+                            file('${moduleDir}/../../../tests/data/pool_rnaseq_R1.fastq.gz', checkIfExists: true),
+                            file('${moduleDir}/../../../tests/data/pool_rnaseq_R2.fastq.gz', checkIfExists: true),
+                        ],
+                    ],
+                    [
+                        [ id: 'wgs', pool: 'pool', type: 'wgs', single_end: false ],
+                        [
+                            file('${moduleDir}/../../../tests/data/pool_wgs_R1.fastq.gz', checkIfExists: true),
+                            file('${moduleDir}/../../../tests/data/pool_wgs_R2.fastq.gz', checkIfExists: true),
+                        ],
+                    ],
+                )
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                // One BAM per species of the pool, of its one RNA-seq library.
+                { assert workflow.out.bams.collect { it[0].id }.sort() == ['sp1', 'sp2'] },
+                { assert workflow.out.bams.every { it[0].library == 'rna-ypd-1' } },
+            )
+        }
+    }
+}
