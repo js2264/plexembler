@@ -344,3 +344,32 @@ the genetic code may be wrong.
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
 
+### `expression` { #expression }
+
+Writes a species' expression tables from featureCounts' table of its read
+pairs of each pooled RNA-seq library ([`split --type rnaseq`](#split) gave it
+its own pairs alone): the counts, genes × libraries, after each gene's length
+(its exons', without overlaps, as featureCounts measures it); and the TPM,
+within the species: each gene's pairs over its length, as a share of the
+library's sum, times a million.
+
+```bash
+plexembler expression Scer.featureCounts.tsv -p Scer -o Scer/ -l rna-ypd-1=YPD_1 -l rna-gal-1=GAL_1
+```
+
+It writes `Scer.counts.tsv` (`gene`, `length_bp`, a column per library) and
+`Scer.tpm.tsv` (`gene`, a column per library), each library's column named by
+`--label`, `<condition>_<replicate>` in the pipeline; its MultiQC table (each
+library's pairs on genes and genes detected) and its log.
+
+| Option | Default | Description |
+|---|---|---|
+| `COUNTS` | (required) | featureCounts' table, a column per library's BAM (`<species>.<library>.bam`). |
+| `-p, --prefix` | (required) | The species' ID, which starts its alignments' names and names the outputs. |
+| `-o, --outdir` | (required) | The folder of the tables and the log. |
+| `-l, --label` | | A library's column name, LIBRARY=LABEL (rna-ypd-1=YPD_1); the library's ID otherwise. |
+| `--min-count` | `10` | The fewest pairs that make a gene detected, in MultiQC's table. |
+| `--force` | off | Overwrite outputs that exist already. |
+| `-v, --verbose` | off | Debug messages, in the log and on stderr. |
+| `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
+

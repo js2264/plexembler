@@ -374,16 +374,21 @@ BUSCO's genome.
 **Goal:** each species' expression tables, counts and TPM, and its coverage
 tracks. Differential expression is out of scope (Decisions).
 
-- [ ] **Counts:** featureCounts on each RNA-seq library's per-species
-      alignments, its strandedness from Salmon's library type.
+- [x] **Counts:** featureCounts on each RNA-seq library's per-species
+      alignments, its strandedness `--rnaseq_strandedness` (from Salmon's
+      library type, to come).
 - [ ] **TPM:** Salmon on the pool's transcripts, every species with its genome
       as decoy, so that a read of a gene shared by two species is shared by
       Salmon's EM; TPM within each species, from that species' reads alone.
       `plexembler expression` writes `<species>.counts.tsv` and
       `<species>.tpm.tsv`: genes × libraries (`<condition>_<replicate>`), and each
-      gene's ambiguous fraction.
+      gene's ambiguous fraction. Done: `plexembler expression`'s counts and
+      TPM, from featureCounts' counts and the genes' lengths, the split's
+      pairs alone; to come: Salmon's EM for the shared reads, and each gene's
+      ambiguous fraction.
 - [ ] **Tracks:** bigWig of the RNA-seq (by strand), the WGS and the nanopore
-      reads (`deeptools bamCoverage`, `mosdepth`).
+      reads (`deeptools bamCoverage`, `mosdepth`). The RNA-seq's and the
+      nanopore reads' done; the WGS', to come.
 
 **Done when**, on the benchmark pool's simulated RNA-seq (known TPMs):
 Spearman's ρ ≥ 0.9 for every species.

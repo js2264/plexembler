@@ -258,6 +258,25 @@
                 }
             }
         },
+        "expression_options": {
+            "title": "Expression and tracks",
+            "type": "object",
+            "fa_icon": "fas fa-chart-bar",
+            "description": "Each species' counts and TPM, genes by RNA-seq libraries, and its coverage tracks (milestone 5).",
+            "properties": {
+                "rnaseq_strandedness": {
+                    "type": "string",
+                    "default": "reverse",
+                    "enum": [
+                        "reverse",
+                        "forward",
+                        "unstranded"
+                    ],
+                    "description": "The pooled RNA-seq libraries' strandedness: reverse (dUTP, Illumina's stranded kits), forward, or unstranded.",
+                    "fa_icon": "fas fa-exchange-alt"
+                }
+            }
+        },
         "institutional_config_options": {
             "title": "Institutional config options",
             "type": "object",
@@ -413,6 +432,9 @@
         },
         {
             "$ref": "#/$defs/annotation_options"
+        },
+        {
+            "$ref": "#/$defs/expression_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"

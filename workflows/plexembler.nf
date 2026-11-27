@@ -17,6 +17,7 @@ include { MAPS                   } from '../subworkflows/local/maps'
 include { PLEXEMBLER_JUNCTIONS   } from '../modules/local/plexembler/junctions/main'
 include { RNASEQ                 } from '../subworkflows/local/rnaseq'
 include { ANNOTATION             } from '../subworkflows/local/annotation'
+include { EXPRESSION             } from '../subworkflows/local/expression'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -171,6 +172,21 @@ workflow PLEXEMBLER {
         params.busco_db ? file(params.busco_db, checkIfExists: true) : [],
     )
     ch_multiqc_files = ch_multiqc_files.mix(ANNOTATION.out.multiqc_files)
+
+    //
+    // SUBWORKFLOW: each species' expression tables and its tracks
+    //
+    EXPRESSION(
+        RNASEQ.out.bams,
+        ANNOTATION.out.gtf
+            .map { meta, gtf -> [meta.id, meta, gtf] }
+            .join(ANNOTATION.out.with_genes)
+            .map { _id, meta, gtf, _genes -> [meta, gtf] },
+        SCAFFOLD.out.genome,
+        ONT_READS.out.reads,
+        params.rnaseq_strandedness,
+    )
+    ch_multiqc_files = ch_multiqc_files.mix(EXPRESSION.out.multiqc_files)
 
     //
     // Collate and save software versions

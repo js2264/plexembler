@@ -65,7 +65,9 @@ _QUIET = click.option(
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, "--version", prog_name="plexembler")
 @click.command_panel("Contigs", commands=["rename", "select", "screen"])
-@click.command_panel("Genomes", commands=["finalize", "junctions", "genes"])
+@click.command_panel(
+    "Genomes", commands=["finalize", "junctions", "genes", "expression"]
+)
 @click.command_panel("Reads", commands=["digest"])
 @click.command_panel("Pools", commands=["ani", "split"])
 def cli() -> None:
@@ -924,3 +926,80 @@ def genes_command(
             annotate(genome, models, prefix, outdir, int(genetic_code), source)
         except (OSError, ValueError, KeyError) as error:
             raise click.ClickException(str(error)) from error
+
+
+def _labels(
+    _context: click.Context, _parameter: click.Parameter, values: tuple[str, ...]
+) -> dict[str, str]:
+    """``LIBRARY=LABEL`` pairs, as a mapping."""
+    labels = {}
+    for value in values:
+        library, separator, label = value.partition("=")
+        if not separator or not library or not label:
+            raise click.BadParameter(f"{value!r} is not LIBRARY=LABEL")
+        labels[library] = label
+    return labels
+
+
+@cli.command(name="expression", context_settings=CONTEXT_SETTINGS)
+@click.argument("counts", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option(
+    "-p",
+    "--prefix",
+    required=True,
+    callback=_species,
+    help="The species' ID, which starts its alignments' names and names the outputs.",
+)
+@click.option(
+    "-o",
+    "--outdir",
+    required=True,
+    type=click.Path(file_okay=False, path_type=Path),
+    help="The folder of the tables and the log.",
+)
+@click.option(
+    "-l",
+    "--label",
+    "labels",
+    multiple=True,
+    callback=_labels,
+    help="A library's column name, LIBRARY=LABEL (rna-ypd-1=YPD_1); the library's ID otherwise.",
+)
+@click.option(
+    "--min-count",
+    type=click.IntRange(1),
+    default=10,
+    show_default=True,
+    help="The fewest pairs that make a gene detected, in MultiQC's table.",
+)
+@_FORCE
+@_VERBOSE
+@_QUIET
+def expression_command(
+    counts: Path,
+    prefix: str,
+    outdir: Path,
+    labels: dict[str, str],
+    min_count: int,
+    force: bool,
+    verbose: bool,
+    quiet: bool,
+) -> None:
+    """Write a species' counts and TPM, genes by libraries, from featureCounts' table."""
+    from .expression import read_featurecounts, write_outputs
+
+    _refuse_existing([outdir / f"{prefix}.counts.tsv"], force)
+    parameters = {
+        "counts": counts,
+        "prefix": prefix,
+        "outdir": outdir,
+        "labels": ",".join(f"{k}={v}" for k, v in labels.items()),
+        "min_count": min_count,
+        "force": force,
+    }
+    with run_log(outdir, prefix, parameters, verbose=verbose, quiet=quiet):
+        try:
+            table = read_featurecounts(counts, prefix, labels)
+        except (OSError, ValueError) as error:
+            raise click.ClickException(str(error)) from error
+        write_outputs(table, outdir, prefix, min_count)

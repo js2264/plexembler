@@ -60,6 +60,11 @@
             "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
             "installed_by": ["modules"]
           },
+          "deeptools/bamcoverage": {
+            "branch": "master",
+            "git_sha": "9804fc814f848fd7100b2203e35ff6d5321d031f",
+            "installed_by": ["modules"]
+          },
           "fastqc": {
             "branch": "master",
             "git_sha": "f3a7fb3aca1320fcd5e607c36c8c3a4133f2680b",
@@ -203,6 +208,11 @@
           "star/genomegenerate": {
             "branch": "master",
             "git_sha": "9804fc814f848fd7100b2203e35ff6d5321d031f",
+            "installed_by": ["modules"]
+          },
+          "subread/featurecounts": {
+            "branch": "master",
+            "git_sha": "f72135da1c6152ac6826c8048259eda4bde5b538",
             "installed_by": ["modules"]
           },
           "trnascanse": {

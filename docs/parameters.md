@@ -63,6 +63,14 @@ Each species' repeats, genes and non-coding RNAs, and each pooled RNA-seq librar
 | `augustus_species` | The species AUGUSTUS predicts ab initio with: one it was trained on (augustus --species=help), as close as can be. | `string` | saccharomyces_cerevisiae_S288C |  |  |
 | `orthodb_proteins` | Proteins of related species for BRAKER3, such as OrthoDB's partition of the fungi (Fungi.fa.gz). | `string` |  |  |  |
 
+## Expression and tracks
+
+Each species' counts and TPM, genes by RNA-seq libraries, and its coverage tracks (milestone 5).
+
+| Parameter | Description | Type | Default | Required | Hidden |
+|-----------|-----------|-----------|-----------|-----------|-----------|
+| `rnaseq_strandedness` | The pooled RNA-seq libraries' strandedness: reverse (dUTP, Illumina's stranded kits), forward, or unstranded. (accepted: `reverse`\|`forward`\|`unstranded`) | `string` | reverse |  |  |
+
 ## Institutional config options
 
 Parameters used to describe centralised config profiles. These should not be edited.

@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "expression"
+description: "Each species' counts and TPM, genes by RNA-seq libraries (featureCounts, plexembler expression), and its tracks (deepTools): each library's coverage by strand, the nanopore reads' depth"
+keywords:
+  - rna-seq
+  - expression
+  - bigwig
+components:
+  - subread/featurecounts
+  - plexembler/expression
+  - deeptools/bamcoverage
+  - minimap2/align
+input:
+  - ch_bams:
+      type: file
+      description: |
+        Each species' alignments of each RNA-seq library. Structure: [ val(meta), path(bam), path(bai) ]
+  - ch_gtf:
+      type: file
+      description: |
+        Each species' genes. Structure: [ val(meta), path(gtf) ]
+  - ch_genomes:
+      type: file
+      description: |
+        Each species' genome. Structure: [ val(meta), path(fasta) ]
+  - ch_ont:
+      type: file
+      description: |
+        Each species' nanopore reads. Structure: [ val(meta), path(fastq) ]
+  - strandedness:
+      type: string
+      description: |
+        The RNA-seq libraries' strandedness: reverse, forward or unstranded
+output:
+  - counts:
+      type: file
+      description: |
+        Each species' counts. Structure: [ val(meta), path(tsv) ]
+  - tpm:
+      type: file
+      description: |
+        Each species' TPM. Structure: [ val(meta), path(tsv) ]
+  - rnaseq_tracks:
+      type: file
+      description: |
+        Each library's coverage by strand. Structure: [ val(meta), path(bigwig) ]
+  - ont_tracks:
+      type: file
+      description: |
+        Each species' nanopore depth. Structure: [ val(meta), path(bigwig) ]
+  - multiqc_files:
+      type: file
+      description: |
+        The files MultiQC reads. Structure: [ path(file) ]
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"
