@@ -234,11 +234,15 @@ split between the species first, on their genomes (STAR, then
 evidence. Its repeats are found and masked (`--repeats repeatmodeler`), then
 its genes predicted (`--gene_predictor`):
 
-- **`braker`** (the default): BRAKER3 `--fungus`, trained on the species
-  itself, with its RNA-seq, `--orthodb_proteins` (OrthoDB's proteins of the
-  fungi, `Fungi.fa.gz`, from
+- **`braker`** (the default): BRAKER3, with the species' RNA-seq,
+  `--orthodb_proteins` (OrthoDB's proteins of the fungi, `Fungi.fa.gz`, from
   [their partitions](https://bioinf.uni-greifswald.de/bioinf/partitioned_odb12/)),
-  or both. A species with neither is predicted by AUGUSTUS.
+  or both, as hints to AUGUSTUS's model of `--augustus_species`, without
+  training: a yeast's genome holds too few genes and introns to train a model
+  on (GeneMark-ET fails on a few dozen introns). With `--braker_train`,
+  BRAKER3 trains GeneMark and AUGUSTUS on the species itself, for a species
+  far from any model AUGUSTUS knows and rich in introns. A species with
+  neither RNA-seq nor proteins is predicted by AUGUSTUS.
 - **`augustus`**: AUGUSTUS ab initio, with `--augustus_species`, a species it
   was trained on (`augustus --species=help`), as close to yours as can be:
   `saccharomyces_cerevisiae_S288C` by default. Quick, and right for a species

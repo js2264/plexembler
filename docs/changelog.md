@@ -110,8 +110,9 @@ follow [semantic versioning](https://semver.org).
   ambiguous.
 - **Each species' annotation**: its repeats found de novo (RepeatModeler2) and
   masked soft (RepeatMasker, `--repeats`); its genes predicted by BRAKER3 with
-  its RNA-seq and `--orthodb_proteins`, or by AUGUSTUS ab initio
-  (`--augustus_species`) when it has neither (`--gene_predictor`); named,
+  AUGUSTUS's model of `--augustus_species`, its RNA-seq and `--orthodb_proteins`
+  as hints, without training (`--braker_train` to train on the species), or by
+  AUGUSTUS ab initio when it has neither (`--gene_predictor`); named,
   translated with its genetic code and written by `plexembler genes`; BUSCO on
   its proteins; its tRNAs (tRNAscan-SE) and rRNAs (barrnap); all in
   `species/<species>/annotation/`.

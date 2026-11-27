@@ -353,9 +353,14 @@ mitochondrial genes.
       alignment); each species' libraries merged for the gene models.
 - [x] **Genes:** BRAKER3 `--fungus` (nf-core `braker3`) with the species' RNA
       alignments and OrthoDB's fungal proteins (`--orthodb_proteins`, given;
-      its download to the cache, to come). Without RNA-seq, BRAKER on the
-      proteins alone; with neither, AUGUSTUS ab initio with a trained species
-      (`--augustus_species`, local module). To come: GALBA, if it does better
+      its download to the cache, to come), as hints to AUGUSTUS's model of
+      `--augustus_species`, without training: on the benchmark's second set,
+      GeneMark-ET failed on S. cerevisiae's 14 introns, and the models BRAKER3
+      trained on Spar and Cgla found 88.8 and 87.4 % of their genes, where
+      S. cerevisiae's model found 94.0 and 95.1 % ab initio. `--braker_train`
+      trains on the species (far from any model, rich in introns). Without
+      RNA-seq, BRAKER on the proteins alone; with neither, AUGUSTUS ab initio
+      with a trained species (`--augustus_species`, local module). To come: GALBA, if it does better
       than BRAKER on proteins on the benchmark; Helixer (local, GPU,
       experimental until tested on one) as a second candidate
       (`--gene_predictors braker,helixer`), scored by BUSCO's proteins and
