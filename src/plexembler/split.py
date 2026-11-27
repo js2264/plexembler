@@ -27,6 +27,13 @@ screen's Hi-C signal.
 
 Each species' pairs are written as FASTQ, their reads as sequenced; the pool's
 numbers as a table, a JSON file and MultiQC's table.
+
+An RNA-seq library (``--type rnaseq``) is aligned by STAR to the pool's
+genomes, whose sequences are each species' own: its pairs are written as the
+alignments they are, each species' in a SAM file of its genome's sequences,
+ready to sort and count. STAR has no ``XA`` tag: a multimapper's secondary
+records say between which species it is ambiguous. RNA-seq keeps its
+duplicates and holds no pair out.
 """
 
 from __future__ import annotations
@@ -68,6 +75,10 @@ class Mate:
     sequence: str
     quality: str
     tags: dict[str, str]
+    #: The record, as it came.
+    line: str = ""
+    #: The species of the read's secondary alignments (STAR's multimappers).
+    alternatives: frozenset[str] = frozenset()
 
     @property
     def mapped(self) -> bool:
@@ -96,9 +107,11 @@ class Mate:
         return self.position + span - 1
 
     def alternative_species(self) -> set[str]:
-        """The species of bwa-mem2's alternative hits (``XA:Z:contig,±pos,CIGAR,NM;``)."""
-        alternatives = self.tags.get("XA", "")
-        return {species_of(hit.split(",")[0]) for hit in alternatives.split(";") if hit}
+        """The species of its other hits: bwa-mem2's alternative hits
+        (``XA:Z:contig,±pos,CIGAR,NM;``), and its secondary records'."""
+        hits = self.tags.get("XA", "")
+        found = {species_of(hit.split(",")[0]) for hit in hits.split(";") if hit}
+        return found | self.alternatives
 
     def fastq(self, name: str) -> str:
         """The read as it was sequenced: reverse-complemented back when it aligned reversed."""
@@ -132,22 +145,31 @@ def parse_record(line: str) -> Mate:
         sequence=fields[9],
         quality=fields[10],
         tags=tags,
+        line=line if line.endswith("\n") else line + "\n",
     )
 
 
-def read_sam(handle: TextIO) -> tuple[list[str], Iterator[tuple[Mate, Mate]]]:
+def read_sam(
+    handle: TextIO, header: list[str] | None = None
+) -> tuple[list[str], Iterator[tuple[Mate, Mate]]]:
     """The species of the header's contigs, and each pair's two primary records.
+
+    A read's records come together, as bwa-mem2 and STAR write them; its
+    secondary records give the species of its other hits. ``header``, when
+    given, gets the header's lines.
 
     Raises
     ------
     ValueError
-        When a pair lacks a mate's primary record (the file is not as bwa-mem2
-        writes it: a pair's records together).
+        When a pair lacks a mate's primary record, or its records are not
+        together.
     """
     species: list[str] = []
     first = None
     for line in handle:
         if line.startswith("@"):
+            if header is not None:
+                header.append(line)
             if line.startswith("@SQ"):
                 name = next(f[3:] for f in line.split("\t") if f.startswith("SN:"))
                 if (found := species_of(name.strip())) not in species:
@@ -156,26 +178,40 @@ def read_sam(handle: TextIO) -> tuple[list[str], Iterator[tuple[Mate, Mate]]]:
         first = line
         break
 
+    def pair_of(primaries: list[Mate], others: set[str]) -> tuple[Mate, Mate]:
+        if len(primaries) > 2:
+            raise ValueError(f"{primaries[0].name}: more than two primary records")
+        one, two = primaries
+        alternatives = frozenset(others)
+        one.alternatives = two.alternatives = alternatives
+        return (one, two) if one.flag & FIRST else (two, one)
+
     def pairs() -> Iterator[tuple[Mate, Mate]]:
-        records: list[Mate] = []
+        name = None
+        primaries: list[Mate] = []
+        others: set[str] = set()
         lines = itertools.chain([first], handle) if first is not None else iter(())
         for line in lines:
             if not line.strip():
                 continue
-            mate = parse_record(line)
-            if mate.flag & (SECONDARY | SUPPLEMENTARY):
-                continue
-            records.append(mate)
-            if len(records) == 2:
-                one, two = records
-                if one.name != two.name:
-                    raise ValueError(
-                        f"{one.name} and {two.name}: a pair's records are not together"
-                    )
-                yield (one, two) if one.flag & FIRST else (two, one)
-                records = []
-        if records:
-            raise ValueError(f"{records[0].name}: a read without its mate")
+            record = parse_record(line)
+            if record.name != name:
+                if name is not None:
+                    if len(primaries) < 2:
+                        raise ValueError(
+                            f"{name} and {record.name}: a pair's records are not together"
+                        )
+                    yield pair_of(primaries, others)
+                name, primaries, others = record.name, [], set()
+            if record.flag & SECONDARY:
+                if record.mapped:
+                    others.add(record.species)
+            elif not record.flag & SUPPLEMENTARY:
+                primaries.append(record)
+        if name is not None:
+            if len(primaries) < 2:
+                raise ValueError(f"{name}: a read without its mate")
+            yield pair_of(primaries, others)
 
     return species, pairs()
 
@@ -252,6 +288,43 @@ class Writers:
             handle.close()
 
 
+class SamWriters:
+    """Each species' alignments, as SAM of its own sequences, gzipped."""
+
+    def __init__(self, outdir: Path, library: str, header: list[str], level: int):
+        self.outdir, self.library, self.header, self.level = (
+            outdir,
+            library,
+            header,
+            level,
+        )
+        self.handles: dict[str, IO[str]] = {}
+
+    def path(self, species: str) -> Path:
+        return self.outdir / f"{species}.{self.library}.sam.gz"
+
+    def write(self, species: str, one: Mate, two: Mate) -> None:
+        if species not in self.handles:
+            handle = gzip.open(  # noqa: SIM115
+                self.path(species), "wt", compresslevel=self.level
+            )
+            for line in self.header:
+                if line.startswith("@SQ"):
+                    name = next(
+                        f[3:] for f in line.split("\t") if f.startswith("SN:")
+                    ).strip()
+                    if species_of(name) != species:
+                        continue
+                handle.write(line)
+            self.handles[species] = handle
+        self.handles[species].write(one.line)
+        self.handles[species].write(two.line)
+
+    def close(self) -> None:
+        for handle in self.handles.values():
+            handle.close()
+
+
 def split_pairs(
     sam: TextIO,
     outdir: Path,
@@ -274,7 +347,8 @@ def split_pairs(
     library
         The library's ID, which names the files.
     kind
-        ``wgs`` or ``hic``.
+        ``wgs``, ``hic`` or ``rnaseq`` (STAR's alignments, written as SAM:
+        no duplicates dropped, no pair held out).
     min_mapq, min_identity
         What makes a mate's alignment unique and near-identical.
     holdout
@@ -290,10 +364,14 @@ def split_pairs(
         The pool's species, from the header, and the tally.
     """
     outdir.mkdir(parents=True, exist_ok=True)
-    species, pairs = read_sam(sam)
+    header: list[str] = []
+    species, pairs = read_sam(sam, header)
     tally = Tally()
     seen: set[bytes] = set()
     writers = Writers(outdir, library, level)
+    alignments = SamWriters(outdir, library, header, level)
+    if kind == "rnaseq":
+        holdout, dedup = 0.0, False
     try:
         for one, two in pairs:
             tally.pairs += 1
@@ -339,6 +417,10 @@ def split_pairs(
             if duplicate:
                 tally.duplicates[name] += 1
                 continue
+            if kind == "rnaseq":
+                tally.kept[name] += 1
+                alignments.write(name, one, two)
+                continue
             if held_out(one.name, holdout):
                 tally.holdout[name] += 1
                 writers.write(name, "holdout", one, two)
@@ -347,6 +429,7 @@ def split_pairs(
             writers.write(name, "", one, two)
     finally:
         writers.close()
+        alignments.close()
     return species, tally
 
 

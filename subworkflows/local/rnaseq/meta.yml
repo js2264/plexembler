@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "rnaseq"
+description: Each pooled RNA-seq library aligned to its pool's genomes at once (STAR) and split between the species, as each species' alignments
+keywords:
+  - rna-seq
+  - deconvolution
+  - star
+components:
+  - find/concatenate
+  - star/genomegenerate
+  - cat/fastq
+  - star/align
+  - plexembler/split
+input:
+  - ch_genomes:
+      type: file
+      description: |
+        Each species' genome. Structure: [ val(meta), path(fasta) ]
+  - ch_libraries:
+      type: file
+      description: |
+        The pooled libraries. Structure: [ val(meta), [ path(fastq) ] ]
+output:
+  - bams:
+      type: file
+      description: |
+        Each species' alignments of each library. Structure: [ val(meta), path(bam), path(bai) ]
+  - table:
+      type: file
+      description: |
+        Each library's split. Structure: [ val(meta), path(tsv) ]
+  - multiqc_files:
+      type: file
+      description: |
+        The files MultiQC reads. Structure: [ path(file) ]
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

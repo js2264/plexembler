@@ -65,7 +65,7 @@ _QUIET = click.option(
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, "--version", prog_name="plexembler")
 @click.command_panel("Contigs", commands=["rename", "select", "screen"])
-@click.command_panel("Genomes", commands=["finalize", "junctions"])
+@click.command_panel("Genomes", commands=["finalize", "junctions", "genes"])
 @click.command_panel("Reads", commands=["digest"])
 @click.command_panel("Pools", commands=["ani", "split"])
 def cli() -> None:
@@ -304,21 +304,23 @@ def ani_command(
     "--outdir",
     required=True,
     type=click.Path(file_okay=False, path_type=Path),
-    help="The folder of each species' FASTQ files, the tables and the log.",
+    help="The folder of each species' FASTQ (or SAM) files, the tables and the log.",
 )
 @click.option(
     "-l",
     "--library",
     required=True,
-    help="The library's ID, which names each species' FASTQ files.",
+    help="The library's ID, which names each species' FASTQ (or SAM) files.",
 )
 @click.option(
     "-t",
     "--type",
     "kind",
-    type=click.Choice(["wgs", "hic"]),
+    type=click.Choice(["wgs", "hic", "rnaseq"]),
     required=True,
-    help="The library's type: wgs, or hic, which drops duplicates, counts the contacts between contigs and estimates epsilon.",
+    help="The library's type: wgs; hic, which drops duplicates, counts the contacts "
+    "between contigs and estimates epsilon; or rnaseq, STAR's alignments, written "
+    "as each species' SAM.",
 )
 @click.option(
     "--min-mapq",
@@ -856,3 +858,69 @@ def junctions_command(
                     junction.observed,
                     junction.expected,
                 )
+
+
+@cli.command(name="genes", context_settings=CONTEXT_SETTINGS)
+@click.argument("genome", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.argument("models", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option(
+    "-p",
+    "--prefix",
+    required=True,
+    callback=_species,
+    help="The species' ID, which starts every gene's name and names the outputs.",
+)
+@click.option(
+    "-o",
+    "--outdir",
+    required=True,
+    type=click.Path(file_okay=False, path_type=Path),
+    help="The folder of the annotation and the log.",
+)
+@click.option(
+    "-g",
+    "--genetic-code",
+    type=click.Choice([str(c) for c in (1, 3, 4, 11, 12, 26)]),
+    default="1",
+    show_default=True,
+    help="NCBI's translation table of the species' genes: 12 for the CUG-Ser clade, 26 for CUG-Ala.",
+)
+@click.option(
+    "-s",
+    "--source",
+    default="plexembler",
+    show_default=True,
+    help="The GFF3 and GTF files' second column: what predicted the genes.",
+)
+@_FORCE
+@_VERBOSE
+@_QUIET
+def genes_command(
+    genome: Path,
+    models: Path,
+    prefix: str,
+    outdir: Path,
+    genetic_code: str,
+    source: str,
+    force: bool,
+    verbose: bool,
+    quiet: bool,
+) -> None:
+    """Name a species' gene models; write its GFF3, GTF, proteins and CDS."""
+    from .genes import annotate
+
+    _refuse_existing([outdir / f"{prefix}.gff3.gz"], force)
+    parameters = {
+        "genome": genome,
+        "models": models,
+        "prefix": prefix,
+        "outdir": outdir,
+        "genetic_code": genetic_code,
+        "source": source,
+        "force": force,
+    }
+    with run_log(outdir, prefix, parameters, verbose=verbose, quiet=quiet):
+        try:
+            annotate(genome, models, prefix, outdir, int(genetic_code), source)
+        except (OSError, ValueError, KeyError) as error:
+            raise click.ClickException(str(error)) from error

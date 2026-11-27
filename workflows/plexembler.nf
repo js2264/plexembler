@@ -15,6 +15,8 @@ include { SCAFFOLD               } from '../subworkflows/local/scaffold'
 include { GENOME_QC as GENOME_QC_FINAL } from '../subworkflows/local/genome_qc'
 include { MAPS                   } from '../subworkflows/local/maps'
 include { PLEXEMBLER_JUNCTIONS   } from '../modules/local/plexembler/junctions/main'
+include { RNASEQ                 } from '../subworkflows/local/rnaseq'
+include { ANNOTATION             } from '../subworkflows/local/annotation'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -149,9 +151,26 @@ workflow PLEXEMBLER {
     ch_multiqc_files = ch_multiqc_files.mix(PLEXEMBLER_JUNCTIONS.out.multiqc.map { _meta, table -> table })
 
     //
-    // The steps to come, milestone by milestone (docs/plan.md): annotation,
-    // expression and the report of each species.
+    // SUBWORKFLOW: each pooled RNA-seq library split between its species, on
+    // their genomes
     //
+    RNASEQ(SCAFFOLD.out.genome, ch_libraries)
+    ch_multiqc_files = ch_multiqc_files.mix(RNASEQ.out.multiqc_files)
+
+    //
+    // SUBWORKFLOW: each species' repeats, genes and non-coding RNAs
+    //
+    ANNOTATION(
+        SCAFFOLD.out.genome,
+        RNASEQ.out.bams,
+        params.repeats,
+        params.gene_predictor,
+        params.augustus_species,
+        params.orthodb_proteins ? file(params.orthodb_proteins, checkIfExists: true) : [],
+        params.busco_lineage,
+        params.busco_db ? file(params.busco_db, checkIfExists: true) : [],
+    )
+    ch_multiqc_files = ch_multiqc_files.mix(ANNOTATION.out.multiqc_files)
 
     //
     // Collate and save software versions

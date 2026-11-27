@@ -328,34 +328,42 @@ benchmark's planted misjoins are flagged by `plexembler junctions`.
 **Goal:** each species' genes (GTF, GFF3, proteins), repeats, non-coding RNAs and
 mitochondrial genes.
 
-- [ ] **Repeats:** RepeatModeler2 (a library per species), RepeatMasker →
-      soft-masked genome and repeat landscape.
-- [ ] **RNA-seq, split:** STAR on the pool's final genomes (introns capped at
+- [x] **Repeats:** RepeatModeler2 (a library per species), RepeatMasker →
+      soft-masked genome (`--repeats`). The repeat landscape, to come.
+- [x] **RNA-seq, split:** STAR on the pool's final genomes (introns capped at
       5 kb, `--alignIntronMax 5000 --alignMatesGapMax 5000`: compact genomes get
-      false splices otherwise), `plexembler split --type rnaseq` (unique hits);
-      each species' libraries merged for the gene models.
-- [ ] **Genes:** BRAKER3 `--fungus` (nf-core `braker3`) with the species' RNA
-      alignments and OrthoDB's fungal proteins (`--orthodb_proteins`, downloaded
-      to the cache when absent). Without RNA-seq: BRAKER on proteins alone, or
-      GALBA (local), whichever does better on the benchmark. Helixer (local,
-      GPU, experimental until tested on one) as a second candidate (`--gene_predictors braker,helixer`), scored by
-      BUSCO's proteins and OMArk.
-- [ ] **Formats:** AGAT (`agat/convertspgff2gtf`, `agat/spextractsequences`,
-      `agat/spstatistics`): GTF and GFF3, locus tags `<species>_000010`, proteins
-      translated with the species' `genetic_code` (CUG is a sense codon in tables
-      1, 12 and 26 alike: gene structures do not change, proteins do), CDS.
+      false splices otherwise), `plexembler split --type rnaseq` (unique hits,
+      each species' pairs kept as alignments, already on its genome: no second
+      alignment); each species' libraries merged for the gene models.
+- [x] **Genes:** BRAKER3 `--fungus` (nf-core `braker3`) with the species' RNA
+      alignments and OrthoDB's fungal proteins (`--orthodb_proteins`, given;
+      its download to the cache, to come). Without RNA-seq, BRAKER on the
+      proteins alone; with neither, AUGUSTUS ab initio with a trained species
+      (`--augustus_species`, local module). To come: GALBA, if it does better
+      than BRAKER on proteins on the benchmark; Helixer (local, GPU,
+      experimental until tested on one) as a second candidate
+      (`--gene_predictors braker,helixer`), scored by BUSCO's proteins and
+      OMArk.
+- [x] **Formats:** `plexembler genes`, in place of AGAT: GTF and GFF3, locus
+      tags `<species>_000010`, proteins translated with the species'
+      `genetic_code` (CUG is a sense codon in tables 1, 12 and 26 alike: gene
+      structures do not change, proteins do; a protein with a stop inside is
+      warned of), CDS, a table of the genes. AGAT's statistics, to come with
+      the checks.
 - [ ] **The genetic code, checked:** Codetta (Shulgina and Eddy 2021) infers each
       species' nuclear code from its genome: it is the code used when the
       samplesheet says `NA`, and a warning when it differs from the one given.
 - [ ] **Non-coding RNAs:** tRNAscan-SE (`-E`), barrnap (`--kingdom euk`: the rDNA
-      locus), Infernal with Rfam.
+      locus), Infernal with Rfam. tRNAscan-SE and barrnap done; Infernal, to
+      come (`--rfam_cm`).
 - [ ] **Functions:** eggNOG-mapper (orthologue names, GO, KEGG, EC, Pfam) →
       `functions.tsv`; InterProScan with `--interproscan_db`.
 - [ ] **The mitochondrial genome's genes,** with the yeast mitochondrial code
       (table 3): MitoHiFi in its contig mode, or MFannot; the one that annotates
       the benchmark's mitochondria best.
 - [ ] **Annotation checks:** BUSCO's proteins, OMArk (local), AGAT's statistics,
-      the RNA-seq reads in genes.
+      the RNA-seq reads in genes. BUSCO's proteins done; the share of the
+      RNA-seq reads in genes comes with M5's counts.
 
 **Done when**, on the benchmark species with reference annotations: ≥ 90 % of
 the reference genes found (gffcompare); BUSCO's proteins within 2 points of

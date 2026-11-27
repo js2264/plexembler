@@ -83,18 +83,18 @@ def test_the_second_species_first(tmp_path: Path):
     assert "Scer\tSpar\t88.40\t60.00\t70.00\tsame genus" in pairs
 
 
-def test_force_and_checks(tmp_path: Path):
+def test_force_and_checks(tmp_path: Path, plain):
     table = skani(tmp_path, ROWS)
     outdir = tmp_path / "out"
     assert run(str(table), "-p", "poolA", "-o", str(outdir), "-q").exit_code == 0
     again = run(str(table), "-p", "poolA", "-o", str(outdir))
     assert again.exit_code == 1
-    assert "--force" in again.output
+    assert "--force" in plain(again.output)
     assert run(str(table), "-p", "poolA", "-o", str(outdir), "--force").exit_code == 0
     assert run(str(table), "-p", "pool_A", "-o", str(outdir)).exit_code == 2
     bad = tmp_path / "bad.tsv"
     bad.write_text("x\n", encoding="utf-8")
     failed = run(str(bad), "-p", "poolA", "-o", str(tmp_path / "o2"))
     assert failed.exit_code == 1
-    assert "no column" in failed.output
+    assert "no column" in plain(failed.output)
     assert not logging.getLogger("plexembler").handlers

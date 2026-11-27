@@ -132,7 +132,7 @@ def test_a_bad_agp(tmp_path: Path):
         read_agp(bad)
 
 
-def test_the_command(agp, tmp_path: Path):
+def test_the_command(agp, tmp_path: Path, plain):
     pairs = pairs_file(tmp_path / "Scer.pairs")
     outdir = tmp_path / "out"
     arguments = ["junctions", str(pairs), "-a", str(agp), "-p", "Scer", "-o", str(outdir), "-w", "10000"]  # fmt: skip
@@ -161,4 +161,4 @@ def test_the_command(agp, tmp_path: Path):
         cli, [*arguments[:3], str(broken), *arguments[4:], "--force"]
     )
     assert bad.exit_code == 1
-    assert "columns" in bad.output
+    assert "columns" in plain(bad.output)

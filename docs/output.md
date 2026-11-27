@@ -12,11 +12,13 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 │   ├── assembly/      (now) <species>.assembly.fa.gz: the kept contigs, polished;
 │   │                  the table of candidates
 │   ├── genome/        (now) <species>.fa.gz (+ .fai, .gzi), <species>.agp,
-│   │                  <species>.chrom.sizes, <species>.names.tsv, qc/; later
-│   │                  <species>.softmasked.fa.gz, <species>.chrM.fa.gz
-│   ├── annotation/    <species>.gtf.gz, <species>.gff3.gz, <species>.proteins.faa.gz,
-│   │                  <species>.cds.fna.gz, <species>.functions.tsv, repeats, ncRNA, tRNA,
-│   │                  telomeres.bed, centromeres.bed, chrM.gff3
+│   │                  <species>.chrom.sizes, <species>.names.tsv,
+│   │                  <species>.softmasked.fa, qc/; later <species>.chrM.fa.gz
+│   ├── annotation/    (now) <species>.gtf.gz, <species>.gff3.gz, <species>.proteins.faa.gz,
+│   │                  <species>.cds.fna.gz, <species>.genes.tsv, repeats/, ncrna/, qc/;
+│   │                  later <species>.functions.tsv, telomeres.bed, centromeres.bed, chrM.gff3
+│   ├── rnaseq/        (now) <species>.<library>.bam (+ .bai): its pairs of each pooled
+│   │                  RNA-seq library, on its genome
 │   ├── hic/           (now) <species>.mcool, <species>.pairs.gz and their stats;
 │   │                  later <species>.hic, <species>.pretext, maps (PNG), contact decay
 │   ├── expression/    <species>.counts.tsv, <species>.tpm.tsv: genes × RNA-seq libraries
@@ -25,8 +27,8 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 │   ├── contigs/       (now) <species>.contigs.fa.gz: polished with its short reads,
 │   │                  screened, its organelle named <species>_chrM
 │   ├── polish/        (now) the short-read polishing's choice; the Hi-C reads' digestion
-│   ├── candidates/    assembly/<assembler>/, polish/ and scaffold/yahs/ (now): every
-│   │                  candidate, its checks; later every scaffolder's, with its map
+│   ├── candidates/    assembly/<assembler>/, polish/, scaffold/yahs/ and genes/ (now):
+│   │                  every candidate, its checks; later every scaffolder's, with its map
 │   ├── estimates/     (now) what the samplesheet left NA: the genome size (LRGE);
 │   │                  the k-mer spectrum's fit (GenomeScope2)
 │   ├── reads/         (now, with --save_ont_reads) the nanopore reads as assembled
@@ -201,6 +203,46 @@ and zoomed out, balanced ([cooler](https://github.com/open2c/cooler)).
   and their numbers (`<species>.pairs.stat`); the parse's numbers, duplicates
   included (`<species>.pairsam.stat`).
 
+### The pooled RNA-seq, split
+
+Each pooled RNA-seq library, aligned by [STAR](https://github.com/alexdobin/STAR)
+to its pool's genomes at once (introns capped at 5 kb), and split between the
+species by [`plexembler split --type rnaseq`](cli.md#split): each species' pairs
+are the alignments they were, on its genome already.
+
+- `species/<species>/rnaseq/<species>.<library>.bam` (and `.bai`): the
+  species' pairs of the library, sorted.
+- `pools/<pool>/deconvolution/rnaseq/`: each library's split, as for the WGS
+  and Hi-C libraries, and STAR's report of each (`star/<library>.Log.final.out`).
+
+### Annotation
+
+Each species' repeats, found de novo by
+[RepeatModeler2](https://github.com/Dfam-consortium/RepeatModeler) and masked
+soft by [RepeatMasker](https://www.repeatmasker.org) (`--repeats`); its genes,
+predicted by [BRAKER3](https://github.com/Gaius-Augustus/BRAKER) (`--fungus`)
+with its RNA-seq alignments and `--orthodb_proteins`, or by
+[AUGUSTUS](https://github.com/Gaius-Augustus/Augustus) ab initio with
+`--augustus_species` when it has neither; named and written by
+[`plexembler genes`](cli.md#genes); its tRNAs and rRNAs.
+
+- `species/<species>/annotation/`: the genes, `<species>.gff3.gz` and
+  `<species>.gtf.gz`, named `<species>_000010`, … in the genome's order; the
+  proteins, `<species>.proteins.faa.gz`, translated with the species'
+  `genetic_code`; the CDS, `<species>.cds.fna.gz`; the table of genes,
+  `<species>.genes.tsv`; its MultiQC table and the command's log.
+- `species/<species>/annotation/repeats/`: RepeatModeler's families
+  (`<species>.families.fa`, `.stk`, `.log`), RepeatMasker's table and its repeats (`<species>.out`,
+  `.tbl`, `.gff`).
+- `species/<species>/genome/<species>.softmasked.fa`: the genome, its repeats in
+  lower case.
+- `species/<species>/annotation/ncrna/`: [tRNAscan-SE](https://github.com/UCSC-LoweLab/tRNAscan-SE)'s
+  tRNAs (`trnascan/<species>.tsv`, `.gff`, `.stats`) and
+  [barrnap](https://github.com/tseemann/barrnap)'s rRNAs (`barrnap/<species>.gff`).
+- `species/<species>/annotation/qc/busco/`: BUSCO on the proteins.
+- `species/<species>/candidates/genes/`: the predictor's own files
+  (`braker3/braker.gtf`, `.aa`, `.codingseq`, `.log`; `augustus/<species>.augustus.gff3`).
+
 ### MultiQC
 
 `multiqc/multiqc_report.html`: the reads' QC, each candidate's BUSCO and
@@ -208,7 +250,8 @@ gfastats numbers, the table of candidates of every species, the identity
 between the species of every pool, each library's split (the first, on the
 contigs), each species' polishing and its Hi-C reads' digestion, the contig
 screen, each genome's BUSCO and gfastats numbers and its joins' verdicts, each
-map's pairs, and the software versions, in one report,
+map's pairs, each RNA-seq library's split and STAR's report, each species'
+genes and BUSCO on its proteins, and the software versions, in one report,
 with the methods' description and its references.
 
 ### Pipeline information

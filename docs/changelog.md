@@ -97,3 +97,23 @@ follow [semantic versioning](https://semver.org).
 - **Each species' Hi-C map** on its genome: its pairs aligned (bwa-mem2),
   parsed, sorted and deduplicated (pairtools), binned at `--map_resolution`
   (1 kb) and zoomed out, balanced (cooler): `species/<species>/hic/<species>.mcool`.
+- **The pooled RNA-seq, split** (milestone 4): each library aligned by STAR to
+  its pool's genomes at once (introns capped at 5 kb) and split by
+  `plexembler split --type rnaseq`, each species' pairs kept as the alignments
+  they are, sorted and indexed, in `species/<species>/rnaseq/`; a
+  multimapper's secondary alignments say between which species it is
+  ambiguous.
+- **Each species' annotation**: its repeats found de novo (RepeatModeler2) and
+  masked soft (RepeatMasker, `--repeats`); its genes predicted by BRAKER3 with
+  its RNA-seq and `--orthodb_proteins`, or by AUGUSTUS ab initio
+  (`--augustus_species`) when it has neither (`--gene_predictor`); named,
+  translated with its genetic code and written by `plexembler genes`; BUSCO on
+  its proteins; its tRNAs (tRNAscan-SE) and rRNAs (barrnap); all in
+  `species/<species>/annotation/`.
+- **`plexembler genes`**, which names a predictor's gene models in the
+  genome's order (`<species>_000010`, …) and writes GFF3, GTF, the proteins,
+  translated with the species' genetic code (tables 1, 3, 4, 11, 12 and 26),
+  the CDS and a table of the genes.
+- **The test data**, version 4: genes every 6 kb (open reading frames of
+  yeast's codon usage, which AUGUSTUS's yeast model finds), the RNA-seq read
+  from them; the second species of the CUG-Ser clade (table 12).

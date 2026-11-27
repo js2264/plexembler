@@ -104,6 +104,34 @@ Every tool a step of the pipeline runs, added with its step ([docs/plan.md](docs
 
   > Abdennur N, Mirny LA. Cooler: scalable storage for Hi-C data and other genomically labeled arrays. Bioinformatics. 2020 Jan 1;36(1):311-316. doi: 10.1093/bioinformatics/btz540.
 
+- [STAR](https://doi.org/10.1093/bioinformatics/bts635)
+
+  > Dobin A, Davis CA, Schlesinger F, Drenkow J, Zaleski C, Jha S, Batut P, Chaisson M, Gingeras TR. STAR: ultrafast universal RNA-seq aligner. Bioinformatics. 2013 Jan 1;29(1):15-21. doi: 10.1093/bioinformatics/bts635.
+
+- [RepeatModeler2](https://doi.org/10.1073/pnas.1921046117)
+
+  > Flynn JM, Hubley R, Goubert C, Rosen J, Clark AG, Feschotte C, Smit AF. RepeatModeler2 for automated genomic discovery of transposable element families. Proc Natl Acad Sci U S A. 2020 Apr 28;117(17):9451-9457. doi: 10.1073/pnas.1921046117.
+
+- [RepeatMasker](https://www.repeatmasker.org)
+
+  > Smit AFA, Hubley R, Green P. RepeatMasker Open-4.0. 2013-2015.
+
+- [BRAKER3](https://doi.org/10.1101/gr.278090.123)
+
+  > Gabriel L, Brůna T, Hoff KJ, Ebel M, Lomsadze A, Borodovsky M, Stanke M. BRAKER3: Fully automated genome annotation using RNA-seq and protein evidence with GeneMark-ETP, AUGUSTUS, and TSEBRA. Genome Res. 2024 Jun 25;34(5):769-777. doi: 10.1101/gr.278090.123.
+
+- [AUGUSTUS](https://doi.org/10.1093/bioinformatics/btn013)
+
+  > Stanke M, Diekhans M, Baertsch R, Haussler D. Using native and syntenically mapped cDNA alignments to improve de novo gene finding. Bioinformatics. 2008 Mar 1;24(5):637-44. doi: 10.1093/bioinformatics/btn013.
+
+- [tRNAscan-SE](https://doi.org/10.1093/nar/gkab688)
+
+  > Chan PP, Lin BY, Mak AJ, Lowe TM. tRNAscan-SE 2.0: improved detection and functional classification of transfer RNA genes. Nucleic Acids Res. 2021 Sep 20;49(16):9077-9096. doi: 10.1093/nar/gkab688.
+
+- [barrnap](https://github.com/tseemann/barrnap)
+
+  > Seemann T. barrnap: BAsic Rapid Ribosomal RNA Predictor.
+
 - [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
 
 > Andrews, S. (2010). FastQC: A Quality Control Tool for High Throughput Sequence Data [Online].

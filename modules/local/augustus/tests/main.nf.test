@@ -1,0 +1,31 @@
+nextflow_process {
+
+    name "Test process AUGUSTUS"
+    script "../main.nf"
+    process "AUGUSTUS"
+
+    tag "modules"
+    tag "modules_local"
+    tag "augustus"
+
+    test("a genome - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [ [ id: 'sp1' ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ]
+                input[1] = 'saccharomyces_cerevisiae_S288C'
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.gff3.size() == 1 },
+            )
+        }
+    }
+}

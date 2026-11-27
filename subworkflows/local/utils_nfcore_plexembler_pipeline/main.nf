@@ -295,6 +295,13 @@ def toolCitationText() {
             "YaHS (Zhou et al. 2023),",
             "pairtools (Open2C et al. 2024),",
             "cooler (Abdennur and Mirny 2020),",
+            "STAR (Dobin et al. 2013),",
+            "RepeatModeler2 (Flynn et al. 2020),",
+            "RepeatMasker (Smit et al. 2015),",
+            "BRAKER3 (Gabriel et al. 2024),",
+            "AUGUSTUS (Stanke et al. 2008),",
+            "tRNAscan-SE (Chan et al. 2021),",
+            "barrnap (Seemann),",
             "FastQC (Andrews 2010),",
             "MultiQC (Ewels et al. 2016)",
             "."
@@ -327,6 +334,13 @@ def toolBibliographyText() {
             "<li>Zhou, C., McCarthy, S. A., & Durbin, R. (2023). YaHS: yet another Hi-C scaffolding tool. Bioinformatics, 39(1), btac808. doi: 10.1093/bioinformatics/btac808</li>",
             "<li>Open2C, Abdennur, N., Fudenberg, G., Flyamer, I. M., Galitsyna, A. A., Goloborodko, A., Imakaev, M., & Venev, S. V. (2024). Pairtools: from sequencing data to chromosome contacts. PLoS Computational Biology, 20(5), e1012164. doi: 10.1371/journal.pcbi.1012164</li>",
             "<li>Abdennur, N., & Mirny, L. A. (2020). Cooler: scalable storage for Hi-C data and other genomically labeled arrays. Bioinformatics, 36(1), 311-316. doi: 10.1093/bioinformatics/btz540</li>",
+            "<li>Dobin, A., et al. (2013). STAR: ultrafast universal RNA-seq aligner. Bioinformatics, 29(1), 15-21. doi: 10.1093/bioinformatics/bts635</li>",
+            "<li>Flynn, J. M., et al. (2020). RepeatModeler2 for automated genomic discovery of transposable element families. PNAS, 117(17), 9451-9457. doi: 10.1073/pnas.1921046117</li>",
+            "<li>Smit, A. F. A., Hubley, R., & Green, P. (2013-2015). RepeatMasker Open-4.0. URL: https://www.repeatmasker.org</li>",
+            "<li>Gabriel, L., et al. (2024). BRAKER3: Fully automated genome annotation using RNA-seq and protein evidence with GeneMark-ETP, AUGUSTUS, and TSEBRA. Genome Research, 34(5), 769-777. doi: 10.1101/gr.278090.123</li>",
+            "<li>Stanke, M., Diekhans, M., Baertsch, R., & Haussler, D. (2008). Using native and syntenically mapped cDNA alignments to improve de novo gene finding. Bioinformatics, 24(5), 637-644. doi: 10.1093/bioinformatics/btn013</li>",
+            "<li>Chan, P. P., Lin, B. Y., Mak, A. J., & Lowe, T. M. (2021). tRNAscan-SE 2.0: improved detection and functional classification of transfer RNA genes. Nucleic Acids Research, 49(16), 9077-9096. doi: 10.1093/nar/gkab688</li>",
+            "<li>Seemann, T. barrnap: BAsic Rapid Ribosomal RNA Predictor. URL: https://github.com/tseemann/barrnap</li>",
             "<li>Andrews S, (2010) FastQC, URL: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/).</li>",
             "<li>Ewels, P., Magnusson, M., Lundin, S., & Käller, M. (2016). MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics , 32(19), 3047–3048. doi: /10.1093/bioinformatics/btw354</li>"
         ].join(' ').trim()

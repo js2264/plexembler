@@ -65,7 +65,7 @@ Huva,poolA,ont/Huva.fastq.gz,NA,NA,NA,NA
 | `ploidy` | no | The expected ploidy. A haploid species' assemblies keep no other haplotype's contigs (Flye's `--no-alt-contigs`, hifiasm's `-l0`). | haploid; GenomeScope2's fit of the nanopore k-mers hints at heterozygosity (nanopore errors inflate it), the species' own short reads tell it (milestone 2), and allele balance (milestone 6) |
 | `n_chromosomes` | no | The expected number of nuclear chromosomes: the genome's longest scaffolds, that many, are named its chromosomes ([`plexembler finalize`](cli.md#finalize)); HapHiC's input (to come). | every scaffold of `--min_chromosome` bases (100 kb) or more is a chromosome |
 | `busco_lineage` | no | A BUSCO lineage (`busco --list-datasets`), such as `saccharomycetes_odb12`. | `--busco_lineage`: `auto_euk` by default, BUSCO's choice |
-| `genetic_code` | no | The NCBI translation table of the nuclear genes: `1`, `12` for the CUG-Ser clade, `26` for the CUG-Ala clade. | inferred from the genome; `1` until then (milestone 4) |
+| `genetic_code` | no | The NCBI translation table of the nuclear genes: `1`, `12` for the CUG-Ser clade, `26` for the CUG-Ala clade. The proteins are translated with it ([`plexembler genes`](cli.md#genes)). | `1`; to be inferred from the genome (Codetta, to come) |
 | `telomere_repeat` | no | The telomeric repeat unit (`TGTGGG`). | found from the reads (milestone 3) |
 | `assembler` | no | The assembler whose contigs to keep (`flye`, `hifiasm`), whatever the checks say: one of `--assemblers`. | the candidate the checks prefer ([`plexembler select`](cli.md#select)) |
 
@@ -217,6 +217,32 @@ contigs, named the same way.
 The scaffolds are YaHS's, uncurated. The steps that check and correct them
 (the junctions' support on the map, the telomeres, a second scaffolder) are to
 come; until then, look at each species' map before trusting its chromosomes.
+
+## Annotation
+
+Each species' genome is annotated (milestone 4 of the [plan](plan.md);
+[the parameters](parameters.md#annotation)). The pooled RNA-seq libraries are
+split between the species first, on their genomes (STAR, then
+[`plexembler split --type rnaseq`](cli.md#split)): each species' pairs are its
+evidence. Its repeats are found and masked (`--repeats repeatmodeler`), then
+its genes predicted (`--gene_predictor`):
+
+- **`braker`** (the default): BRAKER3 `--fungus`, trained on the species
+  itself, with its RNA-seq, `--orthodb_proteins` (OrthoDB's proteins of the
+  fungi, `Fungi.fa.gz`, from
+  [their partitions](https://bioinf.uni-greifswald.de/bioinf/partitioned_odb12/)),
+  or both. A species with neither is predicted by AUGUSTUS.
+- **`augustus`**: AUGUSTUS ab initio, with `--augustus_species`, a species it
+  was trained on (`augustus --species=help`), as close to yours as can be:
+  `saccharomyces_cerevisiae_S288C` by default. Quick, and right for a species
+  near one AUGUSTUS knows; BRAKER3 does better for the others.
+- **`none`**: no genes.
+
+The genes are named in the genome's order (`<species>_000010`, …) and their
+proteins translated with the samplesheet's `genetic_code` (`1` when `NA`):
+CUG is a sense codon in tables 1, 12 and 26 alike, so the gene structures do
+not change, the proteins do. A wrong code shows as proteins with a stop codon
+inside, which the run warns of.
 
 ## Profiles
 
