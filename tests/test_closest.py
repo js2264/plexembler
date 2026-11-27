@@ -169,6 +169,15 @@ def test_read_lineages_by_ranks_or_lineage(tmp_path: Path):
     assert read_lineages(joined, {"GCA_000146045.2"}) == {
         "GCA_000146045.2": "d__Eukaryota;p__Ascomycota"
     }
+    # sourmash's other name for the column of its genomes.
+    identifiers = tmp_path / "identifiers.csv"
+    identifiers.write_text(
+        "identifiers,superkingdom,genus\nGCA_000146045.2,Eukaryota,Saccharomyces\n",
+        encoding="utf-8",
+    )
+    assert read_lineages(identifiers, {"GCA_000146045.2"}) == {
+        "GCA_000146045.2": "Eukaryota;Saccharomyces"
+    }
     wrong = tmp_path / "wrong.csv"
     wrong.write_text("name,genus\nx,y\n", encoding="utf-8")
     with pytest.raises(ValueError, match="not a sourmash taxonomy"):

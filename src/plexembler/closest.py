@@ -173,9 +173,10 @@ def _unversioned(accession: str) -> str:
 def read_lineages(path: Path, accessions: set[str]) -> dict[str, str]:
     """The lineages of the given accessions, from a sourmash taxonomy (CSV).
 
-    The file has an ``ident`` column (or ``accession``) and either the ranks'
-    columns (``superkingdom`` … ``strain``) or a ``lineage`` column, as
-    ``sourmash tax`` reads them. Accessions are matched without their version.
+    The file names its genomes in an ``ident`` column (or ``identifiers``, or
+    ``accession``, as ``sourmash tax`` reads them) and gives their lineages in
+    the ranks' columns (``superkingdom`` … ``strain``) or in a ``lineage``
+    column. Accessions are matched without their version.
 
     Returns
     -------
@@ -193,11 +194,14 @@ def read_lineages(path: Path, accessions: set[str]) -> dict[str, str]:
     with open_text(path) as handle:
         reader = csv.DictReader(handle)
         fields = reader.fieldnames or []
-        ident = next((f for f in ("ident", "accession") if f in fields), None)
+        ident = next(
+            (f for f in ("ident", "identifiers", "accession") if f in fields), None
+        )
         ranks = [rank for rank in RANKS if rank in fields]
         if ident is None or not (ranks or "lineage" in fields):
             raise ValueError(
-                f"{path}: not a sourmash taxonomy: no column ident, or no ranks"
+                f"{path}: not a sourmash taxonomy: no column ident, identifiers or "
+                "accession, or no ranks"
             )
         for row in reader:
             key = _unversioned((row.get(ident) or "").strip())
