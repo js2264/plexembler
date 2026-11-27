@@ -14,8 +14,9 @@ over 10 kb against its reference (QUAST). And the pool: the pair of the genus
 found as one (85 to 95 %), the distant species below.
 
 Milestone 2: 99.5 % or more of each species' split WGS pairs its own (InSilicoSeq
-names each read after its sequence: ``--save_split_reads``); epsilon within 10 %
-of the simulated rate; each species' screened contigs its own (minimap2 against
+names each read after its sequence: ``--save_split_reads``) and epsilon within
+10 % of the simulated rate, in both splits of the pool (on the contigs, then on
+the screened contigs); each species' screened contigs its own (minimap2 against
 the references: the planted bleed-through moved or dropped); no QV lower after
 the short-read polishing; and, with ``--hic-results`` (a run with
 ``--polish_reads hic``), the Hi-C reads' polishing gain 80 % of the WGS pairs'.
@@ -227,40 +228,45 @@ def milestone_2(
     workdir = results / "benchmark"
     workdir.mkdir(parents=True, exist_ok=True)
     checks = []
-    deconvolution = results / "pools" / pool / "deconvolution" / "contigs"
-    for row in rows:
-        species = row["species"]
-        reads = deconvolution / "reads" / f"{species}.{pool}-wgs_R1.fastq.gz"
-        own = total = 0
-        with gzip.open(reads, "rt") as handle:
-            for index, line in enumerate(handle):
-                if index % 4 == 0:
-                    total += 1
-                    own += line[1:].startswith(f"{species}_")
-        share = own / total if total else 0.0
+    # The pool is split twice: on the contigs, for the screen, then on the
+    # screened contigs, for the polishing and the scaffolds.
+    for stage, on in (("contigs", "contigs"), ("screened", "screened contigs")):
+        deconvolution = results / "pools" / pool / "deconvolution" / stage
+        for row in rows:
+            species = row["species"]
+            reads = deconvolution / "reads" / f"{species}.{pool}-wgs_R1.fastq.gz"
+            own = total = 0
+            with gzip.open(reads, "rt") as handle:
+                for index, line in enumerate(handle):
+                    if index % 4 == 0:
+                        total += 1
+                        own += line[1:].startswith(f"{species}_")
+            share = own / total if total else 0.0
+            checks.append(
+                {
+                    "species": species,
+                    "check": f"99.5 % of its split WGS pairs its own (on the {on})",
+                    "value": f"{100 * share:.2f} % of {total}",
+                    "passed": share >= 0.995,
+                }
+            )
+        numbers = json.loads(
+            (deconvolution / f"{pool}.{pool}-hic.split.json").read_text()
+        )
+        expected = truth["hic"].get("random_ligation")
+        found = numbers.get("epsilon")
         checks.append(
             {
-                "species": species,
-                "check": "99.5 % of its split WGS pairs its own",
-                "value": f"{100 * share:.2f} % of {total}",
-                "passed": share >= 0.995,
+                "species": pool,
+                "check": f"epsilon within 10 % of the simulated rate (on the {on})",
+                "value": f"{found:.4f} (simulated {expected})"
+                if found is not None and expected
+                else str(found),
+                "passed": bool(
+                    found and expected and abs(found - expected) <= 0.1 * expected
+                ),
             }
         )
-    numbers = json.loads((deconvolution / f"{pool}.{pool}-hic.split.json").read_text())
-    expected = truth["hic"].get("random_ligation")
-    found = numbers.get("epsilon")
-    checks.append(
-        {
-            "species": pool,
-            "check": "epsilon within 10 % of the simulated rate",
-            "value": f"{found:.4f} (simulated {expected})"
-            if found is not None and expected
-            else str(found),
-            "passed": bool(
-                found and expected and abs(found - expected) <= 0.1 * expected
-            ),
-        }
-    )
     every = workdir / "references.fa"
     every.write_text(
         "".join((data / "references" / f"{r['species']}.fa").read_text() for r in rows)

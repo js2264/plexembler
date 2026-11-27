@@ -50,8 +50,9 @@ python benchmarks/evaluate.py --results results --milestone 1
 (`--busco`, `--quast`, `--minimap2`: how to run them, on PATH by default) and
 writes `results/benchmark/m<N>.md`; it exits 1 when a check fails. Each
 milestone's checks are its "Done when": milestone 1, the kept contigs (BUSCO
-against the reference's, QV, misassemblies); milestone 2, the split, epsilon,
-the screened contigs and the polishing (`--hic-results`: a second run, polished
+against the reference's, QV, misassemblies); milestone 2, the two splits (on
+the contigs, then on the screened contigs) and their epsilon, the screened
+contigs and the polishing (`--hic-results`: a second run, polished
 with the Hi-C reads, `--polish_reads hic`); milestone 3, each genome's
 chromosomes against the reference's (whole, end to end), its misassemblies and
 its flagged joins.
