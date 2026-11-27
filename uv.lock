@@ -1116,6 +1116,8 @@ version = "0.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
+    { name = "jinja2" },
+    { name = "pyyaml" },
     { name = "rich-click" },
 ]
 
@@ -1141,6 +1143,8 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.1" },
+    { name = "jinja2", specifier = ">=3.1" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "rich-click", specifier = ">=1.9" },
 ]
 
