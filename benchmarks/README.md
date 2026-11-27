@@ -45,9 +45,19 @@ The truth: `references/<species>.fa` (the genome, its repeats in),
 `truth/<species>.ont_errors.tsv` (the nanopore reads' shared errors).
 
 The set is deterministic: the same `GENERATOR_VERSION` writes the same reads.
-It is published, with that version, as the release `benchmark-data-v<N>`, which
+It is published, with that version, as the release `benchmark-data-v<N>`
+(`small.tar`, and `small.sha256`, each file's checksum), which
 [the benchmarks' workflow](../.github/workflows/benchmarks.yml) downloads, or
 makes and publishes when it does not exist.
+
+```bash
+# The set, without the simulators
+gh release download benchmark-data-v2 --repo js2264/plexembler --dir benchmarks/data
+tar -xf benchmarks/data/small.tar -C benchmarks/data
+(cd benchmarks/data && sha256sum -c small.sha256)
+```
+
+Or make it:
 
 ```bash
 # The simulators: Badread and InSilicoSeq
@@ -84,6 +94,16 @@ when":
   against BUSCO on its genome;
 - milestone 5, Spearman's rho between its TPM and the true TPM, in every
   RNA-seq library, on its genes paired with the reference's.
+
+## In CI
+
+[`benchmarks.yml`](../.github/workflows/benchmarks.yml) runs the pipeline on
+the set (Docker, on GitHub's runner, the package's image built from the
+checkout), then the checks: every milestone's for every release tag (`v*`),
+and by hand (Actions, Benchmarks, Run workflow: a branch, one milestone or all,
+and whether to publish a set the run had to make). Each milestone's table lands
+in the run's summary, its report in the run's artifact. A run takes hours, so a
+pull request has the pipeline's nf-tests instead (`pipeline.yml`).
 
 ## To come
 

@@ -54,11 +54,12 @@ follow [semantic versioning](https://semver.org).
 - **The benchmark pool** (`-profile benchmark`): three yeasts, two of a genus,
   their nanopore reads and their pool's WGS, Arima Hi-C and RNA-seq simulated
   from their references and annotations by `benchmarks/make_benchmark_data.py`,
-  published as the release `benchmark-data-v2`: a repeat planted in each
-  chromosome and nanopore reads under 7 kb, so that the assemblies break and the
-  scaffolding has joins to make; errors the nanopore reads share, for the
-  polishing to fix; RNA-seq at known levels. `benchmarks/evaluate.py` checks
-  milestones 1 to 5's "Done when" on its results.
+  published as the release `benchmark-data-v2` with each file's checksum: a
+  repeat planted in each chromosome and nanopore reads under 7 kb, so that the
+  assemblies break and the scaffolding has joins to make; errors the nanopore
+  reads share, for the polishing to fix; RNA-seq at known levels.
+  `benchmarks/evaluate.py` checks milestones 1 to 5's "Done when" on its
+  results, all of them for every release (`benchmarks.yml`).
 - **The pool, split** (milestone 2): each pooled WGS and Hi-C library aligned
   to every species' contigs of its pool at once (bwa-mem2) and split between
   them by `plexembler split`: a pair to a species when both mates are unique
