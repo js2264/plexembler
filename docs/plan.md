@@ -61,6 +61,7 @@ it applies.
 | RNA-seq | Counts and TPM per species and library; no differential expression (M5) |
 | Delivery | A pull request per milestone into `main`, squash-merged by the maintainer: each milestone on its own branch, its pull request stacked on the previous milestone's until that one is merged, then rebased onto `main` |
 | Benchmark | Public data of yeasts with T2T references, mixed in silico (T2) |
+| Benchmark sets | Three, from the easiest to the hardest (2026-11-27): each plants more of the repeats yeast genomes hold and gives worse long reads and Hi-C, R10 in all three. Milestone 4 counts the characterized genes, not the uncharacterized ORFs (T2) |
 | Upstream | hicstuff, instaGRAAL, chromosomix and metacooler are attached: their changes are prepared there (T4, T7), and worked around here until they are released |
 | The package's container | An image on GHCR per release, `ghcr.io/js2264/plexembler:X.Y.Z`, built from the released wheel; PyPI later (T1) |
 
@@ -106,7 +107,7 @@ The repository, and what every later step relies on. Not released.
 - [x] Unknown values (`NA`) in the species samplesheet, and its `chemistry`
       column.
 - [ ] GitHub's settings (T5).
-- [ ] The benchmark pool's small set, `benchmark-data-v1` (T2): its generator is written; the release is made by `benchmarks.yml` once `main` has it.
+- [x] The benchmark pool (T2): its three sets, `benchmark-data-v3`, released by `benchmarks.yml` (v1 never was; v2 was, by the workflow's first run).
 - [x] The package's container, which M1's local modules need (T1).
 
 ## M1 · Contigs, per species · v0.1.0
@@ -387,9 +388,10 @@ mitochondrial genes.
       RNA-seq reads in genes comes with M5's counts.
 
 **Done when**, on the benchmark species with reference annotations: ≥ 90 % of
-the reference genes found (a predicted CDS over 80 % of each reference CDS,
-at 95 % identity: the genome's coordinates are not the reference's, which
-gffcompare would need); BUSCO's proteins within 2 points of BUSCO's genome.
+the characterized reference genes found, the uncharacterized ORFs left out
+(Decisions; a predicted CDS over 80 % of each reference CDS, at 95 % identity:
+the genome's coordinates are not the reference's, which gffcompare would need);
+BUSCO's proteins within 2 points of BUSCO's genome.
 
 ## M5 · Expression and tracks · v0.5.0
 
@@ -495,17 +497,28 @@ pipeline's own steps need a container before the package is anywhere else.
       `-profile benchmark`; `benchmarks/evaluate.py` checks a milestone's "Done
       when"; `.github/workflows/benchmarks.yml` fetches the release, or makes
       and publishes it, and runs both.
-- [ ] **`benchmark-data-v2`**: RNA-seq of each species' genes (polyester), and
-      misjoins planted in a draft, for M3 to M5. What v1 showed (the M1 to M3
-      PRs hold the numbers): Flye assembles each of its small chromosomes in
-      one contig, so YaHS joins nothing and `plexembler junctions` scores
-      nothing. v2 needs drafts broken where the scaffolds must join them
-      (shorter reads, or contigs cut before scaffolding), the references'
-      annotations for M4 (gffcompare), and RNA-seq with known levels for M5.
-      And drafts with errors for the short-read polishing to fix: v1's (Badread
-      at 98 %, Flye, Medaka) have under one mismatch or indel per 100 kb outside
-      a misjoined subtelomere, so no polishing is kept and M2's Hi-C check, a
-      gain against WGS's, is not judged.
+- [x] **`benchmark-data-v2`**: a 9 kb repeat planted every 200 kb and
+      nanopore reads under 7 kb, so that the drafts break where the scaffolds
+      must join them; errors the nanopore reads share, for the polishing;
+      the references' annotations (M4) and RNA-seq at known levels (M5);
+      misjoins laid out at evaluation (M3). What it found (js2264/plexembler#8
+      holds the numbers): the polishing guard too strict for the held-out
+      QV's floor (its tolerance now 0.1); YaHS's own resolutions joining
+      nothing below a contig N50 of 100 kb, and a clear join left apart (its
+      resolutions given, from 1 kb, and a second pass on its scaffolds);
+      BRAKER3's training failing on a yeast's few introns (the clade's
+      AUGUSTUS model, `--braker_train` to train). And what it could not
+      measure: reads under 7 kb collapse the yeasts' own subtelomeric
+      paralogs as well as the planted repeat, so chromosome ends went
+      missing before any scaffolding.
+- [x] **`benchmark-data-v3`**: three sets, from the easiest to the hardest,
+      each planting more of the repeats yeast genomes hold, S288C's own (Ty1
+      upstream of tRNA genes, Ty1 in tandem, Y' arrays inside the telomeres,
+      an rDNA array), with R10 reads and Hi-C less able to resolve them
+      (`benchmarks/README.md`); each reference gene characterized or not,
+      milestone 4 counting the characterized ones; milestone 3 leaving out the
+      tandem arrays no read crosses. `benchmarks.yml` runs the three, the easy
+      and medium sets gating, the hard one reported.
 - [ ] **`test_full`**: an in-silico pool of public data (nanopore, Hi-C, Illumina,
       RNA-seq) of five to ten yeasts with T2T references, subsampled and mixed,
       on Zenodo; run by hand on a cluster before each release, its numbers on

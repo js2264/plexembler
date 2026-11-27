@@ -51,16 +51,20 @@ follow [semantic versioning](https://semver.org).
 - **`plexembler select`**, which keeps one candidate of a step by its checks
   and writes why; **`plexembler ani`**, the identity between the species of a
   pool (skani), with a warning above 95 %.
-- **The benchmark pool** (`-profile benchmark`, each task within 4 CPUs and
+- **The benchmark pool** (`-profile benchmark_easy`, `benchmark_medium` or
+  `benchmark_hard`, `benchmark` the medium one; each task within 4 CPUs and
   12 GB, GitHub's runner): three yeasts, two of a genus, their nanopore reads
   and their pool's WGS, Arima Hi-C and RNA-seq simulated from their references
-  and annotations by `benchmarks/make_benchmark_data.py`, published as the
-  release `benchmark-data-v2` with each file's checksum: a repeat planted in
-  each chromosome and nanopore reads under 7 kb, so that the assemblies break
-  and the scaffolding has joins to make; errors the nanopore reads share, for
-  the polishing to fix; RNA-seq at known levels. `benchmarks/evaluate.py`
-  checks milestones 1 to 5's "Done when" on its results, all of them for every
-  release (`benchmarks.yml`). ([#8](https://github.com/js2264/plexembler/pull/8))
+  and annotations by `benchmarks/make_benchmark_data.py`, in three sets from
+  the easiest to the hardest, published as the release `benchmark-data-v3`
+  with each file's checksum: each plants more of the repeats yeast genomes
+  hold, S288C's own (Ty1 upstream of tRNA genes, Y' arrays inside the
+  telomeres, an rDNA array), and gives R10 reads and Hi-C less able to resolve
+  them; errors the nanopore reads share, for the polishing to fix; RNA-seq at
+  known levels; each gene characterized or not. `benchmarks/evaluate.py` checks
+  milestones 1 to 5's "Done when" on a set's results, all of them on every set
+  for every release (`benchmarks.yml`; the hard set reported, not gating).
+  ([#8](https://github.com/js2264/plexembler/pull/8))
 - **The pool, split** (milestone 2): each pooled WGS and Hi-C library aligned
   to every species' contigs of its pool at once (bwa-mem2) and split between
   them by `plexembler split`: a pair to a species when both mates are unique
