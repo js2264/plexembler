@@ -143,16 +143,16 @@ follow [semantic versioning](https://semver.org).
   js2264/plexembler -r v<version>`, every other argument going to Nextflow as
   it is (`-profile`, `-resume`, `--input`, …); the folder or the commit the
   package was installed from, when it was; `--pipeline` and `-r` for another,
-  `--dry-run` to print the command.
+  `--dry-run` to print the command. ([#10](https://github.com/js2264/plexembler/pull/10))
 - **The pipeline with nothing installed but uv and Java**: `uvx plexembler run
   <plexembler run's arguments>`. plexembler depends on PyPI's `nextflow`,
   Nextflow's launcher, which `plexembler run` finds beside its Python and which
   fetches Nextflow at its first run; a machine needs nothing else but a
-  container engine.
+  container engine. ([#10](https://github.com/js2264/plexembler/pull/10))
 - **Java from PyPI**, the `java` extra, `plexembler[java]` (jdk4py), whose
   Java `plexembler run` gives Nextflow: with micromamba for the steps, a Linux
   machine runs the pipeline with nothing else installed, `uvx --from
-  'plexembler[java]' plexembler run -profile micromamba …`.
+  'plexembler[java]' plexembler run -profile micromamba …`. ([#10](https://github.com/js2264/plexembler/pull/10))
 - **The pipeline without a container engine**: `-profile micromamba`, beside
   `conda` and `mamba`, conda's environments made by micromamba, a single
   executable. With conda's profiles, the run refuses at its start the two
@@ -165,4 +165,4 @@ follow [semantic versioning](https://semver.org).
   tRNAscan-SE's step keeps the paths of its configuration when its environment
   is under `/tmp` (the module rewrote every `/tmp` of it, its temporary
   folder's meant), and `cooler cload`'s environment pins numpy, as `cooler
-  zoomify`'s does, without which micromamba took 14 GB to solve it.
+  zoomify`'s does, without which micromamba took 14 GB to solve it. ([#10](https://github.com/js2264/plexembler/pull/10))
