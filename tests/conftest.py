@@ -1,5 +1,6 @@
-"""What the tests share: a command's output read as plain text."""
+"""What the tests share: a command's output read as plain text, and sequences."""
 
+import random
 import re
 
 import pytest
@@ -22,3 +23,17 @@ def plain_text(output: str) -> str:
 def plain():
     """``plain(result.output)``: a command's output as one line of text."""
     return plain_text
+
+
+def random_sequence(length: int, seed: int, gc: float = 0.4) -> str:
+    """A random sequence of ``length`` bases, the same for the same seed."""
+    rng = random.Random(seed)
+    at, cg = (1 - gc) / 2, gc / 2
+    return "".join(rng.choices("ACGT", weights=[at, cg, cg, at], k=length))
+
+
+@pytest.fixture
+def sequence():
+    """``sequence(length, seed, gc=0.4)``: a random sequence, the same for the
+    same seed."""
+    return random_sequence
