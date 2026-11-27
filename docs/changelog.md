@@ -76,10 +76,17 @@ follow [semantic versioning](https://semver.org).
   `pools/<pool>/deconvolution/`.
 - **Short-read polishing**: each species with its WGS pairs, or, in a pool
   without WGS, its Hi-C reads cut at their ligation junctions (`plexembler
-  digest`); Polypolish then pypolca, kept only when the QV against pairs held
-  out of the polishing rises, by more than 0.1 (`plexembler select --step
-  polish --qv-tolerance 0.1`); `--polish_reads`, `--sr_polisher`,
-  `--polish_holdout`.
+  digest`); Polypolish then pypolca, judged by pairs held out of the
+  polishing where it changed the draft: the draft's k-mers they lack that it
+  removed, against those it made that they lack (`MERYL_CHANGES`); the one
+  that removed the most more than it made is kept, if one did (`plexembler
+  select --step polish`, the selection table's `kmers_fixed` and
+  `kmers_introduced`). A QV on thin held-out pairs, Hi-C's above all, sits far
+  below the genome's and hid a polishing's gain: on the benchmark's medium
+  set, the Hi-C polishing that took Cgla's errors against its reference from
+  5.00 to 0.65 per 100 kb raised that QV by 0.01, and was not kept.
+  `--polish_reads`, `--sr_polisher`, `--polish_holdout`.
+  ([#8](https://github.com/js2264/plexembler/pull/8))
 - **The contig screen**, `plexembler screen`: each contig kept, moved to
   another species of its pool, dropped, or named its species' mitochondrion
   (`<species>_chrM`), from each species' nanopore depth on it, its identity to

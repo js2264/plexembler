@@ -107,7 +107,8 @@ workflow CONTIGS {
         .groupTuple()
         .map { species, candidates, fastas, buscos, qvs, stats ->
             def meta = species.getGroupTarget()
-            [meta + [keep: meta.assembler], candidates, fastas, buscos, qvs, stats]
+            // No k-mer changes: those are the polishing's.
+            [meta + [keep: meta.assembler], candidates, fastas, buscos, qvs, stats, candidates.collect { _name -> no_file }]
         }
     PLEXEMBLER_SELECT(ch_candidates, 'assembly')
 

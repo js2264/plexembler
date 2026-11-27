@@ -1,0 +1,82 @@
+nextflow_process {
+
+    name "Test process MERYL_CHANGES"
+    script "../main.nf"
+    process "MERYL_CHANGES"
+
+    tag "modules"
+    tag "modules_local"
+    tag "meryl"
+    tag "meryl/changes"
+
+    test("a polishing that fixes one error") {
+
+        setup {
+            run("MERYL_COUNT") {
+                script "../../../../nf-core/meryl/count/main.nf"
+                process {
+                    """
+                    input[0] = [
+                        [ id: 'sp1', single_end: true ],
+                        file('${moduleDir}/../../../../tests/data/pool_wgs_R1.fastq.gz', checkIfExists: true),
+                    ]
+                    input[1] = 21
+                    """
+                }
+            }
+        }
+
+        when {
+            process {
+                """
+                // The draft: sp1 with one error, a base changed 10 kb into chr1;
+                // its polishing, sp1 itself. The reads cover sp1 14 times.
+                def truth = file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true)
+                def lines = truth.readLines()
+                def line = lines[125]
+                lines[125] = line.substring(0, 40) + (line[40] == 'A' ? 'C' : 'A') + line.substring(41)
+                def draft = file("\${launchDir}/sp1.draft.fa")
+                draft.text = lines.join('\\n') + '\\n'
+                input[0] = MERYL_COUNT.out.meryl_db.map { meta, db -> [meta + [candidate: 'polished'], draft, truth, db] }
+                input[1] = 21
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                // The error's 21 k-mers, which the reads lack, gone; none made.
+                { assert path(process.out.kmers[0][1]).readLines() == ['fixed\tintroduced', '21\t0'] },
+            )
+        }
+    }
+
+    test("a draft, its polishing and held-out k-mers - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                def db = file("\${launchDir}/holdout.meryl")
+                db.mkdirs()
+                input[0] = [
+                    [ id: 'sp1', candidate: 'pypolca' ],
+                    file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true),
+                    file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true),
+                    db,
+                ]
+                input[1] = 21
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.kmers[0][1]).readLines() == ['fixed\tintroduced', '0\t0'] },
+            )
+        }
+    }
+}

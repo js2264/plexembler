@@ -140,9 +140,10 @@ needs them makes them again from the alignments.
 Each species' screened contigs (below), polished with its own short reads, of
 the pool's second split, on the screened contigs: its WGS pairs, or, when its
 pool has no WGS library, its Hi-C reads cut at their junctions
-([`plexembler digest`](cli.md#digest)). Polypolish, then pypolca; each kept only
-if its QV, against the k-mers of the pairs held out of the polishing, beats the
-draft's.
+([`plexembler digest`](cli.md#digest)). Polypolish, then pypolca; the one kept
+is the one whose changes the pairs held out of the polishing favour the most,
+if they favour one: the draft's k-mers they lack that it removed, against those
+it made that they lack.
 
 - `species/<species>/polish/`: the choice, `<species>.polish.selection.tsv`
   ([format](formats.md#selection-table)), the kept sequence
@@ -150,7 +151,9 @@ draft's.
   (`<species>.digest.json`: the reads with 0, 1 and 2 or more junctions, a
   measure of the library's ligation).
 - `species/<species>/candidates/polish/`: Polypolish's and pypolca's
-  sequences, and their QVs and the draft's (`qc/merqury/*.holdout.qv`).
+  sequences, their changed k-mers (`qc/kmers/<species>.<polishing>.kmers.tsv`:
+  `fixed` and `introduced`), and their QVs and the draft's
+  (`qc/merqury/*.holdout.qv`).
 
 ### The contig screen
 

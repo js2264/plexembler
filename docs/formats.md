@@ -35,6 +35,7 @@ out.
 | `busco` | no | BUSCO's short summary (`.txt` or `.json`), or compleasm's `summary.txt` |
 | `qv` | no | Merqury's `.qv` file |
 | `stats` | no | gfastats' summary, tabular (`--tabular`) or not |
+| `kmers` | no | A polishing's changed k-mers: a header, `fixed` and `introduced`, and a row of their two counts (the pipeline's `MERYL_CHANGES`) |
 
 ## The selection table { #selection-table }
 
@@ -51,7 +52,8 @@ candidate lacks.
 | `busco_n` | The BUSCO lineage's number of genes |
 | `qv` | Merqury's QV (`inf` when it found no error) |
 | `contigs`, `contig_n50`, `total_length` | gfastats' number of contigs, contig N50 and total length, in bases |
-| `reason` | For the kept candidate, the rule that kept it: `the most single-copy complete BUSCOs`, `the highest QV`, `the longest contig N50`, `named by the samplesheet`, `the only candidate`, or a tie on every rule |
+| `kmers_fixed`, `kmers_introduced` | A polishing's changed k-mers that the held-out reads lack: the draft's that it removed, and its own |
+| `reason` | For the kept candidate, the rule that kept it: `the most single-copy complete BUSCOs`, `the highest QV`, `the longest contig N50`, `named by the samplesheet`, `the only candidate`, or a tie on every rule; for a polishing, its changed k-mers (`the held-out reads lack …`), or that none was better than the draft |
 
 ## The identity pairs { #identity-pairs }
 

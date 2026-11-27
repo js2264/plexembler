@@ -216,22 +216,23 @@ screened.
       coverage makes a QV from its k-mers pessimistic); the polished version is
       kept only if it is better (`plexembler select --step polish`: the draft,
       Polypolish's and pypolca's QVs). pypolca runs `--careful`.
-- [ ] **A polishing guard that sees past the held-out pairs' sampling.** On the
-      benchmark pool the held-out pairs are 3 to 4× of each genome, at which 3
-      to 7 % of a genome's 21-mers are missing from them by chance: the QV reads
-      about 24 to 27 whatever the genome's true quality, and a polishing's gain or
-      harm moves it by hundredths. There, measured against the references, the
-      WGS pairs' polishing fixed 2 of Scer's 3 indels and 2 of Spar's 9 errors,
-      and the Hi-C reads' added errors (Spar: 36 mismatches and 10 indels;
-      Scer: 20 mismatches and 2 indels); the QV saw neither, and the guard's
-      tolerance (1 QV) kept every draft: the small gains lost, the harm
-      avoided. The second set (WGS at 100×, 10× held out) showed the gain lost
-      too: Scer's polishing took its errors against the reference from 453 to
-      267, and its held-out QV from 29.66 to 30.63 alone, under the tolerance.
-      The polishing's tolerance is now 0.1, under which the first set's Hi-C
-      polishing (0.00) stays out. To try still: the assembly-only k-mers the
-      candidates differ in, rather than their QVs; a larger hold-out when the
-      coverage allows it.
+- [x] **A polishing guard that sees past the held-out pairs' sampling.** The
+      held-out pairs are thin: on the benchmark's medium set, a held-out tenth
+      of the Hi-C reads misses 197,501 to 272,975 of a genome's 21-mers by
+      chance, which holds their QV near 18 whatever the genome's quality. A
+      polishing's gain or harm moves it by hundredths, and the QV's tolerance
+      (1, then 0.1) kept every draft there: the Hi-C polishing raised it by
+      0.01 to 0.07, although, against the references, it took Cgla's errors
+      from 5.00 to 0.65 per 100 kb, Spar's from 8.03 to 5.52 and Scer's from
+      47.92 to 45.62. A polishing is now judged by the k-mers it changed
+      (`MERYL_CHANGES`): the draft's that the held-out pairs lack and that it
+      removed (fixed), against those it made that they lack (introduced). The
+      k-mers the pairs miss by chance, where no polishing touched the draft,
+      are the same in every candidate, and cancel out. There, the Hi-C
+      polishing fixed 2,233 for 147 introduced (Scer), 920 for 108 (Spar) and
+      920 for 211 (Cgla), and is kept; the WGS pairs' choices are unchanged
+      (2,101 for 80, 1,248 for 7, 968 for none). The selection table gives both
+      counts (`kmers_fixed`, `kmers_introduced`).
 - [ ] **Micro-C** (`enzymes` is `none`) has no junction sequence to cut at:
       such a pool's species stay polished with nanopore reads alone, by default.
       Polishing with the clipped local alignments of its reads (primary and
