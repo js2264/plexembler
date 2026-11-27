@@ -70,6 +70,26 @@ nf-core pipelines lint                                # nf-core's checks (.nf-co
   data go to a release asset (`test-data-v<N>`), never into git
   (CONVENTIONS.md § 13).
 
+### plexembler run, as uv runs it
+
+plexembler depends on PyPI's `nextflow`, Nextflow's launcher
+([installation](installation.md#with-uv)), which `plexembler run` finds
+beside its Python and which fetches Nextflow at its first run. `pipeline.yml`'s
+`uv` job runs the test profile through it, in preview, as a machine with uv and
+Java alone would, with the oldest Java Nextflow takes, 17, and the newest
+long-term one:
+
+```bash
+uvx --from . plexembler run --pipeline . -profile test -preview --outdir results
+```
+
+- **Its floor is the pipeline's** `manifest.nextflowVersion`:
+  `tests/test_run.py` fails when they differ.
+- **PyPI has it as an sdist alone**, a shell script that builds without a
+  compiler: `ci.yml`'s install job takes every other dependency as a wheel.
+- **`uv sync` installs it in `.venv/bin`**, which `uv run` puts first on
+  `PATH`: there, `nextflow` is PyPI's launcher, at its own version.
+
 ### nf-core's modules and subworkflows
 
 ```bash
@@ -132,15 +152,93 @@ git push --follow-tags
 
 bump-my-version sets the version (`pyproject.toml` and `uv.lock`, the
 pipeline's `manifest.version` in `nextflow.config`, `zensical.toml`'s
-`release`, `CITATION.cff`), turns `## Unreleased` into the version's section,
-commits `chore(release): vX.Y.Z` and tags `vX.Y.Z`. The tag starts
-`release.yml`: CI and the pipeline's tests on the tag, the sdist and the wheel
-checked, the GitHub release from the changelog, and the image,
-`ghcr.io/js2264/plexembler:X.Y.Z` and `latest`, which the pipeline's own steps
-run in. PyPI's trusted publishing waits for the repository variable
-`PUBLISH_PYPI` to be `true` (docs/plan.md, T1). The pipeline is released by
-the same tag: `nextflow run js2264/plexembler -r vX.Y.Z`. A minor release that
-breaks something says so under *Breaking changes* in its changelog section, and
-comes with `docs/upgrading.md` ([the plan's versions](plan.md#versions-0x-for-good)).
+`release`, `CITATION.cff`), turns
+`## Unreleased` into the version's section, commits `chore(release): vX.Y.Z`
+and tags `vX.Y.Z`. The tag starts `release.yml`: CI and the pipeline's tests on
+the tag, the sdist and the wheel checked, PyPI, the GitHub release from the
+changelog, and the image, `ghcr.io/js2264/plexembler:X.Y.Z` and `latest`, which
+the pipeline's own steps run in. The pipeline is released by the same tag:
+`nextflow run js2264/plexembler -r vX.Y.Z`, which `plexembler run` of version
+X.Y.Z runs. A minor release that breaks something says so under *Breaking
+changes* in its changelog section, and comes with `docs/upgrading.md` ([the
+plan's versions](plan.md#versions-0x-for-good)).
+
+- **PyPI's trusted publishing** waits for the repository variable
+  `PUBLISH_PYPI` to be `true` (docs/plan.md, T1, T8), once PyPI has
+  `js2264/plexembler`'s `release.yml`, environment `pypi`, as the trusted
+  publisher of `plexembler`. `uvx plexembler` takes its release from PyPI:
+  until then, it has none to take.
+
+### bioconda
+
+The project's conda packages are bioconda's (CONVENTIONS.md § 0); uv needs
+none, PyPI's release is enough. plexembler's recipe, for `conda
+install plexembler` and its BioContainers image, can be submitted to
+[bioconda-recipes](https://github.com/bioconda/bioconda-recipes) after a
+release on PyPI ([the plan](plan.md#t8-plexembler-run-and-uv)):
+`recipes/plexembler/meta.yaml`, its source PyPI's sdist, which bioconda's bot
+then follows; bioconda's `nextflow` stands for PyPI's launcher in it. When
+the dependencies change (`pyproject.toml`), the recipe's are changed by hand,
+the same day. Its `sha256` is the
+sdist's (`curl -sL <url> | sha256sum`); with a local `path:` as its source,
+`conda-build` builds and tests it.
+
+```yaml title="recipes/plexembler/meta.yaml"
+{% set name = "plexembler" %}
+{% set version = "0.1.0" %}
+
+package:
+  name: {{ name }}
+  version: {{ version }}
+
+source:
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  sha256: <the sdist's>
+
+build:
+  number: 0
+  noarch: python
+  script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation --no-cache-dir -vvv
+  run_exports:
+    # 0.x for good: a minor release may break.
+    - {{ pin_subpackage(name, max_pin="x.x") }}
+
+requirements:
+  host:
+    - python >=3.10
+    - pip
+    - hatchling >=1.27
+  run:
+    - python >=3.10
+    - click >=8.1
+    - rich-click >=1.9
+    - jinja2 >=3.1
+    - pyyaml >=6.0
+    - nextflow >=26.04.0
+
+test:
+  imports:
+    - plexembler
+  commands:
+    - plexembler --help
+    - plexembler run --dry-run -profile test --outdir results
+
+about:
+  home: https://github.com/js2264/plexembler
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  summary: Genomes, gene annotations, Hi-C maps and expression tables for every species of a pool.
+  description: |
+    Reference genomes, gene annotations, Hi-C maps and expression tables for
+    every species of a pool, from per-species nanopore reads and pooled Hi-C,
+    WGS and RNA-seq: a Nextflow pipeline, run by `plexembler run`.
+  doc_url: https://js2264.github.io/plexembler/
+  dev_url: https://github.com/js2264/plexembler
+
+extra:
+  recipe-maintainers:
+    - js2264
+```
 
 The project's template (chromokit's) brings its changes with `uvx copier update`.

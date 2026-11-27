@@ -43,10 +43,21 @@ dependencies = [
     "jinja2>=3.1",
     # 6.0: the report kit's MultiQC file (report_mqc.yaml), yaml.safe_dump.
     "pyyaml>=6.0",
+    # 26.4: the pipeline's, manifest.nextflowVersion in nextflow.config
+    # (tests/test_run.py checks). PyPI's nextflow is Nextflow's launcher, which
+    # `plexembler run` finds beside its Python, and which fetches Nextflow, for
+    # the machine's Java, at its first run.
+    "nextflow>=26.4",
 ]
 
 [project.optional-dependencies]
 # Optional runtime features only, never tools (CONVENTIONS.md § 2).
+java = [
+    # Java for Nextflow, from PyPI, for a machine without one: `plexembler run`
+    # gives jdk4py's to Nextflow (NXF_JAVA_HOME). 21: the oldest Java of
+    # jdk4py's that Nextflow takes (17 or newer).
+    "jdk4py>=21",
+]
 
 [dependency-groups]
 # Never published (CONVENTIONS.md § 2): `uv sync` installs dev, and
@@ -173,6 +184,13 @@ replace = "name = \"plexembler\"\nversion = \"{new_version}\""
 filename = "nextflow.config"
 search = "    version         = '{current_version}'"
 replace = "    version         = '{new_version}'"
+
+[[tool.bumpversion.files]]
+# The conda environments of the steps that run plexembler: the package at the
+# release's tag (docs/plan.md, T1). pipeline.yml's lint job checks them.
+glob = "modules/local/plexembler/*/environment.yml"
+search = "plexembler@v{current_version}"
+replace = "plexembler@v{new_version}"
 
 [[tool.bumpversion.files]]
 # The version the documentation's header and footer show.

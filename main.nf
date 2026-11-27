@@ -68,6 +68,8 @@ workflow {
         params.input,
         params.libraries,
         params.assemblers,
+        params.gene_predictor,
+        params.ont_polisher,
         params.help,
         params.help_full,
         params.show_hidden

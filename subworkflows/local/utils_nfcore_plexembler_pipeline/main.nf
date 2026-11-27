@@ -31,6 +31,8 @@ workflow PIPELINE_INITIALISATION {
     input             //  string: Path to the species samplesheet (--input)
     libraries         //  string: Path to the pooled libraries samplesheet (--libraries)
     assemblers        //  string: The assemblers that run, comma-separated (--assemblers)
+    gene_predictor    //  string: What predicts the genes (--gene_predictor)
+    ont_polisher      //  string: What polishes the contigs with nanopore reads (--ont_polisher)
     help              // boolean: Display help message and exit
     help_full         // boolean: Show the full help message
     show_hidden       // boolean: Show hidden parameters in the help message
@@ -88,6 +90,10 @@ workflow PIPELINE_INITIALISATION {
     def library_rows = readLibraries(libraries)
     validatePools(species_rows, library_rows)
     validateAssemblers(species_rows, assemblers.tokenize(','))
+    // The steps' environments are conda's (micromamba's), not a container's.
+    if (workflow.profile.tokenize(',').intersect(['conda', 'mamba', 'micromamba']).size() >= 1) {
+        validateCondaSteps(gene_predictor, ont_polisher)
+    }
 
     emit:
     species   = channel.fromList(species_rows) // channel: [ val(meta), [ path(ont) ] ], one item per species
@@ -195,6 +201,20 @@ def validateAssemblers(species, assemblers) {
 //
 // A pooled library's meta map, every key present; single_end for nf-core's modules
 //
+//
+// The steps that have no conda environment, refused with conda (-profile conda,
+// mamba, micromamba): BRAKER3, whose authors support it in their container
+// alone, and Dorado, which has no conda package.
+//
+def validateCondaSteps(gene_predictor, ont_polisher) {
+    if (gene_predictor == 'braker') {
+        error("--gene_predictor braker: BRAKER3 runs in a container alone, and conda's profiles run none: choose --gene_predictor augustus, or a container engine (docs/usage.md)")
+    }
+    if (ont_polisher == 'dorado') {
+        error("--ont_polisher dorado: Dorado has no conda package: choose --ont_polisher medaka, or a container engine (docs/usage.md)")
+    }
+}
+
 def libraryMeta(meta) {
     def type = meta.type
     return [

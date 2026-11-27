@@ -53,7 +53,8 @@
           "cooler/cload": {
             "branch": "master",
             "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
-            "installed_by": ["modules"]
+            "installed_by": ["modules"],
+            "patch": "modules/nf-core/cooler/cload/cooler-cload.diff"
           },
           "cooler/zoomify": {
             "branch": "master",
@@ -218,7 +219,8 @@
           "trnascanse": {
             "branch": "master",
             "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
-            "installed_by": ["modules"]
+            "installed_by": ["modules"],
+            "patch": "modules/nf-core/trnascanse/trnascanse.diff"
           },
           "yahs": {
             "branch": "master",

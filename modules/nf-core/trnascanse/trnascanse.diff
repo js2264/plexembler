@@ -1,0 +1,21 @@
+Changes in component 'nf-core/trnascanse'
+'modules/nf-core/trnascanse/meta.yml' is unchanged
+Changes in 'trnascanse/main.nf':
+--- modules/nf-core/trnascanse/main.nf
++++ modules/nf-core/trnascanse/main.nf
+@@ -47,7 +47,7 @@
+     ## copy this and modify to use the working dir as the temp directory
+     conf=\$(which tRNAscan-SE).conf
+     cp \${conf} trnascan.conf
+-    sed -i s#/tmp#.#g trnascan.conf
++    sed -i 's#^temp_dir: /tmp#temp_dir: .#' trnascan.conf
+ 
+     tRNAscan-SE \\
+         --thread ${task.cpus} \\
+
+'modules/nf-core/trnascanse/environment.yml' is unchanged
+'modules/nf-core/trnascanse/.conda-lock/linux_arm64-bd-b0274a0899088e35_1.txt' is unchanged
+'modules/nf-core/trnascanse/.conda-lock/linux_amd64-bd-15c0475b13b49f03_1.txt' is unchanged
+'modules/nf-core/trnascanse/tests/main.nf.test' is unchanged
+'modules/nf-core/trnascanse/tests/main.nf.test.snap' is unchanged
+************************************************************

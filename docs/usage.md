@@ -11,7 +11,9 @@ nextflow run js2264/plexembler \
 The pipeline takes two samplesheets: the **species** of the pools, with their
 nanopore reads (`--input`), and the **pooled libraries**, Hi-C, WGS and
 RNA-seq (`--libraries`). Every parameter is on the [parameters](parameters.md)
-page; the results are on the [outputs](output.md) page.
+page; the results are on the [outputs](output.md) page. `plexembler run`
+takes the same arguments, and runs the pipeline of its own version
+([command line](cli.md#run)).
 
 !!! note "Under development"
 
@@ -275,11 +277,42 @@ put the results on a bucket and give the run their address
 ## Profiles
 
 `-profile` takes a container engine (`docker`, `apptainer`, `singularity`,
-`podman`, `charliecloud`), `conda`, an institution's profile from
-[nf-core/configs](https://nf-co.re/configs/) (`maestro`, …), and `gpu` for the
-steps that can use one. They combine: `-profile maestro,apptainer`. The
-[guide on compute](guides/compute.md) says which to use on a workstation and on
-a cluster.
+`podman`, `charliecloud`), conda (`conda`, `mamba`, `micromamba`), an
+institution's profile from [nf-core/configs](https://nf-co.re/configs/)
+(`maestro`, …), and `gpu` for the steps that can use one. They combine:
+`-profile maestro,apptainer`. The [guide on compute](guides/compute.md) says
+which to use on a workstation and on a cluster.
+
+### Without a container engine
+
+`-profile conda`, `mamba` or `micromamba` runs each step in a conda
+environment, from conda-forge and bioconda, which Nextflow makes at the step's
+first run and keeps: conda, mamba or micromamba is then all the steps need.
+micromamba, a single executable, is the lightest:
+
+```bash
+curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C ~/.local bin/micromamba
+uvx --from 'plexembler[java]' plexembler run -profile micromamba --gene_predictor augustus \
+    --input species.csv --libraries libraries.csv --outdir results
+```
+
+The first line puts micromamba in `~/.local/bin`, which uv's installer puts on
+`PATH` ([installation](installation.md#with-uv)); `osx-arm64` for an Apple
+silicon Mac.
+
+- **Two steps have no conda environment**, and the pipeline refuses them with
+  conda at its start: BRAKER3, `--gene_predictor braker`, the default, which
+  its authors support in their container alone (choose `augustus`); and
+  `dorado polish`, `--ont_polisher dorado` (choose `medaka`).
+- **The first run makes the environments**, some 35 and 12 GB for the test
+  profile, which takes a while; the next runs reuse them. On a cluster, keep them on shared
+  storage (`export NXF_CONDA_CACHEDIR=/shared/conda`), made where there is
+  network. They are made as their steps start, several at a time, a GB or two
+  of memory each: on a small machine, `-queue-size 2` makes them two at a
+  time.
+- **Containers are what CI tests every pull request with** (Docker); conda's
+  environments, every week, on the test profile. They are nf-core's, the
+  containers' tools at their versions, but solved on your machine.
 
 `-profile test` runs on two species of a few dozen kilobases, from
 `tests/data/`: the plumbing, in a few minutes.
@@ -292,6 +325,8 @@ Pin a release, so that a run can be made again as it was:
 nextflow run js2264/plexembler -r v0.1.0 -profile docker \
     --input species.csv --libraries libraries.csv --outdir results
 ```
+
+`plexembler run` pins it already: plexembler 0.1.0 runs `-r v0.1.0`.
 
 plexembler stays at 0.x ([plan](plan.md#versions-0x-for-good)): a patch
 release (0.1.1) only fixes; a minor release (0.2.0) adds steps, and may change a

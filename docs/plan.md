@@ -18,6 +18,7 @@ flowchart LR
   T2[T2 Test data, benchmark pool] -.-> M1
   T1[T1 The package's container] -.-> M1
   T7[T7 chromosomix, metacooler] -.-> M2
+  T8[T8 plexembler run, uv] -.-> C
 ```
 
 ## Versions: 0.x, for good
@@ -474,7 +475,8 @@ pipeline's own steps need a container before the package is anywhere else.
       checkout before nf-test, so that a pull request tests its own code.
 - [x] The local modules that run `plexembler`: `container
       "ghcr.io/js2264/plexembler:${workflow.manifest.version}"`, and for conda
-      an environment that installs the package at the release's tag (M1).
+      an environment that installs the package at the release's tag (M1),
+      which bump-my-version writes and `pipeline.yml`'s lint checks.
 
 ### T2 · Test data and the benchmark pool
 
@@ -566,6 +568,30 @@ from M2 on.
       pipeline from 1.0.0, which plexembler does not plan
       ([Versions](#versions-0x-for-good)), and nf-core's layout would replace some
       of the conventions' choices (`CHANGELOG.md`, the docs' site).
+
+### T8 · plexembler run, and uv
+
+The pipeline, run by a machine that has uv, and micromamba or a container
+engine, nothing else: the package runs the pipeline of its own version, and
+brings Nextflow's launcher with it, and Java with its `java` extra.
+
+- [x] **`plexembler run`**: `nextflow run js2264/plexembler -r v<version>`,
+      every other argument going to Nextflow as it is
+      ([command line](cli.md#run)).
+- [x] **PyPI's `nextflow`**, Nextflow's launcher, a dependency of the package:
+      `uvx plexembler run …` ([installation](installation.md#with-uv)), with
+      Java. `pipeline.yml`'s `uv` job runs it, from the checkout, on the test
+      profile in preview, with Java 17 and 25.
+- [x] **Java from PyPI**, the `java` extra (jdk4py), which `plexembler run`
+      gives Nextflow: with micromamba for the steps' environments, a machine
+      needs uv and micromamba alone (`pipeline.yml`'s `conda` job).
+- [ ] **PyPI's publishing turned on** (T1): PyPI's trusted publisher for
+      `release.yml`, then the repository variable `PUBLISH_PYPI`. `uvx
+      plexembler` runs from the first release published.
+- [ ] **bioconda's recipe**, optional (docs/contributing.md, CONVENTIONS.md
+      § 0), from PyPI's sdist: `conda install plexembler`, its BioContainers
+      image, and `pixi exec` or `pixi global install` of the package; then
+      chromokit's `bioconda` answer, for its badge and install line.
 
 ## Questions that change defaults
 

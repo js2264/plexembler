@@ -87,6 +87,27 @@ def elapsed(seconds: float) -> str:
 
 
 @contextmanager
+def stderr_log() -> Generator[None]:
+    """Log a command's run to stderr alone, INFO and above, for as long as it runs.
+
+    For a command that writes no log file (CONVENTIONS.md § 11), such as
+    ``plexembler run``, whose run Nextflow logs.
+    """
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(logging.Formatter(RECORD_FORMAT, datefmt=DATE_FORMAT))
+    handler.setLevel(logging.INFO)
+    previous_level = logger.level
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    try:
+        yield
+    finally:
+        logger.removeHandler(handler)
+        handler.close()
+        logger.setLevel(previous_level)
+
+
+@contextmanager
 def run_log(
     outdir: Path,
     sample: str | None,

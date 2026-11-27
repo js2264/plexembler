@@ -47,7 +47,7 @@ process TRNASCANSE {
     ## copy this and modify to use the working dir as the temp directory
     conf=\$(which tRNAscan-SE).conf
     cp \${conf} trnascan.conf
-    sed -i s#/tmp#.#g trnascan.conf
+    sed -i 's#^temp_dir: /tmp#temp_dir: .#' trnascan.conf
 
     tRNAscan-SE \\
         --thread ${task.cpus} \\

@@ -11,6 +11,58 @@ with a table whose first column lists its options, short form first:
 
 ## Commands
 
+### `run` { #run }
+
+Runs the pipeline with Nextflow, at plexembler's own version: `plexembler run
+ARGS…` runs `nextflow run js2264/plexembler -r v<version> ARGS…`, and every
+argument but its own options goes to Nextflow as it is: Nextflow's options
+(`-profile`, `-resume`, `-c`, `-r`) and the pipeline's
+[parameters](parameters.md) (`--input`, `--libraries`, `--outdir`).
+plexembler brings Nextflow's launcher with it, PyPI's `nextflow`, which
+fetches Nextflow at its first run ([installation](installation.md#with-uv)):
+with Java, plexembler is all a machine needs to run the pipeline, but a
+container engine.
+
+```bash
+plexembler run -profile docker \
+    --input species.csv --libraries libraries.csv --outdir results
+```
+
+- **The pipeline, and its revision.** A release of plexembler (PyPI's, as
+  `uvx plexembler` takes it) runs `js2264/plexembler` at its tag,
+  `v<version>`: the package's version is the pipeline's. Installed from a folder that holds the
+  pipeline (a clone, by `uv sync` or `pip install -e .`), it runs that folder
+  as it is; installed from the git repository by pip or uv, that repository at
+  the commit installed. `-r` runs another revision of the repository,
+  `--pipeline` another pipeline.
+- **Nextflow** is the one beside plexembler's Python, the launcher that uv
+  and pip install with it (conda, its Nextflow), else the one on `PATH`:
+  26.04.0 or newer, which needs Java 17 or newer, the machine's, or jdk4py's
+  with the `java` extra (`plexembler[java]`), which plexembler gives it
+  (`NXF_JAVA_HOME`, unless set). plexembler hands
+  its process over to it, so that Nextflow's exit status and logs are the
+  run's (`.nextflow.log` where it runs, `<outdir>/pipeline_info/`), and Ctrl-C
+  stops Nextflow as it would without plexembler.
+- **Its own options** are read word for word, wherever they are; every
+  argument after `--` goes to Nextflow, so that `plexembler run -- --help`
+  lists the pipeline's parameters, which `--help` alone does not.
+- **No log of its own,** and none of the options of the commands that write
+  outputs (`-o`, `--force`, `-p`, `-v`, `-q`): the run's outputs and log are
+  Nextflow's, and a single-dash option is Nextflow's, as `-profile` is.
+
+`--dry-run` prints the command:
+
+```console
+$ plexembler run --dry-run -profile docker --input species.csv --outdir results
+/usr/local/bin/nextflow run js2264/plexembler -r v0.1.0 -profile docker --input species.csv --outdir results
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `NEXTFLOW_ARGS` | | Nextflow's options and the pipeline's parameters, as `nextflow run` takes them. |
+| `--pipeline` | the folder or the commit plexembler was installed from, else `js2264/plexembler` | The pipeline: a folder (a clone), run as it is, or a repository, which Nextflow pulls, run at `v<version>` unless `-r` names a revision. |
+| `--dry-run` | off | Print the Nextflow command, and run nothing. |
+
 ### `rename` { #rename }
 
 Names every contig after its species, `<species>_<contig>`: the name of every

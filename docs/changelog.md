@@ -150,3 +150,30 @@ follow [semantic versioning](https://semver.org).
   `--no-collapse`, `--min-unit` and `--min-identity` set it; the names table
   has three more columns: `original_length_bp`, `copies` and `circular`.
   ([#9](https://github.com/js2264/plexembler/pull/9))
+- **`plexembler run`**, the pipeline at the package's version: `nextflow run
+  js2264/plexembler -r v<version>`, every other argument going to Nextflow as
+  it is (`-profile`, `-resume`, `--input`, …); the folder or the commit the
+  package was installed from, when it was; `--pipeline` and `-r` for another,
+  `--dry-run` to print the command. ([#10](https://github.com/js2264/plexembler/pull/10))
+- **The pipeline with nothing installed but uv and Java**: `uvx plexembler run
+  <plexembler run's arguments>`. plexembler depends on PyPI's `nextflow`,
+  Nextflow's launcher, which `plexembler run` finds beside its Python and which
+  fetches Nextflow at its first run; a machine needs nothing else but a
+  container engine. ([#10](https://github.com/js2264/plexembler/pull/10))
+- **Java from PyPI**, the `java` extra, `plexembler[java]` (jdk4py), whose
+  Java `plexembler run` gives Nextflow: with micromamba for the steps, a Linux
+  machine runs the pipeline with nothing else installed, `uvx --from
+  'plexembler[java]' plexembler run -profile micromamba …`. ([#10](https://github.com/js2264/plexembler/pull/10))
+- **The pipeline without a container engine**: `-profile micromamba`, beside
+  `conda` and `mamba`, conda's environments made by micromamba, a single
+  executable. With conda's profiles, the run refuses at its start the two
+  steps that have no conda environment: BRAKER3 (`--gene_predictor braker`:
+  choose `augustus`) and `dorado polish` (`--ont_polisher dorado`). The steps
+  that run plexembler install it at the release's tag, which bump-my-version
+  now writes into their environments, and its dependencies from conda-forge:
+  pip took one that `~/.local` held for installed, which the steps, run
+  without it, did not see. Two patches of nf-core's modules:
+  tRNAscan-SE's step keeps the paths of its configuration when its environment
+  is under `/tmp` (the module rewrote every `/tmp` of it, its temporary
+  folder's meant), and `cooler cload`'s environment pins numpy, as `cooler
+  zoomify`'s does, without which micromamba took 14 GB to solve it. ([#10](https://github.com/js2264/plexembler/pull/10))
