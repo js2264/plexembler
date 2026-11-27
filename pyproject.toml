@@ -175,6 +175,13 @@ search = "    version         = '{current_version}'"
 replace = "    version         = '{new_version}'"
 
 [[tool.bumpversion.files]]
+# The release pixi's script runs (docs/run.py), from PyPI, which has it once
+# release.yml publishes it.
+filename = "docs/run.py"
+search = '"plexembler=={current_version}"'
+replace = '"plexembler=={new_version}"'
+
+[[tool.bumpversion.files]]
 # The version the documentation's header and footer show.
 filename = "zensical.toml"
 search = 'release = "{current_version}"'

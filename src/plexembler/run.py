@@ -3,8 +3,8 @@
 ``plexembler run ARGS…`` runs ``nextflow run js2264/plexembler -r v<version>
 ARGS…``: the pipeline of the package's own version, every argument but
 plexembler's own options going to Nextflow as it is (docs/cli.md). With
-Nextflow beside it, which pixi installs with it (pixi.toml), the package is all
-a machine needs to run the pipeline, but a container engine.
+Nextflow beside it, as pixi's script installs both (docs/run.py), the package
+is all a machine needs to run the pipeline, but a container engine.
 
 plexembler then hands its process over to Nextflow (``exec``): Nextflow's exit
 status, signals and logs are the run's, as when Nextflow is launched by hand.

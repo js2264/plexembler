@@ -37,13 +37,12 @@ a container engine (Docker, Apptainer, Singularity) or conda:
 nextflow pull js2264/plexembler
 ```
 
-Or let [pixi](https://pixi.sh) install plexembler with Nextflow and Java, and
-run the pipeline of the version installed with `plexembler run`, which takes
-`nextflow run`'s arguments:
+Or let [pixi](https://pixi.sh) run it, with plexembler from PyPI, Nextflow from
+bioconda and Java from conda-forge: every argument after `--` is `nextflow
+run`'s.
 
 ```bash
-pixi global install -c conda-forge -c bioconda --git https://github.com/js2264/plexembler.git
-plexembler run -profile test,docker --outdir results
+pixi run --script https://js2264.github.io/plexembler/run.py -- -profile test,docker --outdir results
 ```
 
 ## Quick start

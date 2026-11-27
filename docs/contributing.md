@@ -70,26 +70,29 @@ nf-core pipelines lint                                # nf-core's checks (.nf-co
   data go to a release asset (`test-data-v<N>`), never into git
   (CONVENTIONS.md § 13).
 
-### The conda package
+### pixi's script
 
-`pixi.toml` is plexembler's conda package, which pixi builds from the
-repository ([installation](installation.md#with-pixi)): the Python package,
-with Nextflow from bioconda. `pipeline.yml`'s `pixi` job builds it and runs the
-test profile through it, as a machine with pixi alone would; with
-[pixi](https://pixi.sh) 0.85.0 or newer:
+`docs/run.py` runs the pipeline with nothing installed but pixi
+([installation](installation.md#with-pixi)): a PEP 723 script, whose metadata
+takes plexembler's release from PyPI and Nextflow from bioconda, and whose body
+is `plexembler run`. The site serves it, at
+<https://js2264.github.io/plexembler/run.py>. `pipeline.yml`'s `pixi` job runs
+it with the checkout's plexembler in place of PyPI's, as a machine with pixi
+alone would, with the oldest pixi that runs it, 0.80.0 (`conda-pypi-map` in a
+script), and the newest:
 
 ```bash
-pixi build --output-dir conda-dist          # the package, from the checkout
-pixi exec -c conda-forge -c bioconda -s conda-dist/plexembler-*.conda -- \
-    plexembler run --pipeline . -profile test -preview --outdir results
+sed "s|\"plexembler==[^\"]*\"|\"plexembler @ file://$PWD\"|" docs/run.py > /tmp/run.py
+pixi run --script /tmp/run.py -- --pipeline . -profile test -preview --outdir results
 ```
 
-- **Its run-dependencies** are `pyproject.toml`'s dependencies, as conda-forge
-  names them, and the Nextflow of `nextflow.config`'s
-  `manifest.nextflowVersion`: `tests/test_run.py` fails when they differ.
-- **pixi keeps a package by its file name**, which every build of a version
-  shares, `--force-reinstall` or not: run a new build with a cache of its own,
-  `PIXI_CACHE_DIR=$(mktemp -d) pixi exec …`.
+- **Its plexembler is the release**, `plexembler==X.Y.Z`, which bump-my-version
+  writes, and its Nextflow the pipeline's `manifest.nextflowVersion`:
+  `tests/test_run.py` fails when they are not.
+- **Its one conda package is Nextflow**, so that `conda-pypi-map = false`
+  holds: pixi then fetches no mapping of conda's packages to PyPI's, from
+  prefix.dev, which some networks block. A conda package that is a PyPI one
+  too (numpy) would need the mapping back.
 
 ### nf-core's modules and subworkflows
 
@@ -152,29 +155,40 @@ git push --follow-tags
 ```
 
 bump-my-version sets the version (`pyproject.toml` and `uv.lock`, the
-pipeline's `manifest.version` in `nextflow.config`, `zensical.toml`'s
-`release`, `CITATION.cff`), turns `## Unreleased` into the version's section,
-commits `chore(release): vX.Y.Z` and tags `vX.Y.Z`. The tag starts
-`release.yml`: CI and the pipeline's tests on the tag, the sdist and the wheel
-checked, the GitHub release from the changelog, and the image,
-`ghcr.io/js2264/plexembler:X.Y.Z` and `latest`, which the pipeline's own steps
-run in. PyPI's trusted publishing waits for the repository variable
-`PUBLISH_PYPI` to be `true` (docs/plan.md, T1). The pipeline is released by
-the same tag: `nextflow run js2264/plexembler -r vX.Y.Z`, which `plexembler
-run` of version X.Y.Z runs. A minor release that breaks something says so
-under *Breaking changes* in its changelog section, and comes with
-`docs/upgrading.md` ([the plan's versions](plan.md#versions-0x-for-good)).
+pipeline's `manifest.version` in `nextflow.config`, the plexembler of pixi's
+script, `docs/run.py`, `zensical.toml`'s `release`, `CITATION.cff`), turns
+`## Unreleased` into the version's section, commits `chore(release): vX.Y.Z`
+and tags `vX.Y.Z`. The tag starts `release.yml`: CI and the pipeline's tests on
+the tag, the sdist and the wheel checked, PyPI, the GitHub release from the
+changelog, and the image, `ghcr.io/js2264/plexembler:X.Y.Z` and `latest`, which
+the pipeline's own steps run in. The pipeline is released by the same tag:
+`nextflow run js2264/plexembler -r vX.Y.Z`, which `plexembler run` of version
+X.Y.Z runs. A minor release that breaks something says so under *Breaking
+changes* in its changelog section, and comes with `docs/upgrading.md` ([the
+plan's versions](plan.md#versions-0x-for-good)).
+
+- **PyPI's trusted publishing** waits for the repository variable
+  `PUBLISH_PYPI` to be `true` (docs/plan.md, T1, T8), once PyPI has
+  `js2264/plexembler`'s `release.yml`, environment `pypi`, as the trusted
+  publisher of `plexembler`. pixi's script takes its release from PyPI: until
+  then, it has none to take.
+- **The site's script names the release as soon as its commit is pushed**,
+  which deploys the site, and PyPI has it only once the tag's tests have
+  passed: in between, the site's `run.py` names a release that PyPI does not
+  have yet.
 
 ### bioconda
 
-The project's conda packages are bioconda's (CONVENTIONS.md § 0). plexembler's
-recipe is to be submitted to [bioconda-recipes](https://github.com/bioconda/bioconda-recipes)
-once, after the first release ([the plan](plan.md#t8-plexembler-run-and-pixi)):
-`recipes/plexembler/meta.yaml`, its source the release's archive. bioconda's
-bot then follows each release; when the dependencies change (`pyproject.toml`,
-`pixi.toml`), the recipe's are changed by hand, the same day. Its `sha256` is
-the archive's (`curl -sL <url> | sha256sum`); with a local `path:` as its
-source, `conda-build` builds and tests it.
+The project's conda packages are bioconda's (CONVENTIONS.md § 0); pixi's
+script needs none, PyPI's release is enough. plexembler's recipe, for `conda
+install plexembler` and its BioContainers image, can be submitted to
+[bioconda-recipes](https://github.com/bioconda/bioconda-recipes) after a
+release on PyPI ([the plan](plan.md#t8-plexembler-run-and-pixi)):
+`recipes/plexembler/meta.yaml`, its source PyPI's sdist, which bioconda's bot
+then follows. When the dependencies change (`pyproject.toml`, the pipeline's
+Nextflow), the recipe's are changed by hand, the same day. Its `sha256` is the
+sdist's (`curl -sL <url> | sha256sum`); with a local `path:` as its source,
+`conda-build` builds and tests it.
 
 ```yaml title="recipes/plexembler/meta.yaml"
 {% set name = "plexembler" %}
@@ -185,8 +199,8 @@ package:
   version: {{ version }}
 
 source:
-  url: https://github.com/js2264/plexembler/archive/v{{ version }}.tar.gz
-  sha256: <the archive's>
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  sha256: <the sdist's>
 
 build:
   number: 0

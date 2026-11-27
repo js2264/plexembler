@@ -6,35 +6,40 @@ runs on Linux, and on macOS for small tests.
 
 ## With pixi
 
-[pixi](https://pixi.sh) installs plexembler with Nextflow and Java, from
-conda-forge and bioconda, in an environment of their own: with a container
-engine for the pipeline's tools (Docker, Apptainer, Singularity, Podman), it
-is all a machine needs.
+[pixi](https://pixi.sh) runs the pipeline from a script of a few lines,
+[`run.py`](run.py), that names what it needs: plexembler, from PyPI, and
+Nextflow, from bioconda, which brings Java. pixi makes their environment the
+first time and keeps it: with a container engine for the pipeline's tools
+(Docker, Apptainer, Singularity, Podman), pixi is all a machine needs.
 
 ```bash
 curl -fsSL https://pixi.sh/install.sh | sh         # pixi itself, once
-pixi global install -c conda-forge -c bioconda \
-    --git https://github.com/js2264/plexembler.git --tag v0.1.0
-plexembler run -profile test,docker --outdir results
+pixi run --script https://js2264.github.io/plexembler/run.py -- \
+    -profile test,docker --outdir results
 ```
 
-`plexembler run` is `nextflow run js2264/plexembler -r v0.1.0`, the pipeline
-of the release installed: every argument after it is Nextflow's or the
-pipeline's ([command line](cli.md#run)). Another release is installed the same
-way, with its tag; `--branch main` installs the latest commit, whose pipeline
-`plexembler run` runs. pixi builds the package from the repository's
-`pixi.toml`, with its `pixi-build` preview: pixi 0.85.0 or newer.
+Every argument after `--` is `plexembler run`'s ([command line](cli.md#run)),
+which runs the pipeline of the latest release: `nextflow run js2264/plexembler
+-r v<version>`, with its arguments. The `--` is needed: pixi would read
+`-profile` as an option of its own.
 
-!!! note "To come: nothing to install"
-
-    Once plexembler is on bioconda ([the plan](plan.md#t8-plexembler-run-and-pixi)),
-    `pixi exec` runs it from a temporary environment that pixi keeps, with
-    nothing installed:
+- **A release:** the script of its tag runs that release.
 
     ```bash
-    pixi exec -c conda-forge -c bioconda plexembler run -profile docker \
-        --input species.csv --libraries libraries.csv --outdir results
+    pixi run --script https://raw.githubusercontent.com/js2264/plexembler/v0.1.0/docs/run.py -- \
+        -profile docker --input species.csv --libraries libraries.csv --outdir results
     ```
+
+- **pixi 0.80.0 or newer** runs it: a PEP 723 script, with conda packages.
+- **pixi fetches the script at each run**, and keeps its environment. Where
+  the network is not to be relied on, as on a cluster's nodes, download it
+  once and run the file: `curl -O https://js2264.github.io/plexembler/run.py`,
+  then `pixi run --script run.py -- …`.
+
+!!! note "To come"
+
+    The script takes plexembler from PyPI, where it is published from its
+    first release on ([the plan](plan.md#t8-plexembler-run-and-pixi)).
 
 ## The pipeline
 

@@ -11,14 +11,15 @@ both (`tests/data/`, written by `tests/data/make_test_data.py`):
     nextflow run js2264/plexembler -profile test,docker --outdir results
     ```
 
-=== "plexembler run"
+=== "pixi"
 
     ```bash
-    plexembler run -profile test,docker --outdir results
+    pixi run --script https://js2264.github.io/plexembler/run.py -- \
+        -profile test,docker --outdir results
     ```
 
-    The same run, at the version of plexembler installed
-    ([with pixi](installation.md#with-pixi)).
+    The same run, of the latest release, with nothing installed but pixi
+    ([installation](installation.md#with-pixi)).
 
 Open `results/multiqc/multiqc_report.html`.
 
@@ -52,10 +53,10 @@ Open `results/multiqc/multiqc_report.html`.
             --input species.csv --libraries libraries.csv --outdir results
         ```
 
-    === "plexembler run"
+    === "pixi"
 
         ```bash
-        plexembler run -profile docker \
+        pixi run --script https://js2264.github.io/plexembler/run.py -- -profile docker \
             --input species.csv --libraries libraries.csv --outdir results
         ```
 

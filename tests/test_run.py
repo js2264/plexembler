@@ -7,7 +7,9 @@ that call, and check the command and the environment it would run.
 import json
 import os
 import re
+import runpy
 import stat
+import sys
 import sysconfig
 from pathlib import Path
 
@@ -382,26 +384,41 @@ def test_no_option_of_plexembler_run_hides_a_parameter_of_the_pipeline():
     assert not hidden, f"plexembler run's options hide the pipeline's {hidden}"
 
 
-#: PyPI's names of the dependencies that conda-forge names otherwise.
-CONDA_NAMES: dict[str, str] = {}
+# pixi's script, docs/run.py: plexembler from PyPI, Nextflow from bioconda
+
+SCRIPT = ROOT / "docs" / "run.py"
+#: A PEP 723 block, as the specification's reference implementation finds it.
+_BLOCK = re.compile(
+    r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$"
+)
 
 
-def test_pixi_package_depends_on_what_the_package_and_the_pipeline_do():
+def _script_metadata(text: str) -> dict:
+    """A script's PEP 723 metadata, its TOML read."""
     tomllib = pytest.importorskip("tomllib")
-    pixi_path = ROOT / "pixi.toml"
-    if not pixi_path.exists():
-        pytest.skip("pixi.toml is not here")
-    package = tomllib.loads(pixi_path.read_text(encoding="utf-8"))["package"]
+    blocks = [block for block in _BLOCK.finditer(text) if block["type"] == "script"]
+    assert len(blocks) == 1
+    content = "".join(
+        line[2:] if line.startswith("# ") else line[1:]
+        for line in blocks[0]["content"].splitlines(keepends=True)
+    )
+    return tomllib.loads(content)
+
+
+def test_pixi_script_takes_this_release_and_the_pipelines_nextflow():
+    if not SCRIPT.exists():
+        pytest.skip("docs/run.py is not here")
+    metadata = _script_metadata(SCRIPT.read_text(encoding="utf-8"))
+    tomllib = pytest.importorskip("tomllib")
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    expected = {"python": project["project"]["requires-python"]}
-    for requirement in project["project"]["dependencies"]:
-        name, floor = re.fullmatch(
-            r"([A-Za-z0-9._-]+)(>=[0-9.]+)", requirement
-        ).groups()
-        expected[CONDA_NAMES.get(name.lower(), name.lower())] = floor
-    dependencies = dict(package["run-dependencies"])
-    nextflow = dependencies.pop("nextflow")
-    assert dependencies == expected
+    # bump-my-version writes the release (pyproject.toml).
+    assert metadata["dependencies"] == [f"plexembler=={project['project']['version']}"]
+    assert metadata["requires-python"] == project["project"]["requires-python"]
+    pixi = metadata["tool"]["pixi"]
+    assert pixi["workspace"]["channels"] == ["conda-forge", "bioconda"]
+    assert pixi["workspace"]["conda-pypi-map"] is False
+    nextflow = pixi["dependencies"].pop("nextflow")
+    assert not pixi["dependencies"], "a conda package beside Nextflow needs the mapping"
     config = ROOT / "nextflow.config"
     if config.exists():
         manifest = re.search(
@@ -409,3 +426,18 @@ def test_pixi_package_depends_on_what_the_package_and_the_pipeline_do():
         )
         assert manifest is not None
         assert nextflow == manifest.group(1)
+
+
+@pytest.mark.usefixtures("released")
+def test_pixi_script_is_plexembler_run(
+    nextflow: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+):
+    if not SCRIPT.exists():
+        pytest.skip("docs/run.py is not here")
+    # The arguments after pixi's `--`.
+    monkeypatch.setattr(sys, "argv", [str(SCRIPT), "--dry-run", "-profile", "docker"])
+    with pytest.raises(SystemExit) as exited:
+        runpy.run_path(str(SCRIPT), run_name="__main__")
+    assert exited.value.code == 0
+    out = capsys.readouterr().out
+    assert out == f"{nextflow} run {REPOSITORY} -r {RELEASE} -profile docker\n"

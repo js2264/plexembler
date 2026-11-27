@@ -144,7 +144,8 @@ follow [semantic versioning](https://semver.org).
   it is (`-profile`, `-resume`, `--input`, …); the folder or the commit the
   package was installed from, when it was; `--pipeline` and `-r` for another,
   `--dry-run` to print the command.
-- **plexembler with pixi**, `pixi.toml`: the conda package pixi builds from the
-  repository, with Nextflow and Java, `pixi global install -c conda-forge -c
-  bioconda --git https://github.com/js2264/plexembler.git`, then `plexembler
-  run`; a machine needs nothing else but a container engine.
+- **The pipeline with nothing installed but pixi**: `pixi run --script
+  https://js2264.github.io/plexembler/run.py -- <plexembler run's arguments>`,
+  a script that takes plexembler's release from PyPI and Nextflow from
+  bioconda, which brings Java (`docs/run.py`); a machine needs nothing else
+  but a container engine.
