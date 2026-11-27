@@ -201,7 +201,9 @@ species' copy, 85 to 95 % identical.
   that second split (`--polish_reads auto`: its WGS pairs, or, in a pool
   without WGS, its Hi-C reads cut at their ligation junctions; `wgs` or `hic`
   to choose), Polypolish then pypolca, kept only when the QV against
-  `--polish_holdout` (10 %) of the pairs, held out of the polishing, rises. A
+  `--polish_holdout` (10 %) of the pairs, held out of the polishing, rises (by
+  more than 0.1: their sampling keeps that QV well below the genome's, and a
+  real gain moves it little). A
   pool whose Hi-C library was made without an enzyme (Micro-C) and that has no
   WGS library is not polished with short reads. `--sr_polisher none` skips the
   step.

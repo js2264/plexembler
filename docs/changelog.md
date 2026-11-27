@@ -66,8 +66,9 @@ follow [semantic versioning](https://semver.org).
 - **Short-read polishing**: each species with its WGS pairs, or, in a pool
   without WGS, its Hi-C reads cut at their ligation junctions (`plexembler
   digest`); Polypolish then pypolca, kept only when the QV against pairs held
-  out of the polishing rises (`plexembler select --step polish`);
-  `--polish_reads`, `--sr_polisher`, `--polish_holdout`.
+  out of the polishing rises, by more than 0.1 (`plexembler select --step
+  polish --qv-tolerance 0.1`); `--polish_reads`, `--sr_polisher`,
+  `--polish_holdout`.
 - **The contig screen**, `plexembler screen`: each contig kept, moved to
   another species of its pool, dropped, or named its species' mitochondrion
   (`<species>_chrM`), from each species' nanopore depth on it, its identity to

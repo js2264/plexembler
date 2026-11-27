@@ -224,8 +224,13 @@ screened.
       and the Hi-C reads' added errors (Spar: 36 mismatches and 10 indels;
       Scer: 20 mismatches and 2 indels); the QV saw neither, and the guard's
       tolerance (1 QV) kept every draft: the small gains lost, the harm
-      avoided. To try: the assembly-only k-mers the candidates differ in,
-      rather than their QVs; a larger hold-out when the coverage allows it.
+      avoided. The second set (WGS at 100×, 10× held out) showed the gain lost
+      too: Scer's polishing took its errors against the reference from 453 to
+      267, and its held-out QV from 29.66 to 30.63 alone, under the tolerance.
+      The polishing's tolerance is now 0.1, under which the first set's Hi-C
+      polishing (0.00) stays out. To try still: the assembly-only k-mers the
+      candidates differ in, rather than their QVs; a larger hold-out when the
+      coverage allows it.
 - [ ] **Micro-C** (`enzymes` is `none`) has no junction sequence to cut at:
       such a pool's species stay polished with nanopore reads alone, by default.
       Polishing with the clipped local alignments of its reads (primary and
