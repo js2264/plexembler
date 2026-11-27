@@ -580,10 +580,14 @@ pipeline's own steps need a container before the package is anywhere else.
       - A contig that repeats its neighbour's end: Scer's contig 1 (22 kb)
         holds a poorer copy of 15 kb of chrI that its contig 3 holds too (97 %
         identity by QUAST, 84 % counting its indels), and 6 kb of chrI's left
-        end that no other contig has. YaHS lays it
-        after contig 3, rightly, and QUAST counts the 15 kb overlap as a
-        misassembly. Trim the overlap at the join, or drop such a contig
-        before scaffolding (and lose chrI's 6 kb).
+        end that no other contig has. YaHS lays it after contig 3, rightly,
+        and QUAST counts the 15 kb overlap as a misassembly. It also holds 73
+        % of Scer's errors against its reference: without it, the polished
+        contigs have 11.42 errors per 100 kb, not 42.39 (QV 39.4, not 33.7).
+        The screen keeps it (its depth 17.8, the species' 30), as it compares
+        no species' contigs with each other. Drop such a contig before
+        scaffolding, as purge_dups would (and lose chrI's 6 kb), or trim the
+        overlap at the join.
       - The Hi-C polishing was never kept, its held-out pairs too thin for
         the guard's QV to see a gain; the guard now counts the k-mers a
         polishing changed (M2). Kept, it fixes 42 % of the errors the WGS
