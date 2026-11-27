@@ -52,7 +52,7 @@ follow [semantic versioning](https://semver.org).
   and writes why; **`plexembler ani`**, the identity between the species of a
   pool (skani), with a warning above 95 %.
 - **The benchmark pool** (`-profile benchmark`, each task within 4 CPUs and
-  14 GB, GitHub's runner): three yeasts, two of a genus, their nanopore reads
+  12 GB, GitHub's runner): three yeasts, two of a genus, their nanopore reads
   and their pool's WGS, Arima Hi-C and RNA-seq simulated from their references
   and annotations by `benchmarks/make_benchmark_data.py`, published as the
   release `benchmark-data-v2` with each file's checksum: a repeat planted in
