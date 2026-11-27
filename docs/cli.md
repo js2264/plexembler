@@ -192,9 +192,10 @@ at 99 % identity or more, and its Hi-C contacts with each species' contigs.
 
 - `organelle`: `--organelle-depth` times its species' depth and under
   `--organelle-gc` GC: kept as `<species>_chrM` (`chrM2`, … for more);
-- `drop`: `--duplicate-share` of it in another species' contigs, its own
-  species' reads under `--own-depth` of their depth on it: that species' DNA,
-  already in its contigs;
+- `drop`: most of it (`--duplicate-share`) found in another species' contigs, its own
+  species' reads thin on it (under `--own-depth` of their depth), or that species' reads
+  `--depth-ratio` times as deep on it, each against its own species' depth: that
+  species' DNA, which it holds already;
 - `move`: its own species' reads under `--own-depth` of their depth, another
   species' at `--other-depth` of theirs; or its own species' reads under
   `--hic-own-depth` and its Hi-C contacts with another species over
@@ -223,7 +224,7 @@ species, verdict, new name and reason), their MultiQC table and its log.
 | `-c, --contacts` | | A Hi-C library's contacts between contigs ([`plexembler split`](#split)); once per library. |
 | `-p, --prefix` | (required) | The pool's ID, which names the table and the log. |
 | `-o, --outdir` | (required) | The folder of each species' screened contigs, the table and the log. |
-| `--organelle-depth` | `3.0` | An organelle's depth, in times its species' contigs'. |
+| `--organelle-depth` | `2.0` | An organelle's depth, in times its species' contigs'. |
 | `--organelle-gc` | `0.3` | An organelle's highest GC share. |
 | `--duplicate-share` | `0.9` | The share of a contig found in another species' contigs that makes it theirs. |
 | `--own-depth` | `0.2` | Its own species' reads' depth, in times their usual depth, under which they are thin on it. |
@@ -231,6 +232,7 @@ species, verdict, new name and reason), their MultiQC table and its log.
 | `--hic-ratio` | `2.0` | How many times its Hi-C contacts with another species outnumber its own species'. |
 | `--min-contacts` | `20` | The fewest Hi-C contacts with another species that move a contig. |
 | `--hic-own-depth` | `0.5` | Its own species' depth on a contig, as a share of their depth, under which Hi-C contacts can move it. |
+| `--depth-ratio` | `2.0` | Another species' depth on a duplicate, over its own species', each against their depth, from which the duplicate goes. |
 | `--force` | off | Overwrite outputs that exist already. |
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
