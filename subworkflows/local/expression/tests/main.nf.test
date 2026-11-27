@@ -15,8 +15,12 @@ nextflow_workflow {
         when {
             workflow {
                 """
+                // A file per input, each under its own name: Nextflow 26.04.0
+                // refuses to stage two files under one name in a task.
                 def fasta = file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true)
-                input[0] = channel.of([ [ id: 'sp1', pool: 'pool', library: 'rna-ypd-1', condition: 'YPD', replicate: 1 ], fasta, fasta ])
+                def bam = file('${moduleDir}/main.nf', checkIfExists: true)
+                def bai = file('${moduleDir}/meta.yml', checkIfExists: true)
+                input[0] = channel.of([ [ id: 'sp1', pool: 'pool', library: 'rna-ypd-1', condition: 'YPD', replicate: 1 ], bam, bai ])
                 input[1] = channel.of([ [ id: 'sp1' ], fasta ])
                 input[2] = channel.of([ [ id: 'sp1' ], fasta ])
                 input[3] = channel.of([ [ id: 'sp1' ], file('${moduleDir}/../../../tests/data/sp1.ont.fastq.gz', checkIfExists: true) ])
