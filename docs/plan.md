@@ -336,7 +336,10 @@ its Hi-C maps.
       counts on the positions whose mates' coverage is half to twice the
       genome's mean, which leaves out the repeats contigs end in. On the
       benchmark's medium set it cuts YaHS's join of Scer's chrI to its chrVI,
-      at their two Y' ends.
+      at their two Y' ends; on the hard set, one of Spar's (QUAST's
+      misassemblies 3 to 2). Without the coverage rule it would have cut both
+      of Cgla's hard joins (0.18 and 0.03 of their expected pairs), both true,
+      and Spar's across its Ty1 array.
 - [ ] **Telomeres:** `tidk explore` finds the repeat when the samplesheet has
       none, `tidk search` counts the chromosomes with telomeres at both ends
       (nf-core's subworkflow `fasta_explore_search_plot_tidk`).
@@ -603,6 +606,22 @@ pipeline's own steps need a container before the package is anywhere else.
         low (0.0259 of 0.03); the second split's is within 10 % (M2).
       - A circular contig that Flye writes as two copies of itself (Cgla's
         mitochondrion, once, on the first set) is kept as it is.
+- [ ] **What the hard set found** (a local run of js2264/plexembler#12), the
+      next pull requests:
+      - YaHS lays two of Scer's chrI contigs of 20 kb the wrong way round, and
+        joins chrI's right-end contig to its left-end region (QUAST's three
+        misassemblies on chrI). `plexembler junctions` supports the three
+        joins: a contig shorter than its window is counted whole either way
+        round. Check each join's orientation: the pairs across, near and far
+        from it, against what each orientation expects, as YaHS weighs them.
+      - QUAST counts a join across an unassembled planted array as a
+        relocation: Scer's chrIII, joined in order across its rDNA array (93
+        kb) and its Ty1 array (26 kb, the rest of it in an unplaced contig),
+        Scer's two other misassemblies. The misassembly check could leave out
+        relocations across the planted arrays, as the cover check leaves the
+        arrays out (a change of its decided criterion, to settle first).
+      - Spar: a misassembly inside one of Flye's contigs (a relocation of 100
+        kb in its contig 12), which no join check sees.
 - [ ] **`test_full`**: an in-silico pool of public data (nanopore, Hi-C, Illumina,
       RNA-seq) of five to ten yeasts with T2T references, subsampled and mixed,
       on Zenodo; run by hand on a cluster before each release, its numbers on
