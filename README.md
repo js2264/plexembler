@@ -30,32 +30,47 @@ map, its expression table and its report.
 
 ## Install
 
-The pipeline needs [Nextflow](https://www.nextflow.io) (26.04.0 or newer) and
-a container engine (Docker, Apptainer, Singularity) or conda:
+1. **[Optional] micromamba**, for the tools' conda environments on a machine
+   without Docker or Apptainer (`osx-arm64` on an Apple silicon Mac):
 
-```bash
-nextflow pull js2264/plexembler
-```
+   ```bash
+   mkdir -p ~/.local && curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C ~/.local bin/micromamba
+   ```
 
-Or, on a Linux machine with nothing installed, let
-[uv](https://docs.astral.sh/uv/) run it, with Nextflow and Java from PyPI and
-the tools from conda-forge and bioconda (micromamba): `plexembler run` takes
-`nextflow run`'s arguments.
+2. **[uv](https://docs.astral.sh/uv/)**:
 
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh && . ~/.local/bin/env
-curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C ~/.local bin/micromamba
-uvx --from 'plexembler[java]' plexembler run -profile test,micromamba --outdir results
-```
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh && . ~/.local/bin/env
+   ```
+
+3. **plexembler**, with [Nextflow](https://www.nextflow.io)'s launcher, and
+   Java with the `java` extra (without it, the machine's Java, 17 or newer):
+
+   ```bash
+   uv tool install 'plexembler[java]'
+   ```
+
+4. **Run it**, on the test data: `-profile micromamba` after step 1, else a
+   container engine's (`docker`, `apptainer`, …):
+
+   ```bash
+   plexembler run -profile test,micromamba --outdir results
+   ```
+
+`plexembler run` runs `nextflow run js2264/plexembler -r v<version>`, the
+pipeline of the release installed, and passes it every other argument: with a
+Nextflow of your own (26.04.0 or newer), `nextflow run js2264/plexembler`
+takes the same.
 
 ## Quick start
 
 ```bash
-nextflow run js2264/plexembler -profile test,docker --outdir results
-```
+# with micromamba (step 1): AUGUSTUS's genes, BRAKER3 having no conda environment
+plexembler run -profile micromamba --gene_predictor augustus \
+    --input species.csv --libraries libraries.csv --outdir results
 
-```bash
-nextflow run js2264/plexembler -profile docker \
+# with a container engine: BRAKER3's genes
+plexembler run -profile docker \
     --input species.csv --libraries libraries.csv --outdir results
 ```
 
