@@ -3,7 +3,7 @@
 Reads a run of the pipeline on the benchmark pool's small set (``-profile
 benchmark``) and the set's truth, runs the checks the milestone names, and
 writes ``<results>/benchmark/m<N>.md`` and ``m<N>.json``. It exits 1 when a
-check fails.
+check fails; a check with nothing to judge reads "not judged" and fails nothing.
 
     python benchmarks/evaluate.py --results results --data benchmarks/data/small \\
         --milestone 1 --busco-db busco_downloads
@@ -18,7 +18,8 @@ names each read after its sequence: ``--save_split_reads``); epsilon within 10 %
 of the simulated rate; each species' screened contigs its own (minimap2 against
 the references: the planted bleed-through moved or dropped); no QV lower after
 the short-read polishing; and, with ``--hic-results`` (a run with
-``--polish_reads hic``), the Hi-C reads' polishing gain 80 % of the WGS pairs'.
+``--polish_reads hic``), the Hi-C reads' polishing gain 80 % of the WGS pairs'
+(not judged when the WGS pairs' polishing was not kept: no gain to compare).
 
 Milestone 3, for each species: 90 % or more of its reference's chromosomes
 each 90 % in one of its genome's chromosomes, and as many end to end (both ends
@@ -294,7 +295,10 @@ def milestone_2(
             hic = polish_gain(hic_results, species)
             wgs_gain = gain[1] - gain[0]
             hic_gain = (hic[1] - hic[0]) if hic else 0.0
-            passed = wgs_gain <= 0 or hic_gain >= 0.8 * wgs_gain
+            # A polishing is kept only when it raises the QV by more than the
+            # choice's tolerance: without one from the WGS pairs, there is no
+            # gain to hold the Hi-C reads' to.
+            passed = None if wgs_gain <= 0 else hic_gain >= 0.8 * wgs_gain
             checks.append(
                 {
                     "species": species,
@@ -439,13 +443,14 @@ def write_report(checks: list[dict], results: Path, milestone: int) -> bool:
         "| Species | Check | Value | Passed |",
         "|---|---|---|---|",
     ]
+    verdicts = {True: "yes", False: "**no**", None: "not judged"}
     lines += [
-        f"| {c['species']} | {c['check']} | {c['value']} | {'yes' if c['passed'] else '**no**'} |"
+        f"| {c['species']} | {c['check']} | {c['value']} | {verdicts[c['passed']]} |"
         for c in checks
     ]
     (out / f"m{milestone}.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
-    return all(c["passed"] for c in checks)
+    return all(c["passed"] is not False for c in checks)
 
 
 def main() -> int:
