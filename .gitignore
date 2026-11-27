@@ -51,5 +51,12 @@ CLAUDE.local.md
 
 # The benchmark data: generated or downloaded (benchmarks/README.md), never committed.
 /benchmarks/data/
+
+# pixi: pixi.toml defines the conda package alone, whose builds go to .pixi/
+# and to conda-dist/ (pipeline.yml); the environments are uv's, so pixi's lock,
+# were a command write one, stays out.
+/.pixi/
+/pixi.lock
+/conda-dist/
 # nf-test's wrappers of a workflow test
 /.nf-test-*.nf

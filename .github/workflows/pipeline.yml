@@ -3,9 +3,9 @@ name: Pipeline
 # The Nextflow pipeline, as ci.yml tests the package (CONVENTIONS.md § 6):
 # `nextflow lint` and nf-core's lint, the parameters page and the version
 # checked against their sources, then nf-test with Docker on the oldest
-# Nextflow the pipeline supports (manifest.nextflowVersion) and the newest.
-# On pushes to main, every pull request, by hand, every week, and from
-# release.yml on a tag.
+# Nextflow the pipeline supports (manifest.nextflowVersion) and the newest;
+# and the pipeline run as pixi installs it (pixi.toml). On pushes to main,
+# every pull request, by hand, every week, and from release.yml on a tag.
 on:
   push:
     branches: [main]
@@ -131,3 +131,34 @@ jobs:
         env:
           SHARD: ${{ matrix.shard }}
         run: nf-test test --ci --verbose --profile +docker --shard "$SHARD/4"
+
+  # plexembler as pixi installs it (pixi.toml, docs/installation.md): the conda
+  # package built from the checkout, then run as `pixi exec` runs a package,
+  # in an environment of its own with Nextflow from bioconda and Java from
+  # conda-forge, on a runner with neither set up. `plexembler run` hands over
+  # to that Nextflow, which runs the checkout's pipeline on the test profile in
+  # preview: the workflow and its samplesheets, without its tasks' containers.
+  pixi:
+    name: plexembler run, through pixi
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # pixi alone: the workspace has no environment to install (pixi.toml).
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
+        with:
+          pixi-version: v0.85.0
+          run-install: false
+          cache: false
+
+      - name: The conda package, built from the checkout
+        run: pixi build --output-dir conda-dist
+
+      - name: plexembler run, with nothing but pixi
+        run: |
+          package=$(ls conda-dist/plexembler-*.conda)
+          pixi exec -c conda-forge -c bioconda -s "$package" -- \
+            plexembler run --pipeline . -profile test -preview --outdir results

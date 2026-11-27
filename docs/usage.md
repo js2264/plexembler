@@ -11,7 +11,9 @@ nextflow run js2264/plexembler \
 The pipeline takes two samplesheets: the **species** of the pools, with their
 nanopore reads (`--input`), and the **pooled libraries**, Hi-C, WGS and
 RNA-seq (`--libraries`). Every parameter is on the [parameters](parameters.md)
-page; the results are on the [outputs](output.md) page.
+page; the results are on the [outputs](output.md) page. `plexembler run`
+takes the same arguments, and runs the pipeline of its own version
+([command line](cli.md#run)).
 
 !!! note "Under development"
 
@@ -292,6 +294,8 @@ Pin a release, so that a run can be made again as it was:
 nextflow run js2264/plexembler -r v0.1.0 -profile docker \
     --input species.csv --libraries libraries.csv --outdir results
 ```
+
+`plexembler run` pins it already: plexembler 0.1.0 runs `-r v0.1.0`.
 
 plexembler stays at 0.x ([plan](plan.md#versions-0x-for-good)): a patch
 release (0.1.1) only fixes; a minor release (0.2.0) adds steps, and may change a

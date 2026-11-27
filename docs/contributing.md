@@ -70,6 +70,27 @@ nf-core pipelines lint                                # nf-core's checks (.nf-co
   data go to a release asset (`test-data-v<N>`), never into git
   (CONVENTIONS.md § 13).
 
+### The conda package
+
+`pixi.toml` is plexembler's conda package, which pixi builds from the
+repository ([installation](installation.md#with-pixi)): the Python package,
+with Nextflow from bioconda. `pipeline.yml`'s `pixi` job builds it and runs the
+test profile through it, as a machine with pixi alone would; with
+[pixi](https://pixi.sh) 0.85.0 or newer:
+
+```bash
+pixi build --output-dir conda-dist          # the package, from the checkout
+pixi exec -c conda-forge -c bioconda -s conda-dist/plexembler-*.conda -- \
+    plexembler run --pipeline . -profile test -preview --outdir results
+```
+
+- **Its run-dependencies** are `pyproject.toml`'s dependencies, as conda-forge
+  names them, and the Nextflow of `nextflow.config`'s
+  `manifest.nextflowVersion`: `tests/test_run.py` fails when they differ.
+- **pixi keeps a package by its file name**, which every build of a version
+  shares, `--force-reinstall` or not: run a new build with a cache of its own,
+  `PIXI_CACHE_DIR=$(mktemp -d) pixi exec …`.
+
 ### nf-core's modules and subworkflows
 
 ```bash
@@ -139,8 +160,78 @@ checked, the GitHub release from the changelog, and the image,
 `ghcr.io/js2264/plexembler:X.Y.Z` and `latest`, which the pipeline's own steps
 run in. PyPI's trusted publishing waits for the repository variable
 `PUBLISH_PYPI` to be `true` (docs/plan.md, T1). The pipeline is released by
-the same tag: `nextflow run js2264/plexembler -r vX.Y.Z`. A minor release that
-breaks something says so under *Breaking changes* in its changelog section, and
-comes with `docs/upgrading.md` ([the plan's versions](plan.md#versions-0x-for-good)).
+the same tag: `nextflow run js2264/plexembler -r vX.Y.Z`, which `plexembler
+run` of version X.Y.Z runs. A minor release that breaks something says so
+under *Breaking changes* in its changelog section, and comes with
+`docs/upgrading.md` ([the plan's versions](plan.md#versions-0x-for-good)).
+
+### bioconda
+
+The project's conda packages are bioconda's (CONVENTIONS.md § 0). plexembler's
+recipe is to be submitted to [bioconda-recipes](https://github.com/bioconda/bioconda-recipes)
+once, after the first release ([the plan](plan.md#t8-plexembler-run-and-pixi)):
+`recipes/plexembler/meta.yaml`, its source the release's archive. bioconda's
+bot then follows each release; when the dependencies change (`pyproject.toml`,
+`pixi.toml`), the recipe's are changed by hand, the same day. Its `sha256` is
+the archive's (`curl -sL <url> | sha256sum`); with a local `path:` as its
+source, `conda-build` builds and tests it.
+
+```yaml title="recipes/plexembler/meta.yaml"
+{% set name = "plexembler" %}
+{% set version = "0.1.0" %}
+
+package:
+  name: {{ name }}
+  version: {{ version }}
+
+source:
+  url: https://github.com/js2264/plexembler/archive/v{{ version }}.tar.gz
+  sha256: <the archive's>
+
+build:
+  number: 0
+  noarch: python
+  script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation --no-cache-dir -vvv
+  run_exports:
+    # 0.x for good: a minor release may break.
+    - {{ pin_subpackage(name, max_pin="x.x") }}
+
+requirements:
+  host:
+    - python >=3.10
+    - pip
+    - hatchling >=1.27
+  run:
+    - python >=3.10
+    - click >=8.1
+    - rich-click >=1.9
+    - jinja2 >=3.1
+    - pyyaml >=6.0
+    - nextflow >=26.04.0
+
+test:
+  imports:
+    - plexembler
+  commands:
+    - plexembler --help
+    - plexembler run --dry-run -profile test --outdir results
+
+about:
+  home: https://github.com/js2264/plexembler
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  summary: Genomes, gene annotations, Hi-C maps and expression tables for every species of a pool.
+  description: |
+    Reference genomes, gene annotations, Hi-C maps and expression tables for
+    every species of a pool, from per-species nanopore reads and pooled Hi-C,
+    WGS and RNA-seq: a Nextflow pipeline, run by `plexembler run`.
+  doc_url: https://js2264.github.io/plexembler/
+  dev_url: https://github.com/js2264/plexembler
+
+extra:
+  recipe-maintainers:
+    - js2264
+```
 
 The project's template (chromokit's) brings its changes with `uvx copier update`.

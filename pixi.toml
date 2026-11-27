@@ -1,0 +1,38 @@
+# plexembler as a conda package, which pixi builds from this repository: the
+# Python package, with Nextflow and Java to run the pipeline (`plexembler run`).
+#
+#   pixi global install -c conda-forge -c bioconda \
+#       --git https://github.com/js2264/plexembler.git --tag vX.Y.Z
+#
+# Its name is below; its version, description, licence and links are
+# pyproject.toml's. Its dependencies are pyproject.toml's, as conda-forge names
+# them, and the Nextflow of nextflow.config's manifest: tests/test_run.py
+# checks both. bioconda's recipe has the same (docs/contributing.md). The
+# development environment is uv's: this workspace only defines the package.
+
+[workspace]
+channels = ["conda-forge", "bioconda"]
+platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
+# pixi builds a package from its source with this preview feature only (pixi 0.85).
+preview = ["pixi-build"]
+
+[package]
+name = "plexembler"
+
+[package.build]
+# Pure Python, built by hatchling: one noarch package for every platform. The
+# backend from conda-forge, which institutions block less than prefix.dev.
+backend = { name = "pixi-build-python", version = "*", channels = ["conda-forge"] }
+config = { noarch = true }
+
+[package.host-dependencies]
+hatchling = ">=1.27"
+
+[package.run-dependencies]
+python = ">=3.10"
+click = ">=8.1"
+rich-click = ">=1.9"
+jinja2 = ">=3.1"
+pyyaml = ">=6.0"
+# The pipeline's runner (bioconda), which brings Java (conda-forge's openjdk).
+nextflow = ">=26.04.0"

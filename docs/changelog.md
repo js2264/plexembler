@@ -139,3 +139,12 @@ follow [semantic versioning](https://semver.org).
 - **The test data**, version 4: genes every 6 kb (open reading frames of
   yeast's codon usage, which AUGUSTUS's yeast model finds), the RNA-seq read
   from them; the second species of the CUG-Ser clade (table 12).
+- **`plexembler run`**, the pipeline at the package's version: `nextflow run
+  js2264/plexembler -r v<version>`, every other argument going to Nextflow as
+  it is (`-profile`, `-resume`, `--input`, …); the folder or the commit the
+  package was installed from, when it was; `--pipeline` and `-r` for another,
+  `--dry-run` to print the command.
+- **plexembler with pixi**, `pixi.toml`: the conda package pixi builds from the
+  repository, with Nextflow and Java, `pixi global install -c conda-forge -c
+  bioconda --git https://github.com/js2264/plexembler.git`, then `plexembler
+  run`; a machine needs nothing else but a container engine.

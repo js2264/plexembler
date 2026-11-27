@@ -18,6 +18,7 @@ flowchart LR
   T2[T2 Test data, benchmark pool] -.-> M1
   T1[T1 The package's container] -.-> M1
   T7[T7 chromosomix, metacooler] -.-> M2
+  T8[T8 plexembler run, pixi] -.-> C
 ```
 
 ## Versions: 0.x, for good
@@ -559,6 +560,26 @@ from M2 on.
       pipeline from 1.0.0, which plexembler does not plan
       ([Versions](#versions-0x-for-good)), and nf-core's layout would replace some
       of the conventions' choices (`CHANGELOG.md`, the docs' site).
+
+### T8 · plexembler run, and pixi
+
+The pipeline, run by a machine that has pixi and a container engine, nothing
+else: the package runs the pipeline of its own version, and its conda package
+brings Nextflow and Java.
+
+- [x] **`plexembler run`**: `nextflow run js2264/plexembler -r v<version>`,
+      every other argument going to Nextflow as it is
+      ([command line](cli.md#run)).
+- [x] **`pixi.toml`**, the conda package pixi builds from the repository
+      (pixi-build, a preview of pixi's), with Nextflow from bioconda:
+      `pixi global install -c conda-forge -c bioconda --git …`, then
+      `plexembler run`. `pipeline.yml`'s `pixi` job builds it from the
+      checkout and runs the test profile through `pixi exec`, in preview.
+- [ ] **bioconda's recipe** (docs/contributing.md, CONVENTIONS.md § 0),
+      submitted once the first release is tagged, its source the release's
+      archive: then `pixi exec -c conda-forge -c bioconda plexembler run …`
+      installs nothing, and `pixi global install plexembler` needs no git;
+      chromokit's `bioconda` answer, then, for its badge and install line.
 
 ## Questions that change defaults
 

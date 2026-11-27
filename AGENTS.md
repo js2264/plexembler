@@ -34,6 +34,14 @@ nf-core pipelines lint                                  # nf-core's checks (.nf-
 nf-core pipelines schema docs nextflow_schema.json --output docs/parameters.md --force
 ```
 
+The conda package (pixi ≥ 0.85.0; docs/contributing.md):
+
+```bash
+pixi build --output-dir conda-dist                      # the package, from the checkout
+pixi exec -c conda-forge -c bioconda -s conda-dist/plexembler-*.conda -- \
+    plexembler run --pipeline . -profile test -preview --outdir results
+```
+
 ## Layout
 
 ```text
@@ -44,6 +52,7 @@ modules/nf-core/, subworkflows/nf-core/   installed by nf-core/tools, never edit
 conf/                        base (resources), modules (args, publishing), test profiles
 assets/                      the samplesheets' schemas, MultiQC's config
 nextflow.config, nextflow_schema.json     parameters, profiles, manifest; their schema
+pixi.toml                    the conda package pixi builds: the package, with Nextflow
 src/plexembler/              the Python package: the commands the pipeline's steps run
 src/plexembler/_report/      chromokit's report kit: never edited (chromokit sync replaces it)
 tests/                       pytest (test_*.py) and the pipeline's nf-test (default.nf.test)
@@ -83,6 +92,13 @@ docs/                        the site's pages; docs/plan.md is the implementatio
   (docs/concepts.md). A species' ID has no underscore.
 - **The version is the package's** (`pyproject.toml`), written again as the
   pipeline's `manifest.version`; bump-my-version changes both.
+- **The conda package depends on what the package does**: a dependency of
+  `pyproject.toml`, or the pipeline's Nextflow, changes in `pixi.toml` too
+  (`tests/test_run.py` checks) and in bioconda's recipe
+  (docs/contributing.md).
+- **`plexembler run` passes everything else to Nextflow**: no pipeline
+  parameter is named after one of its options (`pipeline`, `dry-run`), which
+  would hide it (`tests/test_run.py` checks).
 - **Every process has a `stub:` block**, and every local module and
   subworkflow an nf-test with a `-stub` test.
 - **GPU runs cost money**: ask before starting one.
