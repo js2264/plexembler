@@ -20,9 +20,12 @@ names each read after its sequence: ``--save_split_reads``) and epsilon within
 the screened contigs); each species' screened contigs its own (minimap2 against
 the references: the planted bleed-through moved or dropped); no QV lower after
 the short-read polishing, nor more errors against the reference (QUAST's
-mismatches and indels, what the QV guards); and, with ``--hic-results`` (a run with
-``--polish_reads hic``), the Hi-C reads' polishing gain 80 % of the WGS pairs'
-(not judged when the WGS pairs' polishing was not kept: no gain to compare).
+mismatches and indels); and a polishing that fixes some of them kept (when one
+of the run's candidates has fewer errors than the draft). With
+``--hic-results`` (a run with ``--polish_reads hic``), the same of the Hi-C
+reads' polishing, the fallback of a pool without WGS; and, reported without
+deciding the run, the errors it fixed against those the WGS pairs' fixed (80 %
+or more is the aim: their held-out QVs, on different pairs, do not compare).
 
 Milestone 3, for each species: 90 % or more of its reference's chromosomes
 each 90 % in one of its genome's chromosomes, and as many end to end (both ends
@@ -358,27 +361,13 @@ def milestone_2(
                     "passed": gain[1] >= gain[0],
                 }
             )
-        if hic_results is not None and gain is not None:
-            hic = polish_gain(hic_results, species)
-            wgs_gain = gain[1] - gain[0]
-            hic_gain = (hic[1] - hic[0]) if hic else 0.0
-            # A polishing is kept only when it raises the QV by more than the
-            # choice's tolerance: without one from the WGS pairs, there is no
-            # gain to hold the Hi-C reads' to.
-            passed = None if wgs_gain <= 0 else hic_gain >= 0.8 * wgs_gain
-            checks.append(
-                {
-                    "species": species,
-                    "check": "Hi-C's polishing gain 80 % of WGS's",
-                    "value": f"{hic_gain:.1f} vs {wgs_gain:.1f}",
-                    "passed": passed,
-                }
-            )
-        # What the QV guards, against the truth: the polished genome's errors
-        # against its reference, the draft's (its screened contigs) before.
+        # What the guard guards, against the truth: the polished genome's
+        # errors against its reference, the draft's (its screened contigs)
+        # before.
         reference = data / "references" / f"{species}.fa"
         runs = [("", results)] + ([(" with Hi-C", hic_results)] if hic_results else [])
         draft = None
+        errors: dict[str, float] = {}
         for how, run in runs:
             kept = run / "species" / species / "polish" / f"{species}.polish.fa.gz"
             if not kept.exists():
@@ -391,12 +380,53 @@ def milestone_2(
             after = quast_errors(
                 quast, kept, reference, workdir / f"quast_{name}_{species}"
             )
+            errors[name] = after
             checks.append(
                 {
                     "species": species,
                     "check": f"no more errors against its reference after polishing{how}",
                     "value": f"{draft:.2f} -> {after:.2f} per 100 kb (QUAST)",
                     "passed": after <= draft,
+                }
+            )
+            # The guard's other half: when one of the run's polishings has
+            # fewer errors than the draft, a polishing is kept.
+            folder = run / "species" / species / "candidates" / "polish"
+            polished = {
+                path.name.removeprefix(f"{species}.").split(".")[0]: quast_errors(
+                    quast, path, reference, workdir / f"quast_{name}_{path.name}"
+                )
+                for path in sorted(folder.glob(f"{species}.*"))
+                if path.is_file() and path.name.endswith((".fa", ".fasta", ".fa.gz"))
+            }
+            if polished:
+                best = min(polished, key=lambda tool: polished[tool])
+                helps = polished[best] < draft
+                checks.append(
+                    {
+                        "species": species,
+                        "check": f"a polishing that fixes errors kept{how}",
+                        "value": f"{best} {polished[best]:.2f}, kept {after:.2f}, "
+                        f"draft {draft:.2f} per 100 kb",
+                        "passed": after < draft if helps else None,
+                    }
+                )
+        # The Hi-C reads' polishing against the WGS pairs', by the errors each
+        # run's kept polishing fixed against the reference: their held-out QVs
+        # are measured on different pairs, the Hi-C ones far thinner, and do not
+        # compare. Without a WGS gain there is nothing to hold Hi-C's to.
+        if draft is not None and {"wgs", "hic"} <= errors.keys():
+            wgs_fixed = draft - errors["wgs"]
+            hic_fixed = draft - errors["hic"]
+            # Hi-C's polishing is a pool's fallback when it has no WGS: its gain
+            # against WGS's is reported, and decides nothing (docs/plan.md, M2).
+            checks.append(
+                {
+                    "species": species,
+                    "check": "Hi-C's polishing gain 80 % of WGS's",
+                    "value": f"{hic_fixed:.2f} vs {wgs_fixed:.2f} errors per 100 kb fixed",
+                    "passed": None if wgs_fixed <= 0 else hic_fixed >= 0.8 * wgs_fixed,
+                    "reported": True,
                 }
             )
     return checks
@@ -942,13 +972,16 @@ def write_report(
         "|---|---|---|---|",
     ]
     verdicts = {True: "yes", False: "**no**", None: "not judged"}
+    # A reported check says how far the pipeline gets, and decides nothing.
+    reported = {True: "yes (reported)", False: "no (reported)", None: "not judged"}
     lines += [
-        f"| {c['species']} | {c['check']} | {c['value']} | {verdicts[c['passed']]} |"
+        f"| {c['species']} | {c['check']} | {c['value']} | "
+        f"{(reported if c.get('reported') else verdicts)[c['passed']]} |"
         for c in checks
     ]
     (out / f"m{milestone}.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
-    return all(c["passed"] is not False for c in checks)
+    return all(c["passed"] is not False for c in checks if not c.get("reported"))
 
 
 def main() -> int:

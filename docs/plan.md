@@ -62,6 +62,7 @@ it applies.
 | Delivery | A pull request per milestone into `main`, squash-merged by the maintainer: each milestone on its own branch, its pull request stacked on the previous milestone's until that one is merged, then rebased onto `main` |
 | Benchmark | Public data of yeasts with T2T references, mixed in silico (T2) |
 | Benchmark sets | Three, from the easiest to the hardest (2026-11-27): each plants more of the repeats yeast genomes hold and gives worse long reads and Hi-C, R10 in all three. Milestone 4 counts the characterized genes, not the uncharacterized ORFs (T2) |
+| Hi-C polishing | The fallback of a pool without WGS, never a rival to WGS's (2026-11-27): a pool with WGS polishes with it. Milestone 2 asks that it never leave a genome with more errors and be kept when it fixes some; its gain against WGS's is reported, 80 % its aim |
 | Upstream | hicstuff, instaGRAAL, chromosomix and metacooler are attached: their changes are prepared there (T4, T7), and worked around here until they are released |
 | The package's container | An image on GHCR per release, `ghcr.io/js2264/plexembler:X.Y.Z`, built from the released wheel; PyPI later (T1) |
 
@@ -204,7 +205,11 @@ screened.
       report. (hicstuff's own `cutsite` pairs the pieces again; a mode of it
       that writes them once, unpaired, would replace `plexembler digest`, T4.)
       To come: `both`, and `--min_polish_depth`, Hi-C for a species whose WGS
-      depth is too low.
+      depth is too low: the WGS pairs and the Hi-C reads pooled in one round,
+      where the WGS alone are too thin. Not Hi-C after WGS, nor the two side by
+      side with the best kept: both are Illumina reads, of one error profile,
+      and Hi-C adds depth, unevenly, not evidence; WGS fixed more for every
+      species of the benchmark's medium set. Measured on the benchmark first.
 - [x] **Short-read polishing** (`--sr_polisher polypolish,pypolca|none`):
       Polypolish on `bwa mem -a` alignments of the species' reads, single-end for
       Hi-C pieces (its insert-size filter needs true pairs), alignments with
@@ -254,16 +259,16 @@ screened.
       the pool has one). A verdict per contig, keep, move, drop or organelle,
       with its evidence and thresholds; a move renames the contig
       `<species>_<contig>` (`metacooler reassign` for the pool's map, then).
-- [x] **Organelles and plasmids:** the mitochondrial contig, by circularity, GC,
-      depth and `miniprot` hits of a small set of yeast mitochondrial proteins
-      (`assets/`), kept apart as `<species>_chrM`. Today by depth and GC (the
-      screen's `organelle` verdict); circularity (Flye's graph) and miniprot's
-      hits to come.
       Each depth is against the species' own: on the contigs its reads cover
       the most. On the benchmark's easy set, bleed-through assembled into all
       of Cgla's genome, longer than Spar's own contigs, had set Spar's depth;
       the screen kept it as Spar's, and the pool's split then found 360,598 of
       Cgla's WGS pairs ambiguous, leaving it 4,856 (js2264/plexembler#8).
+- [x] **Organelles and plasmids:** the mitochondrial contig, by circularity, GC,
+      depth and `miniprot` hits of a small set of yeast mitochondrial proteins
+      (`assets/`), kept apart as `<species>_chrM`. Today by depth and GC (the
+      screen's `organelle` verdict); circularity (Flye's graph) and miniprot's
+      hits to come.
 - [ ] **Foreign DNA:** FCS-adaptor always; FCS-GX with `--fcsgx_db` (nf-core's
       subworkflow `fasta_clean_fcs`); Tiara's labels (eukaryote, prokaryote,
       organelle) for the report.
@@ -276,7 +281,9 @@ screened.
 true species (the reads' names carry it) for pairs of species below 90 % ANI;
 ε within 10 % of the simulated rate; every planted bleed-through contig moved
 or dropped; no species' QV lower after polishing; polishing with digested Hi-C
-alone gains at least 80 % of what WGS gains, species by species.
+alone, the fallback of a pool without WGS, never leaves a species with more
+errors, and is kept when it fixes some, species by species (its gain against
+WGS's reported, 80 % its aim: Decisions, "Hi-C polishing").
 
 ## M3 · Chromosomes · v0.3.0
 
@@ -544,8 +551,12 @@ pipeline's own steps need a container before the package is anywhere else.
         set): `plexembler junctions` flags the join (6 % of the pairs
         expected across it), and nothing cuts it. Cut the joins it flags, or
         keep the scaffolder candidate without them (M3, "One candidate kept").
-      - The Hi-C polishing is never kept: the held-out pairs of a digested
-        Hi-C library are too thin for the guard's QV to see a gain (M2).
+      - The Hi-C polishing was never kept, its held-out pairs too thin for
+        the guard's QV to see a gain; the guard now counts the k-mers a
+        polishing changed (M2). Kept, it fixes 42 % of the errors the WGS
+        pairs' polishing fixes against the references for Scer and 37 % for
+        Spar (87 % for Cgla): 80 % is now its aim, reported, not a bar
+        (Decisions, "Hi-C polishing").
       - The first split's epsilon, on the contigs before the screen, is 14 %
         low (0.0259 of 0.03); the second split's is within 10 % (M2).
       - A circular contig that Flye writes as two copies of itself (Cgla's

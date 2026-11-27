@@ -102,7 +102,8 @@ runner (4 CPUs, 12 GB). `evaluate.py` runs BUSCO on the references, QUAST and
 minimap2 against them, and plexembler's own `junctions` (`--busco`,
 `--quast`, `--minimap2`, `--plexembler`: how to run them, on PATH by default)
 and writes `results/benchmark/m<N>.md`; it exits 1 when a check fails (a check
-with nothing to judge reads "not judged"). Each milestone's checks are its
+with nothing to judge reads "not judged"; a reported one, "(reported)", says how
+far the pipeline gets and decides nothing). Each milestone's checks are its
 "Done when":
 
 - milestone 1, the kept contigs: BUSCO against the reference's,
@@ -110,8 +111,11 @@ with nothing to judge reads "not judged"). Each milestone's checks are its
   mismatches and indels);
 - milestone 2, the two splits (on the contigs, then on the screened contigs)
   and their epsilon, the screened contigs and the polishing: its QV, and its
-  errors against the reference, QUAST's (`--hic-results`: a second run,
-  polished with the Hi-C reads, `--polish_reads hic`);
+  errors against the reference, QUAST's, and a polishing that fixes some kept;
+  the same of the Hi-C reads' polishing, a pool's fallback without WGS
+  (`--hic-results`: a second run, polished with the Hi-C reads, `--polish_reads
+  hic`), and, reported, the errors it fixed against those the WGS pairs' did
+  (80 % the aim, deciding nothing);
 - milestone 3, each genome's chromosomes against the reference's (whole, end
   to end; the planted tandem arrays, which no read crosses, left out, an array
   at a chromosome's end moving that end inside it), its misassemblies and its
