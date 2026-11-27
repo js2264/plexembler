@@ -95,7 +95,11 @@ follow [semantic versioning](https://semver.org).
   goes when its own reads are thin on it or another species' twice as deep,
   `--depth-ratio`; an alignment between two contigs counts for both); a moved
   contig is named after the species it goes to, its name kept; each species'
-  contigs after it in `species/<species>/contigs/`.
+  contigs after it in `species/<species>/contigs/`. A species' depth is taken
+  on the contigs its own reads cover the most: on the benchmark's easy set,
+  bleed-through assembled into all of Cgla's genome, longer than Spar's own
+  contigs, set Spar's depth, and the screen kept it as Spar's.
+  ([#8](https://github.com/js2264/plexembler/pull/8))
 - **The test data**, version 2: 30× of nanopore reads per species and 10,000
   WGS pairs, so that the test profile assembles; its second species leaves its
   chemistry and genome size to the pipeline.

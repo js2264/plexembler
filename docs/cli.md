@@ -208,8 +208,10 @@ Keeps, moves or drops each contig of a pool, and names its organelles. A
 species' nanopore run can hold another species' reads (bleed-through), which
 assemble into contigs of the wrong species; the screen weighs three signals
 for each contig: each species' nanopore depth on it (against that species'
-depth on its own contigs), the share of it found in another species' contigs
-at 99 % identity or more, and its Hi-C contacts with each species' contigs.
+depth on its own contigs, those its reads cover the most: a whole genome of
+bleed-through, assembled, can outweigh a species' own), the share of it found
+in another species' contigs at 99 % identity or more, and its Hi-C contacts
+with each species' contigs.
 
 - `organelle`: `--organelle-depth` times its species' depth and under
   `--organelle-gc` GC: kept as `<species>_chrM` (`chrM2`, … for more);

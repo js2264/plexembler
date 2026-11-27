@@ -7,7 +7,8 @@ species. ``plexembler screen`` weighs three signals for each contig of a pool
 
 - **the nanopore depth of each species' reads** on it (minimap2's map-ont
   alignments of every species' reads to every species' contigs), against the
-  depth of each species' reads on its own contigs;
+  depth of each species' reads on its own contigs (those its reads cover the
+  most: a whole genome of bleed-through can outweigh a species' own);
 - **its identity to the other species' contigs** (minimap2's asm alignments of
   the pool's contigs to each other): the share of it found, 99 % identical or
   more, in another species' contigs;
@@ -179,14 +180,31 @@ def read_contacts(table: Path, contigs: dict[str, Contig]) -> None:
 
 
 def typical_depths(contigs: dict[str, Contig]) -> dict[str, float]:
-    """Each species' reads' depth on its own contigs: the median, by length."""
+    """Each species' reads' depth on its own contigs: the median, by length, of
+    those its reads cover at least as deeply as any other species' reads do.
+
+    Bleed-through assembled whole can be most of a species' contigs (on the
+    benchmark's easy set, all of Cgla's genome among Spar's), and its depth
+    then the median, against which it would look like the species' own; the
+    other species' reads cover it more deeply. A species none of whose contigs
+    its reads cover the most is measured on all of them.
+    """
     typical = {}
     by_species: dict[str, list[Contig]] = defaultdict(list)
     for contig in contigs.values():
         by_species[contig.species].append(contig)
     for species, own in by_species.items():
+        mine = [
+            contig
+            for contig in own
+            if contig.depth.get(species, 0.0)
+            >= max(
+                (d for other, d in contig.depth.items() if other != species),
+                default=0.0,
+            )
+        ]
         depths = []
-        for contig in own:
+        for contig in mine or own:
             depths += [contig.depth.get(species, 0.0)] * max(1, contig.length // 1000)
         typical[species] = statistics.median(depths) if depths else 0.0
     return typical

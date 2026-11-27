@@ -259,6 +259,11 @@ screened.
       (`assets/`), kept apart as `<species>_chrM`. Today by depth and GC (the
       screen's `organelle` verdict); circularity (Flye's graph) and miniprot's
       hits to come.
+      Each depth is against the species' own: on the contigs its reads cover
+      the most. On the benchmark's easy set, bleed-through assembled into all
+      of Cgla's genome, longer than Spar's own contigs, had set Spar's depth;
+      the screen kept it as Spar's, and the pool's split then found 360,598 of
+      Cgla's WGS pairs ambiguous, leaving it 4,856 (js2264/plexembler#8).
 - [ ] **Foreign DNA:** FCS-adaptor always; FCS-GX with `--fcsgx_db` (nf-core's
       subworkflow `fasta_clean_fcs`); Tiara's labels (eukaryote, prokaryote,
       organelle) for the report.
