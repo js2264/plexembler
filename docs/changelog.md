@@ -125,7 +125,7 @@ follow [semantic versioning](https://semver.org).
   join and those expected are counted on the positions whose mates' coverage
   is half to twice the genome's mean (`left_seen`, `right_seen`): a repeat at
   a contig's end, which the pairs see nothing of, or see another copy's
-  contacts in, is left out.
+  contacts in, is left out. ([#12](https://github.com/js2264/plexembler/pull/12))
 - **The joins the Hi-C pairs do not support, cut**: each of YaHS's joins is
   scored before the genome is written, from the species' pairs on its contigs,
   each mate placed on its scaffold through YaHS's AGP (`plexembler junctions
@@ -134,6 +134,7 @@ follow [semantic versioning](https://semver.org).
   any other (`plexembler finalize --cut`; `scaffold_1.1` and `scaffold_1.2` in
   the table of names). A `thin` join is kept. On the benchmark's medium set,
   YaHS's join of Scer's chrI to its chrVI, at their two Y' ends, is cut.
+  ([#12](https://github.com/js2264/plexembler/pull/12))
 - **Each species' Hi-C map** on its genome: its pairs aligned (bwa-mem2),
   parsed, sorted and deduplicated (pairtools), binned at `--map_resolution`
   (1 kb) and zoomed out, balanced (cooler): `species/<species>/hic/<species>.mcool`.
