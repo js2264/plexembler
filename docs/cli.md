@@ -77,12 +77,38 @@ plexembler rename contigs.fa -p Scer -o Scer.contigs.fa.gz
 It writes the renamed FASTA, the table of names beside it (`Scer.contigs.names.tsv`:
 [format](formats.md#names-table)), and its log, `Scer.plexembler_<YYYYMMDDHHMMSS>.log`.
 
+**A circle written twice.** An assembler can write a circular genome, a
+mitochondrion or a plasmid, as two or more copies of itself joined end to end:
+on some runs, Flye wrote the benchmark's 20,063-bp *N. glabratus*
+mitochondrion as one 40,128-bp contig, which QUAST reads as a misassembly. A
+contig that is such copies is cut to its first copy, before anything else sees
+it, and the log says so: its copies, the unit's length and how alike they are.
+A contig is `k` copies of a unit when its 21-mers, but the last copy's, are
+found again one unit on (within as many bases as the copies may differ by),
+at `--min-identity` or more (the share found is about the identity to the
+21st power), and when it is a whole number of units long: a circle's copies
+are, the last one closing on the first, and a tandem repeat of a linear
+chromosome seldom is. The unit is `--min-unit` bases or more, and a contig that
+is a tandem repeat of a shorter one throughout, a satellite, stays whole. With
+`--assembly-info`, Flye's table of its contigs, a contig Flye says is linear
+(`circ.` N), a tandem repeat such as the rDNA's, is never cut; its circular
+ones (`circ.` Y, a doubled one with a `mult.` of 2 or more) and every contig of
+an assembler without such a table (hifiasm) are judged by their sequence.
+
+```bash
+plexembler rename assembly.fasta -p Cgla -o Cgla.contigs.fa -a assembly_info.txt
+```
+
 | Option | Default | Description |
 |---|---|---|
 | `FASTA` | (required) | The contigs, as FASTA; gzipped or not. |
 | `-p, --prefix` | (required) | The species' ID, which every new name starts with: a letter, then letters, digits and hyphens. It names the log. |
 | `-o, --output` | (required) | The renamed contigs, as FASTA; gzipped when the name ends in `.gz`. |
 | `-n, --names` | `<output>.names.tsv` | The table of new and original names; by default beside the output, its `.fa`/`.fasta`/`.fna` and `.gz` extensions replaced. |
+| `-a, --assembly-info` | | The assembler's table of its contigs, Flye's `assembly_info.txt`: a contig it says is linear (`circ.` N) is never cut. |
+| `--collapse/--no-collapse` | on | Cut a contig that is two or more copies of a unit, end to end (a circle its assembler went round twice), to its first copy. |
+| `--min-unit` | `1000` | The shortest unit, in bases, that a contig is looked at as copies of. |
+| `--min-identity` | `0.99` | The lowest identity between a contig's copies, from their 21-mers, at which it is cut. |
 | `--force` | off | Overwrite outputs that exist already. |
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |

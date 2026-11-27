@@ -135,7 +135,13 @@ usable as a draft genome on its own.
       (`--assemblers flye,hifiasm`), for R10 reads, `-l0` for a haploid species
       (nf-core: `flye`, `hifiasm`, `gfatools/gfa2fa`).
 - [x] **Contigs named after their species:** `plexembler rename`, in a local
-      module `PLEXEMBLER_RENAME` (plain FASTA: Medaka indexes it).
+      module `PLEXEMBLER_RENAME` (plain FASTA: Medaka indexes it). A circle
+      that the assembler wrote as copies of itself is cut to one copy there,
+      before Medaka, the checks and the screen see it: on some runs of the
+      benchmark, Flye wrote Cgla's 20 kb mitochondrion as one 40 kb contig,
+      which QUAST counted as a misassembly. The copies are found on the
+      sequence (whole, near-identical); Flye's `assembly_info.txt` keeps the
+      contigs it says are linear whole, and hifiasm gives no such table.
 - [x] **Nanopore polishing** (`--ont_polisher medaka|dorado|none`): Medaka
       (nf-core `medaka`); `dorado polish` (local, `process_gpu`, experimental
       until tested on a GPU) for Dorado's BAMs.
@@ -251,8 +257,9 @@ screened.
 - [x] **Organelles and plasmids:** the mitochondrial contig, by circularity, GC,
       depth and `miniprot` hits of a small set of yeast mitochondrial proteins
       (`assets/`), kept apart as `<species>_chrM`. Today by depth and GC (the
-      screen's `organelle` verdict); circularity (Flye's graph) and miniprot's
-      hits to come.
+      screen's `organelle` verdict); circularity (Flye's table, which
+      `plexembler rename` reads already: its names table's `circular`) and
+      miniprot's hits to come.
 - [ ] **Foreign DNA:** FCS-adaptor always; FCS-GX with `--fcsgx_db` (nf-core's
       subworkflow `fasta_clean_fcs`); Tiara's labels (eukaryote, prokaryote,
       organelle) for the report.

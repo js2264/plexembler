@@ -16,6 +16,7 @@ import rich_click as click
 
 from . import __version__
 from ._log import logger, run_log, stderr_log
+from .circular import MIN_IDENTITY, MIN_UNIT, read_assembly_info
 from .rename import SPECIES, rename_contigs, write_names
 from .run import REPOSITORY, split_arguments
 
@@ -186,6 +187,32 @@ def run_command(
     type=click.Path(dir_okay=False, path_type=Path),
     help="The table of new and original names (default: the output's name, with .names.tsv for its extensions).",
 )
+@click.option(
+    "-a",
+    "--assembly-info",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="The assembler's table of its contigs, Flye's assembly_info.txt: a contig it says is linear (circ. N) is never cut.",
+)
+@click.option(
+    "--collapse/--no-collapse",
+    default=True,
+    show_default=True,
+    help="Cut a contig that is two or more copies of a unit, end to end (a circle its assembler went round twice), to its first copy.",
+)
+@click.option(
+    "--min-unit",
+    type=click.IntRange(100),
+    default=MIN_UNIT,
+    show_default=True,
+    help="The shortest unit, in bases, that a contig is looked at as copies of.",
+)
+@click.option(
+    "--min-identity",
+    type=click.FloatRange(0.9, 1),
+    default=MIN_IDENTITY,
+    show_default=True,
+    help="The lowest identity between a contig's copies, from their 21-mers, at which it is cut.",
+)
 @click.option("--force", is_flag=True, help="Overwrite outputs that exist already.")
 @click.option(
     "-v", "--verbose", is_flag=True, help="Debug messages, in the log and on stderr."
@@ -201,11 +228,19 @@ def rename(
     prefix: str,
     output: Path,
     names: Path | None,
+    assembly_info: Path | None,
+    collapse: bool,
+    min_unit: int,
+    min_identity: float,
     force: bool,
     verbose: bool,
     quiet: bool,
 ) -> None:
-    """Name every contig after its species: <species>_<contig>."""
+    """Name every contig after its species: <species>_<contig>.
+
+    A contig that is two or more copies of a unit, end to end, a circular
+    genome its assembler went round more than once, is cut to its first copy.
+    """
     if names is None:
         stem = output.name.removesuffix(".gz")
         for extension in (".fasta", ".fa", ".fna"):
@@ -217,11 +252,21 @@ def rename(
         "prefix": prefix,
         "output": output,
         "names": names,
+        "assembly_info": assembly_info,
+        "collapse": collapse,
+        "min_unit": min_unit,
+        "min_identity": min_identity,
         "force": force,
     }
     with run_log(output.parent, prefix, parameters, verbose=verbose, quiet=quiet):
         try:
-            renamed = rename_contigs(fasta, output, prefix)
+            info = read_assembly_info(assembly_info) if assembly_info else None
+        except ValueError as error:
+            raise click.ClickException(f"{assembly_info}: {error}") from error
+        try:
+            renamed = rename_contigs(
+                fasta, output, prefix, info, collapse, min_unit, min_identity
+            )
         except ValueError as error:
             raise click.ClickException(f"{fasta}: {error}") from error
         write_names(renamed, names)

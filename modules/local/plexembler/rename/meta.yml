@@ -1,9 +1,10 @@
 name: "plexembler_rename"
-description: Names every contig after its species, <species>_<contig>
+description: Names every contig after its species, <species>_<contig>, and cuts a circular contig written as copies of its unit to one copy
 keywords:
   - contigs
   - rename
   - fasta
+  - circular
 tools:
   - "plexembler":
       description: "The commands of plexembler's pipeline"
@@ -19,6 +20,10 @@ input:
         type: file
         description: The contigs, FASTA, gzipped or not
         pattern: "*.{fa,fasta,fna}{,.gz}"
+    - info:
+        type: file
+        description: The assembler's table of its contigs, Flye's assembly_info.txt, which says which are circular; [] for an assembler without one
+        pattern: "*.txt"
 output:
   fasta:
     - - meta:
@@ -34,7 +39,7 @@ output:
           description: The species' meta map
       - ${prefix}.names.tsv:
           type: file
-          description: Each contig's new and original names, and its length
+          description: Each contig's new and original names, its length as written and as assembled, the copies of its unit it was, and whether it is circular
           pattern: "*.names.tsv"
   log:
     - - meta:

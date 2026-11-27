@@ -6,7 +6,9 @@ process PLEXEMBLER_RENAME {
     container "ghcr.io/js2264/plexembler:${workflow.manifest.version}"
 
     input:
-    tuple val(meta), path(fasta)
+    // The assembler's contigs, and its table of them when it writes one
+    // (Flye's assembly_info.txt, [] otherwise): which are circular.
+    tuple val(meta), path(fasta), path(info)
 
     output:
     tuple val(meta), path("${prefix}.fa")       , emit: fasta
@@ -23,11 +25,13 @@ process PLEXEMBLER_RENAME {
     if ("${fasta}" == "${prefix}.fa") {
         error("PLEXEMBLER_RENAME: the input and the output are both named ${fasta}: set ext.prefix")
     }
+    def info_arg = info ? "-a ${info}" : ''
     """
     plexembler rename \\
         ${fasta} \\
         -p ${meta.id} \\
         -o ${prefix}.fa \\
+        ${info_arg} \\
         ${args}
     """
 
@@ -35,7 +39,7 @@ process PLEXEMBLER_RENAME {
     prefix = task.ext.prefix ?: "${meta.id}"
     """
     printf ">${meta.id}_contig_1\\nACGT\\n" > ${prefix}.fa
-    printf 'name\\toriginal_name\\tlength_bp\\n${meta.id}_contig_1\\tcontig_1\\t4\\n' > ${prefix}.names.tsv
+    printf 'name\\toriginal_name\\tlength_bp\\toriginal_length_bp\\tcopies\\tcircular\\n${meta.id}_contig_1\\tcontig_1\\t4\\t4\\t1\\tNA\\n' > ${prefix}.names.tsv
     touch ${meta.id}.plexembler_20260101000000.log
     """
 }
