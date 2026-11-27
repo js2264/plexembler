@@ -504,7 +504,8 @@ Spearman's ρ ≥ 0.9 for every species.
       are served. Checked with chromosomix's own `scripts/make_store.py check`.
 - [ ] **The complete workflow** (a 0.x release, see [Versions](#versions-0x-for-good)):
       `test_full` green on the benchmark, every page written, a metro map
-      (`manifest.diagram`), the benchmarks page (CONVENTIONS.md § 20).
+      (`manifest.diagram`; the README's is done, `docs/assets/metro_map.py`),
+      the benchmarks page (CONVENTIONS.md § 20).
 
 ## Tracks
 

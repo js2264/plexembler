@@ -227,3 +227,8 @@ follow [semantic versioning](https://semver.org).
   gave *N. glabratus* 4,794 of the WGS library's pairs, where it was polished
   with 326,616. The first split's tables stay in
   `pools/<pool>/deconvolution/contigs/`.
+- **The pipeline's metro map**, at the top of the README: each species'
+  nanopore reads, then its contigs and its genome, on one line, which the
+  pooled WGS, Hi-C and RNA-seq libraries join where they are used; each tool a
+  station, plexembler's own commands in bold, the optional steps dashed. Light
+  and dark, both written by `docs/assets/metro_map.py`.

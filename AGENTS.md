@@ -117,8 +117,9 @@ docs/                        the site's pages; docs/plan.md is the implementatio
   `species/<species>/`, a pool's under `pools/<pool>/`), its parameters in
   `nextflow.config` and `nextflow_schema.json` (then `docs/parameters.md`), its
   outputs in `docs/output.md`, its tools in `CITATIONS.md` and in
-  `toolCitationText()`, its changelog entry, and its box ticked in
-  `docs/plan.md`.
+  `toolCitationText()`, its station on the README's metro map
+  (`docs/assets/metro_map.py`, then `python docs/assets/metro_map.py`), its
+  changelog entry, and its box ticked in `docs/plan.md`.
 - **Adding a command:** its code, its tests (in-process), its section in
   `docs/cli.md` (`tests/test_docs.py` fails without it), and its changelog
   entry. A command that writes outputs takes `-o`, `--force`, `-p/--prefix`,

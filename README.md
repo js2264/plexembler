@@ -8,6 +8,11 @@
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/metro_map_dark.svg">
+  <img alt="plexembler's metro map: each species' nanopore reads, filtered and assembled into contigs; the pooled WGS, Hi-C and RNA-seq libraries split between the species, then the contigs screened, polished, scaffolded into chromosomes, mapped and annotated; each species' expression, tracks and report." src="docs/assets/metro_map_light.svg">
+</picture>
+
 Reference genomes, gene annotations, Hi-C maps and expression tables for every
 species of a pool, from per-species nanopore reads and pooled Hi-C, WGS and
 RNA-seq.
