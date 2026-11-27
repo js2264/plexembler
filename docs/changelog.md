@@ -218,3 +218,17 @@ follow [semantic versioning](https://semver.org).
   `species/<species>/closest/`. The download is the pipeline's only use of the
   network, and never fails the run: without network, a species gets a warning
   and no dotplot.
+- **Each species' share of each pooled library, from the split its genome is
+  built from**: its report and MultiQC's table of the pool's split give its
+  pairs of each library in the pool's second split, on the screened contigs,
+  whose pairs polish and scaffold it, not in the first, on the contigs before
+  the screen, where another species' copies of its DNA (bleed-through,
+  assembled) make its pairs ambiguous: on the benchmark's easy set, the report
+  gave *N. glabratus* 4,794 of the WGS library's pairs, where it was polished
+  with 326,616. The first split's tables stay in
+  `pools/<pool>/deconvolution/contigs/`.
+- **The pipeline's metro map**, at the top of the README: each species'
+  nanopore reads, then its contigs and its genome, on one line, which the
+  pooled WGS, Hi-C and RNA-seq libraries join where they are used; each tool a
+  station, plexembler's own commands in bold, the optional steps dashed. Light
+  and dark, both written by `docs/assets/metro_map.py`.

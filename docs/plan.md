@@ -130,9 +130,10 @@ usable as a draft genome on its own.
       nanopore reads (LRGE), before the depth cap needs it; the k-mer spectrum
       of the species' nanopore reads fitted by GenomeScope2 as a diploid's,
       reported (nanopore errors inflate its heterozygosity: a hint, not an
-      answer), the species treated as haploid. Its own WGS reads, once M2 has
-      split them, are fitted again, with Smudgeplot. Each estimate is reported
-      as one, beside what the samplesheet gave when it gave something.
+      answer), the species treated as haploid. Each estimate is reported as
+      one, beside what the samplesheet gave when it gave something. To come:
+      its own WGS reads, once M2 has split them, fitted again, with Smudgeplot
+      (M6, "Ploidy").
 - [x] **Assemblers, as candidates** (`--assemblers flye`, by default): Flye,
       `--no-alt-contigs` for a haploid species; hifiasm `--ont` opt-in
       (`--assemblers flye,hifiasm`), for R10 reads, `-l0` for a haploid species
@@ -147,7 +148,8 @@ usable as a draft genome on its own.
       contigs it says are linear whole, and hifiasm gives no such table.
 - [x] **Nanopore polishing** (`--ont_polisher medaka|dorado|none`): Medaka
       (nf-core `medaka`); `dorado polish` (local, `process_gpu`, experimental
-      until tested on a GPU) for Dorado's BAMs.
+      until tested on a GPU) for Dorado's BAMs. Its nf-test is its stub's
+      alone: the real one, tagged `gpu` (Decisions), is to be written.
 - [x] **The genome checks**, a subworkflow `GENOME_QC` that every later stage
       reuses: `gfastats` (contiguity); BUSCO in genome mode, with the
       samplesheet's lineage or `--busco_lineage` (BUSCO's choice by default),
@@ -186,8 +188,8 @@ screened.
       `--deconvolve_mapq` (20) and an identity of at least
       `--deconvolve_min_identity` (98 %): a read of a region missing from its
       own species' contigs would otherwise go, unique, to a sister species'
-      copy, 85 to 95 % identical (Decisions). It writes each species' BAM (and FASTQ where a
-      tool wants reads) and the pool's numbers: each species' share of each
+      copy, 85 to 95 % identical (Decisions). It writes each species' pairs (FASTQ;
+      alignments, for RNA-seq: M4) and the pool's numbers: each species' share of each
       library, the ambiguous fraction of each pair of species, the pairs between
       species and the random-ligation rate ε (Hi-C: the pairs between species
       over 1 − Σpᵢ²), and, for Hi-C, the unique pairs between contigs (the
@@ -198,8 +200,7 @@ screened.
       soon as its own species are ready (today, every pool waits for all).
 - [x] **The polishing reads** (`--polish_reads auto|wgs|hic`, `auto` by
       default): a species' WGS pairs when its pool has a WGS library; when it has
-      none, or for a species whose WGS depth is under `--min_polish_depth`
-      (30×), its **Hi-C reads, cut at their ligation junctions**. A Hi-C read is
+      none, its **Hi-C reads, cut at their ligation junctions**. A Hi-C read is
       chimeric at a junction, but the pieces between junctions are genome, read
       with the same chemistry as WGS. `plexembler digest` cuts each read with
       hicstuff's rule (`cutsite_read`: 4 bases into the junction, so that each
@@ -208,12 +209,12 @@ screened.
       `--min_piece` (40 bp); and writes every piece once, as single-end reads:
       a Hi-C pair is two loci, not a fragment, and its pairing would mislead a
       polisher. Before cutting, duplicate pairs go (Hi-C libraries carry more
-      PCR duplicates than WGS: `pairtools dedup` on the pool's Hi-C alignments),
+      PCR duplicates than WGS: `plexembler split` drops them, as above),
       and a piece takes the species its pair was given. The reads with 0, 1 and
       2 or more junctions are counted: a ligation-efficiency figure for the
       report. (hicstuff's own `cutsite` pairs the pieces again; a mode of it
       that writes them once, unpaired, would replace `plexembler digest`, T4.)
-      To come: `both`, and `--min_polish_depth`, Hi-C for a species whose WGS
+      To come: `both`, and `--min_polish_depth` (30×), Hi-C for a species whose WGS
       depth is too low: the WGS pairs and the Hi-C reads pooled in one round,
       where the WGS alone are too thin. Not Hi-C after WGS, nor the two side by
       side with the best kept: both are Illumina reads, of one error profile,
@@ -289,8 +290,11 @@ screened.
       organelle) for the report.
 - [ ] **Haplotigs:** purge_dups for a species whose new column `purge` says so;
       never by default, never for a hybrid (it would remove a subgenome).
-- [ ] **The pool's Hi-C on the screened contigs** (a second `POOL_DECONVOLVE`),
-      which M3 scaffolds with.
+- [x] **The pool's Hi-C on the screened contigs** (a second `POOL_DECONVOLVE`,
+      its WGS too): the pairs each species is polished and scaffolded with
+      (M3), none lost to another species' copy of its DNA as in the first
+      split; its tables give each species' share of each library, in its
+      report and in MultiQC (`pools/<pool>/deconvolution/screened/`).
 
 **Done when**, on the benchmark pool: ≥ 99.5 % of the assigned pairs go to their
 true species (the reads' names carry it) for pairs of species below 90 % ANI;
@@ -483,7 +487,9 @@ Spearman's ρ ≥ 0.9 for every species.
 - [ ] **Comparative**, per pool (`--comparative`): OrthoFinder (orthogroups,
       species tree), synteny (GENESPACE, local), the ANI matrix of M1.
 - [x] **A browser for the delivery: chromosomix.** Done: the store, checked
-      by chromosomix's own `check_store` in the package's tests; the
+      by chromosomix's own `check_store` in the package's tests, where
+      chromosomix's repository sits beside plexembler's (CI has no checkout
+      of it and skips the check: its pinned version, T7); the
       species' workspaces, which name absolute URLs only, wait for
       `--browser_base`. `plexembler browser` writes,
       for each species, a workspace (`<species>.chromosomix.json`: its map with
@@ -498,7 +504,8 @@ Spearman's ρ ≥ 0.9 for every species.
       are served. Checked with chromosomix's own `scripts/make_store.py check`.
 - [ ] **The complete workflow** (a 0.x release, see [Versions](#versions-0x-for-good)):
       `test_full` green on the benchmark, every page written, a metro map
-      (`manifest.diagram`), the benchmarks page (CONVENTIONS.md § 20).
+      (`manifest.diagram`; the README's is done, `docs/assets/metro_map.py`),
+      the benchmarks page (CONVENTIONS.md § 20).
 
 ## Tracks
 
@@ -589,7 +596,23 @@ pipeline's own steps need a container before the package is anywhere else.
       - The first split's epsilon, on the contigs before the screen, is 14 %
         low (0.0259 of 0.03); the second split's is within 10 % (M2).
       - A circular contig that Flye writes as two copies of itself (Cgla's
-        mitochondrion, once, on the first set) is kept as it is.
+        mitochondrion, once, on the first set) is kept as it is. Done:
+        `plexembler rename` cuts it to one copy (M1, js2264/plexembler#9).
+- [ ] **What the hard set found** (benchmark run 46047521383, at
+      js2264/plexembler#8's head), beyond the medium set's:
+      - Two of Spar's screened contigs are not its DNA (`Spar_contig_16`,
+        `Spar_contig_20`): bleed-through the screen kept (M2, "Done when").
+      - Spar's WGS pairs of the first split are 99.48 % its own, under the
+        99.5 % (on the screened contigs, 100.00 %).
+      - Scer's and Spar's genomes have 4 misassemblies each that their
+        assemblies do not have (Cgla's, 1), and `plexembler junctions` flags
+        none of their 11 joins: misjoins it cannot see, or overlaps at true
+        joins, which QUAST counts too, to be told apart.
+      - One of Cgla's two planted misjoins goes unflagged, and one of Spar's
+        three true joins (its chromosomes cut in two and laid back) is not
+        scored supported.
+      - The QV after polishing is under 40 for every species (32.1, 38.5 and
+        39.3, against the references).
 - [ ] **`test_full`**: an in-silico pool of public data (nanopore, Hi-C, Illumina,
       RNA-seq) of five to ten yeasts with T2T references, subsampled and mixed,
       on Zenodo; run by hand on a cluster before each release, its numbers on
@@ -636,14 +659,20 @@ from M2 on.
 
 ### T5 · GitHub and the infrastructure
 
-- [ ] `main` as the default branch (the repository was empty: the first branch
-      pushed may have become the default).
+- [x] `main` as the default branch (the repository was empty: the first branch
+      pushed may have become the default): it is, the docs deploying from it,
+      which they do from the default branch alone.
 - [ ] The default branch's ruleset (CONVENTIONS.md § 16): pull requests,
       squash-merging, and the required checks: CI's `lint` and stable `test`
-      legs, the docs build, the pipeline's lint and nf-test.
-- [ ] Pages from GitHub Actions; a `CODECOV_TOKEN` secret (koszullab's
-      organisation secret does not reach js2264's repositories); Zenodo's
-      integration; CodeQL and the dependency review (CONVENTIONS.md § 19).
+      legs, the docs build, the pipeline's lint and nf-test. The release
+      commit, which bump-my-version pushes to `main` (docs/contributing.md),
+      needs a bypass.
+- [x] Pages from GitHub Actions: the docs deploy from `main`.
+- [ ] A `CODECOV_TOKEN` secret (koszullab's organisation secret does not reach
+      js2264's repositories): without it, each upload from `main` fails
+      ("Token required because branch is protected"), which `ci.yml` lets
+      pass (`fail_ci_if_error: false`); Zenodo's integration; CodeQL and the
+      dependency review (CONVENTIONS.md § 19).
 
 ### T6 · nf-core
 

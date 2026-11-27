@@ -38,14 +38,21 @@ flowchart LR
   pol --> cat[all species, one reference]
   pool[pooled Hi-C, WGS, RNA-seq] --> map[competitive mapping]
   cat --> map --> split[split by species]
-  split --> down[per species: polishing, screening, scaffolding, maps, annotation, expression]
+  split --> down[per species: screening, polishing, scaffolding, maps, annotation, expression]
 ```
 
-It runs three times, each time on the newest version of the genomes: on the
-nanopore-polished contigs, to polish them with the species' WGS reads; on the
-polished contigs, to screen them and to scaffold them with the species' Hi-C
-pairs; and on the final genomes, for the maps, the annotation's evidence, the
-expression and the coverage tracks.
+The WGS and Hi-C libraries are split twice, each time on the newest version of
+the contigs: on the nanopore-polished contigs, for the screen, which weighs
+their Hi-C contacts; then on the screened contigs, whose pairs polish each
+species with its short reads, scaffold it with its Hi-C pairs and, aligned
+again to its genome, make its Hi-C map. A species whose DNA another species'
+contigs hold (bleed-through, assembled) loses those pairs in the first split,
+ambiguous between the two, and has them in the second, once the screen has
+moved or dropped those contigs: the second split's shares are the ones each
+species' report gives. The RNA-seq libraries are
+split once, on the final genomes, for the gene models and the expression. A
+third split of the WGS and Hi-C, on the final genomes, is to come
+([the plan](plan.md#m3-chromosomes-v030)).
 
 A read that maps as well on two species is **ambiguous**, and goes to neither.
 The fraction of ambiguous reads of each pair of species is reported: it grows

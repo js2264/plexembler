@@ -14,6 +14,20 @@ nextflow_pipeline {
 
         then {
             def selection = path("$outputDir/species/sp1/assembly/sp1.assembly.selection.tsv").readLines()
+            // sp1's pairs of each library: in the pool's split on the screened
+            // contigs, which its genome is built from, and in its report.
+            def screened = ['hic', 'wgs'].collectEntries { library ->
+                def row = path("$outputDir/pools/pool/deconvolution/screened/pool.${library}.split.tsv").readLines()
+                    .collect { line -> line.split('\t') }
+                    .find { fields -> fields[0] == 'sp1' }
+                [library, row ? row[1] : null]
+            }
+            def reported = path("$outputDir/species/sp1/sp1.report.txt").readLines()
+                .dropWhile { line -> line != '[table: libraries]' }
+                .drop(2)
+                .takeWhile { line -> line }
+                .collect { line -> line.split(/\s+/) }
+                .collectEntries { fields -> [fields[0], fields[1]] }
             assertAll(
                 { assert workflow.success },
                 // The nanopore reads' QC, per species; the pooled libraries', both reads of each of the three.
@@ -57,8 +71,11 @@ nextflow_pipeline {
                 { assert path("$outputDir/species/sp1/expression/sp1.counts.tsv").readLines()[0] == 'gene\tlength_bp\tYPD_1' },
                 { assert path("$outputDir/species/sp1/tracks/sp1.ont.bigWig").exists() },
                 { assert path("$outputDir/species/sp1/tracks/sp1.rna-ypd-1.forward.bigWig").exists() },
-                // Its report, and the store of the results (M6).
+                // Its report, and the store of the results (M6): its share of
+                // each library, the screened split's.
                 { assert path("$outputDir/species/sp1/sp1.report.txt").text.contains('[genome]') },
+                { assert screened.every { _library, pairs -> pairs } },
+                { assert reported.subMap(['hic', 'wgs']) == screened },
                 { assert path("$outputDir/chromosomix.store.json").json.entries.size() == 4 },
                 { assert path("$outputDir/multiqc/multiqc_report.html").exists() },
                 { assert path("$outputDir/pipeline_info/plexembler_software_mqc_versions.yml").text.contains('flye') },
