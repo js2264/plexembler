@@ -40,7 +40,7 @@ nextflow_process {
         when {
             process {
                 """
-                input[0] = [ [ id: 'sp1' ], file('${moduleDir}/main.nf'), file('${moduleDir}/main.nf') ]
+                input[0] = [ [ id: 'sp1' ], file('${moduleDir}/main.nf'), file('${moduleDir}/meta.yml') ]
                 input[1] = 'AUGUSTUS'
                 """
             }
