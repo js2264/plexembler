@@ -232,7 +232,7 @@ with its RNA-seq alignments and `--orthodb_proteins`, or by
   `genetic_code`; the CDS, `<species>.cds.fna.gz`; the table of genes,
   `<species>.genes.tsv`; its MultiQC table and the command's log.
 - `species/<species>/annotation/repeats/`: RepeatModeler's families
-  (`*-families.fa`), RepeatMasker's table and its repeats (`<species>.out`,
+  (`<species>.families.fa`, `.stk`, `.log`), RepeatMasker's table and its repeats (`<species>.out`,
   `.tbl`, `.gff`).
 - `species/<species>/genome/<species>.softmasked.fa`: the genome, its repeats in
   lower case.
