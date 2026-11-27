@@ -564,9 +564,9 @@ from M2 on.
 
 ### T8 · plexembler run, and uv
 
-The pipeline, run by a machine that has uv, Java and a container engine,
-nothing else: the package runs the pipeline of its own version, and brings
-Nextflow's launcher with it.
+The pipeline, run by a machine that has uv, and micromamba or a container
+engine, nothing else: the package runs the pipeline of its own version, and
+brings Nextflow's launcher with it, and Java with its `java` extra.
 
 - [x] **`plexembler run`**: `nextflow run js2264/plexembler -r v<version>`,
       every other argument going to Nextflow as it is
@@ -575,6 +575,9 @@ Nextflow's launcher with it.
       `uvx plexembler run …` ([installation](installation.md#with-uv)), with
       Java. `pipeline.yml`'s `uv` job runs it, from the checkout, on the test
       profile in preview, with Java 17 and 25.
+- [x] **Java from PyPI**, the `java` extra (jdk4py), which `plexembler run`
+      gives Nextflow: with micromamba for the steps' environments, a machine
+      needs uv and micromamba alone (`pipeline.yml`'s `conda` job).
 - [ ] **PyPI's publishing turned on** (T1): PyPI's trusted publisher for
       `release.yml`, then the repository variable `PUBLISH_PYPI`. `uvx
       plexembler` runs from the first release published.

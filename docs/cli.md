@@ -37,7 +37,9 @@ plexembler run -profile docker \
   `--pipeline` another pipeline.
 - **Nextflow** is the one beside plexembler's Python, the launcher that uv
   and pip install with it (conda, its Nextflow), else the one on `PATH`:
-  26.04.0 or newer, which needs Java 17 or newer. plexembler hands
+  26.04.0 or newer, which needs Java 17 or newer, the machine's, or jdk4py's
+  with the `java` extra (`plexembler[java]`), which plexembler gives it
+  (`NXF_JAVA_HOME`, unless set). plexembler hands
   its process over to it, so that Nextflow's exit status and logs are the
   run's (`.nextflow.log` where it runs, `<outdir>/pipeline_info/`), and Ctrl-C
   stops Nextflow as it would without plexembler.

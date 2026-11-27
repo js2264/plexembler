@@ -37,12 +37,15 @@ a container engine (Docker, Apptainer, Singularity) or conda:
 nextflow pull js2264/plexembler
 ```
 
-Or, with Java 17 or newer, let [uv](https://docs.astral.sh/uv/) run it:
-plexembler from PyPI brings Nextflow's launcher, and `plexembler run` takes
+Or, on a Linux machine with nothing installed, let
+[uv](https://docs.astral.sh/uv/) run it, with Nextflow and Java from PyPI and
+the tools from conda-forge and bioconda (micromamba): `plexembler run` takes
 `nextflow run`'s arguments.
 
 ```bash
-uvx plexembler run -profile test,docker --outdir results
+curl -LsSf https://astral.sh/uv/install.sh | sh && . ~/.local/bin/env
+curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C ~/.local bin/micromamba
+uvx --from 'plexembler[java]' plexembler run -profile test,micromamba --outdir results
 ```
 
 ## Quick start

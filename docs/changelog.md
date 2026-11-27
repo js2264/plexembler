@@ -149,6 +149,10 @@ follow [semantic versioning](https://semver.org).
   Nextflow's launcher, which `plexembler run` finds beside its Python and which
   fetches Nextflow at its first run; a machine needs nothing else but a
   container engine.
+- **Java from PyPI**, the `java` extra, `plexembler[java]` (jdk4py), whose
+  Java `plexembler run` gives Nextflow: with micromamba for the steps, a Linux
+  machine runs the pipeline with nothing else installed, `uvx --from
+  'plexembler[java]' plexembler run -profile micromamba …`.
 - **The pipeline without a container engine**: `-profile micromamba`, beside
   `conda` and `mamba`, conda's environments made by micromamba, a single
   executable. With conda's profiles, the run refuses at its start the two

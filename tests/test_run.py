@@ -9,9 +9,11 @@ import os
 import re
 import shutil
 import stat
+import sys
 import sysconfig
 from importlib.metadata import requires
 from pathlib import Path
+from types import SimpleNamespace
 
 import click
 import pytest
@@ -21,6 +23,7 @@ from plexembler import __version__, run
 from plexembler.cli import cli
 from plexembler.run import (
     REPOSITORY,
+    bundled_java,
     default_pipeline,
     environment,
     find_nextflow,
@@ -350,6 +353,28 @@ def test_nextflow_runs_with_its_environment(
     _, _, env = launched[0]
     assert env["PATH"] == os.pathsep.join([str(scripts), "/usr/bin"])
     assert env["NXF_VER"] == "26.04.0"
+
+
+def test_the_java_extra_gives_nextflow_its_java(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    java = tmp_path / "jdk4py" / "java-runtime"
+    monkeypatch.setitem(sys.modules, "jdk4py", SimpleNamespace(JAVA_HOME=java))
+    monkeypatch.delenv("NXF_JAVA_HOME", raising=False)
+    assert bundled_java() == str(java)
+    assert environment("/usr/bin/nextflow")["NXF_JAVA_HOME"] == str(java)
+    # A Java the user names stays theirs.
+    monkeypatch.setenv("NXF_JAVA_HOME", "/opt/java")
+    assert environment("/usr/bin/nextflow")["NXF_JAVA_HOME"] == "/opt/java"
+
+
+def test_without_the_java_extra_nextflow_finds_its_own(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setitem(sys.modules, "jdk4py", None)
+    monkeypatch.delenv("NXF_JAVA_HOME", raising=False)
+    assert bundled_java() is None
+    assert "NXF_JAVA_HOME" not in environment("/usr/bin/nextflow")
 
 
 # What plexembler run and the pipeline share

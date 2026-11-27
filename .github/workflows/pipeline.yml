@@ -170,11 +170,12 @@ jobs:
       - name: plexembler run, with nothing but uv and Java
         run: uvx --from . plexembler run --pipeline . -profile test -preview --outdir results
 
-  # The pipeline without a container engine (docs/usage.md): the test profile,
-  # every step for real, in conda's environments, which micromamba makes, run
-  # by uvx's plexembler on Java alone. Weekly and by hand: the environments
-  # take a while to make. The steps that run plexembler install the
-  # checkout's, for the release their environment.yml names.
+  # The pipeline on a machine with uv and micromamba alone (docs/usage.md):
+  # the test profile, every step for real, in conda's environments, which
+  # micromamba makes, run by uvx's plexembler with its java extra, whose Java
+  # Nextflow runs on whatever the runner has. Weekly and by hand: the
+  # environments take a while to make. The steps that run plexembler install
+  # the checkout's, for the release their environment.yml names.
   conda:
     name: The test profile, with micromamba
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -190,11 +191,6 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-
-      - uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: "21"
 
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
 
@@ -214,5 +210,5 @@ jobs:
             { echo "::error::split's environment.yml installs no plexembler from its tag"; exit 1; }
           printf "process {\n    withName: 'PLEXEMBLER_.*' {\n        conda = '%s'\n    }\n}\n" "$RUNNER_TEMP/plexembler.yml" > "$RUNNER_TEMP/conda.config"
 
-      - name: The test profile, with micromamba, run by uvx's plexembler
-        run: uvx --from . plexembler run --pipeline . -profile test,micromamba -c "$RUNNER_TEMP/conda.config" --outdir results
+      - name: The test profile, with micromamba, run by uvx's plexembler and its Java
+        run: uvx --from '.[java]' plexembler run --pipeline . -profile test,micromamba -c "$RUNNER_TEMP/conda.config" --outdir results

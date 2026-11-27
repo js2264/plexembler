@@ -291,10 +291,14 @@ first run and keeps: conda, mamba or micromamba is then all the steps need.
 micromamba, a single executable, is the lightest:
 
 ```bash
-"${SHELL}" <(curl -L micro.mamba.pm/install.sh)    # micromamba, once
-uvx plexembler run -profile micromamba --gene_predictor augustus \
+curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C ~/.local bin/micromamba
+uvx --from 'plexembler[java]' plexembler run -profile micromamba --gene_predictor augustus \
     --input species.csv --libraries libraries.csv --outdir results
 ```
+
+The first line puts micromamba in `~/.local/bin`, which uv's installer puts on
+`PATH` ([installation](installation.md#with-uv)); `osx-arm64` for an Apple
+silicon Mac.
 
 - **Two steps have no conda environment**, and the pipeline refuses them with
   conda at its start: BRAKER3, `--gene_predictor braker`, the default, which

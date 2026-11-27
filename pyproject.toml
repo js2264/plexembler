@@ -52,6 +52,12 @@ dependencies = [
 
 [project.optional-dependencies]
 # Optional runtime features only, never tools (CONVENTIONS.md § 2).
+java = [
+    # Java for Nextflow, from PyPI, for a machine without one: `plexembler run`
+    # gives jdk4py's to Nextflow (NXF_JAVA_HOME). 21: the oldest Java of
+    # jdk4py's that Nextflow takes (17 or newer).
+    "jdk4py>=21",
+]
 
 [dependency-groups]
 # Never published (CONVENTIONS.md § 2): `uv sync` installs dev, and

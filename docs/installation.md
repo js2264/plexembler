@@ -7,28 +7,31 @@ runs on Linux, and on macOS for small tests.
 ## With uv
 
 [uv](https://docs.astral.sh/uv/) runs plexembler from PyPI, with its
-dependencies, Nextflow's launcher among them (PyPI's `nextflow`), which
-fetches Nextflow at its first run. With Java, and a container engine for the
-pipeline's tools (Docker, Apptainer, Singularity, Podman) or micromamba for
-their conda environments ([without a container
-engine](usage.md#without-a-container-engine)), uv is all a machine needs:
+dependencies: Nextflow's launcher (PyPI's `nextflow`), which fetches Nextflow
+at its first run, and, with the `java` extra, Java (jdk4py). With micromamba
+for the tools' conda environments ([without a container
+engine](usage.md#without-a-container-engine)), a Linux machine needs nothing
+else:
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh    # uv itself, once
-uvx plexembler run -profile test,docker --outdir results
+curl -LsSf https://astral.sh/uv/install.sh | sh && . ~/.local/bin/env
+curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C ~/.local bin/micromamba
+uvx --from 'plexembler[java]' plexembler run -profile test,micromamba --outdir results
 ```
 
 `plexembler run` runs the pipeline of the release that uv installed, `nextflow
 run js2264/plexembler -r v<version>`, with every other argument as it is
-([command line](cli.md#run)).
+([command line](cli.md#run)): `-profile docker`, or `apptainer`, where the
+machine has a container engine.
 
-- **A release:** `uvx plexembler@0.1.0 run …` runs that release.
-- **Installed for good:** `uv tool install plexembler`, then `plexembler run
-  …`; `uv tool upgrade plexembler` takes the latest release.
-- **Java 17 or newer** is the machine's: `java` on `PATH`, or `JAVA_HOME`
-  (`NXF_JAVA_HOME` to choose another). On a cluster, often `module load java`;
-  elsewhere, the system's OpenJDK package, Homebrew's `openjdk`, or
-  [SDKMAN!](https://sdkman.io).
+- **A release:** `uvx --from 'plexembler[java]==0.1.0' plexembler run …` runs
+  that release.
+- **Installed for good:** `uv tool install 'plexembler[java]'`, then
+  `plexembler run …`; `uv tool upgrade plexembler` takes the latest release.
+- **Java** is jdk4py's with the `java` extra, which `plexembler run` gives
+  Nextflow (`NXF_JAVA_HOME`, unless set). Without the extra, the machine's,
+  17 or newer: `java` on `PATH`, or `JAVA_HOME` (on a cluster, often `module
+  load java`).
 - **Nextflow is fetched once**, into `~/.nextflow`, from nextflow.io: the
   version of the launcher, PyPI's `nextflow`, which uv took with plexembler.
 

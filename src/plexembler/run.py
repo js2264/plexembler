@@ -13,6 +13,7 @@ status, signals and logs are the run's, as when Nextflow is launched by hand.
 
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import re
@@ -196,16 +197,37 @@ def nextflow_command(
     return [nextflow, "run", pipeline, *revision_args, *nextflow_args]
 
 
+def bundled_java() -> str | None:
+    """The Java of the ``java`` extra (``plexembler[java]``), jdk4py's.
+
+    Returns
+    -------
+    str or None
+        Its home; None when jdk4py is not installed.
+    """
+    try:
+        jdk4py = importlib.import_module("jdk4py")
+    except ImportError:
+        return None
+    return str(jdk4py.JAVA_HOME)
+
+
 def environment(nextflow: str) -> dict[str, str]:
     """The environment Nextflow runs in: plexembler's own.
 
     When Nextflow is the one of plexembler's environment, that environment's
     executables come first on PATH, so that Nextflow finds its Java there too.
+    With the ``java`` extra, Nextflow runs on jdk4py's Java, which its launcher
+    takes from NXF_JAVA_HOME before JAVA_HOME and PATH, unless NXF_JAVA_HOME
+    names another.
     """
     env = dict(os.environ)
     folder = Path(nextflow).parent
     if folder == Path(sysconfig.get_path("scripts")):
         env["PATH"] = os.pathsep.join(filter(None, [str(folder), env.get("PATH")]))
+    java = bundled_java()
+    if java is not None:
+        env.setdefault("NXF_JAVA_HOME", java)
     return env
 
 
