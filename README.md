@@ -30,33 +30,19 @@ map, its expression table and its report.
 
 ## Install
 
-1. **[uv](https://docs.astral.sh/uv/)**:
+```bash
+# 1. uv
+curl -LsSf https://astral.sh/uv/install.sh | sh && . ~/.local/bin/env
+# 2. [Optional] micromamba, to run the tools without Docker or Apptainer
+curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C ~/.local bin/micromamba
+# 3. plexembler, with Nextflow's launcher and Java
+uv tool install 'plexembler[java]'
+# 4. Run it on the test data (-profile test,docker without micromamba)
+plexembler run -profile test,micromamba --outdir results
+```
 
-   ```bash
-   curl -LsSf https://astral.sh/uv/install.sh | sh && . ~/.local/bin/env
-   ```
-
-2. **[Optional] micromamba**, for the tools' conda environments on a machine
-   without Docker or Apptainer (`osx-arm64` on an Apple silicon Mac):
-
-   ```bash
-   curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C ~/.local bin/micromamba
-   ```
-
-3. **plexembler**, with [Nextflow](https://www.nextflow.io)'s launcher, and
-   Java with the `java` extra (without it, the machine's Java, 17 or newer):
-
-   ```bash
-   uv tool install 'plexembler[java]'
-   ```
-
-4. **Run it**, on the test data: `-profile micromamba` after step 2, else a
-   container engine's (`docker`, `apptainer`, …):
-
-   ```bash
-   plexembler run -profile test,micromamba --outdir results
-   ```
-
+On an Apple silicon Mac, micromamba's URL ends in `osx-arm64`. Without the
+`java` extra, Nextflow runs on the machine's Java, 17 or newer.
 `plexembler run` runs `nextflow run js2264/plexembler -r v<version>`, the
 pipeline of the release installed, and passes it every other argument: with a
 Nextflow of your own (26.04.0 or newer), `nextflow run js2264/plexembler`
