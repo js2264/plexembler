@@ -17,9 +17,12 @@ page; the results are on the [outputs](output.md) page.
 
     The pipeline is being built milestone by milestone
     ([implementation plan](plan.md)). Today, it reads and checks both
-    samplesheets and checks the reads (NanoPlot, FastQC, MultiQC). The columns
-    below are read and checked already; the steps that use them come with their
-    milestones.
+    samplesheets, checks the reads (NanoPlot, FastQC, MultiQC), and makes each
+    species' contigs (milestone 1): its nanopore reads filtered and capped,
+    every assembler's contigs as candidates, polished and checked (BUSCO,
+    Merqury, gfastats), one kept, and the identity between the species of each
+    pool. The columns below are read and checked already; the steps that use the
+    others come with their milestones.
 
 ## Paths in the samplesheets
 
@@ -42,6 +45,7 @@ One row per nanopore run of a species; the rows of a species are its runs, and
 share its values. The [schema](https://github.com/js2264/plexembler/blob/main/assets/schema_input.json)
 checks each column. What you do not know about a species' genome is `NA`, or an
 empty cell: the step that needs it estimates it, and the report says so.
+A species' runs may mix FASTQ files and Dorado's BAMs.
 
 ```csv title="species.csv"
 species,pool,ont,genome_size,ploidy,n_chromosomes,genetic_code
@@ -55,14 +59,15 @@ Huva,poolA,ont/Huva.fastq.gz,NA,NA,NA,NA
 |---|---|---|---|
 | `species` | yes | The species' ID: a letter, then letters, digits and hyphens. It starts the name of every contig of the species, `<species>_<contig>`, and names its results. | |
 | `pool` | no (`pool`) | The pool the species is in: the pooled libraries of the same pool are split between its species. | |
-| `ont` | yes | The species' nanopore reads: FASTQ, gzipped or not. | |
-| `chemistry` | no | The nanopore chemistry: `r10` (R10.4.1, Dorado SUP or HAC) or `r9` (R9.4.1 and older). It sets the assembler's mode and the polisher's model. | told from the reads' median quality (Q15 and above: `r10`); `r10` until then (milestone 1) |
-| `genome_size` | no | The expected genome size, in bases, with an optional `k`, `m` or `g` (`12m`). | estimated from the nanopore reads (milestone 1) |
-| `ploidy` | no | The expected ploidy. | estimated from k-mers and allele balance; haploid until then (milestones 1 and 6) |
-| `n_chromosomes` | no | The expected number of nuclear chromosomes: a check of the scaffolds, and HapHiC's input. | scaffolds judged without it; HapHiC skipped (milestone 3) |
-| `busco_lineage` | no | A BUSCO lineage (`busco --list-datasets`). | BUSCO picks one (milestone 1) |
-| `genetic_code` | no | The NCBI translation table of the nuclear genes: `1`, `12` for the CUG-Ser clade, `26` for the CUG-Ala clade. | inferred from the genome; `1` until then (milestone 4) |
+| `ont` | yes | The species' nanopore reads: FASTQ, gzipped or not, or Dorado's unaligned BAM (`.bam`), whose tags are kept. | |
+| `chemistry` | no | The nanopore chemistry: `r10` (R10.4.1, Dorado SUP or HAC) or `r9` (R9.4.1 and older). It sets Flye's mode (`--nano-hq`, `--nano-raw`), Medaka's model and chopper's lowest quality. | told from the reads' median quality, NanoPlot's: Q15 and above is `r10` |
+| `genome_size` | no | The expected genome size, in bases, with an optional `k`, `m` or `g` (`12m`). The nanopore reads are capped at `--ont_max_depth` times it. | estimated from the nanopore reads by LRGE (`species/<species>/estimates/`) |
+| `ploidy` | no | The expected ploidy. A haploid species' assemblies keep no other haplotype's contigs (Flye's `--no-alt-contigs`, hifiasm's `-l0`). | haploid; GenomeScope2's fit of the nanopore k-mers hints at heterozygosity (nanopore errors inflate it), the species' own short reads tell it (milestone 2), and allele balance (milestone 6) |
+| `n_chromosomes` | no | The expected number of nuclear chromosomes: the genome's longest scaffolds, that many, are named its chromosomes ([`plexembler finalize`](cli.md#finalize)); HapHiC's input (to come). | every scaffold of `--min_chromosome` bases (100 kb) or more is a chromosome |
+| `busco_lineage` | no | A BUSCO lineage (`busco --list-datasets`), such as `saccharomycetes_odb12`. | `--busco_lineage`: `auto_euk` by default, BUSCO's choice |
+| `genetic_code` | no | The NCBI translation table of the nuclear genes: `1`, `12` for the CUG-Ser clade, `26` for the CUG-Ala clade. The proteins are translated with it ([`plexembler genes`](cli.md#genes)). | `1`; to be inferred from the genome (Codetta, to come) |
 | `telomere_repeat` | no | The telomeric repeat unit (`TGTGGG`). | found from the reads (milestone 3) |
+| `assembler` | no | The assembler whose contigs to keep (`flye`, `hifiasm`), whatever the checks say: one of `--assemblers`. | the candidate the checks prefer ([`plexembler select`](cli.md#select)) |
 
 ## Pooled libraries
 
@@ -146,6 +151,126 @@ A pool whose Hi-C library was made with a restriction enzyme can do without a
 WGS library: its Hi-C reads, cut at their ligation junctions, polish its
 species instead ([plan](plan.md), milestone 2). A Micro-C library has no
 junction to cut at, which is why `poolC` stays with nanopore polishing.
+
+## Contigs
+
+Each species' contigs (milestone 1 of the [plan](plan.md)) are made from its
+nanopore reads alone; [the parameters](parameters.md#contigs) set each step.
+
+- **The reads:** filtered by length (`--ont_min_length`, 1 kb) and mean quality
+  (`--ont_min_quality`: 10 for R10 reads, 7 for R9), then capped at
+  `--ont_max_depth` (100×) times the genome size, the longest and best kept.
+- **The candidates:** each assembler of `--assemblers` (`flye`; `flye,hifiasm`
+  adds hifiasm in its `--ont` mode, for R10 reads) makes one; each is polished
+  (`--ont_polisher medaka`; `dorado`, experimental, for the species whose
+  reads are Dorado's BAMs, on a GPU; or `none`) and checked.
+- **The one kept:** the most single-copy complete BUSCOs, then the highest QV,
+  then the longest contig N50; the samplesheet's `assembler` names one instead.
+- **The checks:** BUSCO with the species' lineage; Merqury's QV against the
+  pool's WGS k-mers (an assembly k-mer missing from the whole pool is an
+  error) or, without a WGS library, the species' nanopore k-mers, a rougher
+  QV; Merqury's completeness against the species' nanopore k-mers; gfastats.
+- **The pool:** skani's identity between each pair of its species. A pair
+  above 95 % is too close for the pool's short reads to be split between them
+  well, and the run warns about it; a pair from 85 % is of the same genus,
+  which milestone 2 splits with an identity threshold as well.
+
+BUSCO downloads its lineages when it runs; on a cluster whose nodes have no
+network, download them beforehand (`busco --download saccharomycetes_odb12`)
+and give their folder to `--busco_db`.
+
+## The pool, split
+
+The pooled libraries are split between the species of their pool (milestone 2
+of the [plan](plan.md); [the parameters](parameters.md#the-pool-split)): every
+species' contigs in one reference, each WGS and Hi-C library aligned to it at
+once, each pair given to the species of its two mates when both are unique
+(`--deconvolve_mapq`, 20) and near-identical (`--deconvolve_min_identity`,
+98 %). The identity matters for a pair of species of a genus: a read of a
+region missing from its own species' contigs aligns, unique, to the sister
+species' copy, 85 to 95 % identical.
+
+- **The screen:** each contig kept, moved to another species of its pool,
+  dropped, or named its species' mitochondrion, from each species' nanopore
+  depth on it, its identity to the other species' contigs and its Hi-C
+  contacts ([`plexembler screen`](cli.md#screen)). The pool is then split
+  again, on the screened contigs: a species whose DNA another species' contigs
+  held (a barcode's bleed-through, assembled) gets back the pairs the first
+  split found ambiguous between the two.
+- **Polishing:** each species' screened contigs with its own short reads, of
+  that second split (`--polish_reads auto`: its WGS pairs, or, in a pool
+  without WGS, its Hi-C reads cut at their ligation junctions; `wgs` or `hic`
+  to choose), Polypolish then pypolca, kept only when the QV against
+  `--polish_holdout` (10 %) of the pairs, held out of the polishing, rises. A
+  pool whose Hi-C library was made without an enzyme (Micro-C) and that has no
+  WGS library is not polished with short reads. `--sr_polisher none` skips the
+  step.
+
+## Chromosomes
+
+Each species' screened contigs become its genome (milestone 3 of the
+[plan](plan.md); [the parameters](parameters.md#chromosomes)): the pool split
+again on them, each species scaffolded with its own Hi-C pairs (YaHS, told the
+restriction motifs of the library's `enzymes`), the scaffolds named, the
+chromosomes first ([`plexembler finalize`](cli.md#finalize)), and its Hi-C map
+made on the genome (pairtools, cooler; its finest bin `--map_resolution`,
+1 kb). A Micro-C library (`enzymes` `none`) scaffolds too, without motifs. A
+species whose pool has no Hi-C library is not scaffolded: its genome is its
+contigs, named the same way.
+
+The scaffolds are YaHS's, uncurated. The steps that check and correct them
+(the junctions' support on the map, the telomeres, a second scaffolder) are to
+come; until then, look at each species' map before trusting its chromosomes.
+
+## Annotation
+
+Each species' genome is annotated (milestone 4 of the [plan](plan.md);
+[the parameters](parameters.md#annotation)). The pooled RNA-seq libraries are
+split between the species first, on their genomes (STAR, then
+[`plexembler split --type rnaseq`](cli.md#split)): each species' pairs are its
+evidence. Its repeats are found and masked (`--repeats repeatmodeler`), then
+its genes predicted (`--gene_predictor`):
+
+- **`braker`** (the default): BRAKER3 `--fungus`, trained on the species
+  itself, with its RNA-seq, `--orthodb_proteins` (OrthoDB's proteins of the
+  fungi, `Fungi.fa.gz`, from
+  [their partitions](https://bioinf.uni-greifswald.de/bioinf/partitioned_odb12/)),
+  or both. A species with neither is predicted by AUGUSTUS.
+- **`augustus`**: AUGUSTUS ab initio, with `--augustus_species`, a species it
+  was trained on (`augustus --species=help`), as close to yours as can be:
+  `saccharomyces_cerevisiae_S288C` by default. Quick, and right for a species
+  near one AUGUSTUS knows; BRAKER3 does better for the others.
+- **`none`**: no genes.
+
+The genes are named in the genome's order (`<species>_000010`, …) and their
+proteins translated with the samplesheet's `genetic_code` (`1` when `NA`):
+CUG is a sense codon in tables 1, 12 and 26 alike, so the gene structures do
+not change, the proteins do. A wrong code shows as proteins with a stop codon
+inside, which the run warns of.
+
+## Expression
+
+Each species' read pairs of each pooled RNA-seq library (milestone 5 of the
+[plan](plan.md); [the parameters](parameters.md#expression-and-tracks)) are
+counted on its genes, and its counts and TPM written, genes by libraries, each
+library named `<condition>_<replicate>` from the libraries' samplesheet. The
+libraries' strandedness is `--rnaseq_strandedness`: `reverse` (dUTP, as
+Illumina's stranded kits make them) by default, `forward`, or `unstranded`.
+The TPM are within each species, from its own pairs alone: a pair the split
+could not give to one species is in neither's. There is no differential
+expression: the tables are made for it.
+
+Each species' tracks go beside them: each library's coverage on each strand,
+and the nanopore reads' depth, as bigWig.
+
+## Reports and the browser
+
+Each species has its report (milestone 6): a page, its numbers as text, and its
+row in MultiQC's General Statistics. The results open in
+[chromosomix](https://chromosomix.app) through the store the run writes at
+their top, `chromosomix.store.json`: connect the results folder in its app, or
+put the results on a bucket and give the run their address
+(`--browser_base https://…/results/`) to open them at chromosomix.app.
 
 ## Profiles
 

@@ -30,6 +30,7 @@ workflow PIPELINE_INITIALISATION {
     outdir            //  string: The output directory where the results will be saved
     input             //  string: Path to the species samplesheet (--input)
     libraries         //  string: Path to the pooled libraries samplesheet (--libraries)
+    assemblers        //  string: The assemblers that run, comma-separated (--assemblers)
     help              // boolean: Display help message and exit
     help_full         // boolean: Show the full help message
     show_hidden       // boolean: Show hidden parameters in the help message
@@ -86,6 +87,7 @@ workflow PIPELINE_INITIALISATION {
     def species_rows = readSpecies(input)
     def library_rows = readLibraries(libraries)
     validatePools(species_rows, library_rows)
+    validateAssemblers(species_rows, assemblers.tokenize(','))
 
     emit:
     species   = channel.fromList(species_rows) // channel: [ val(meta), [ path(ont) ] ], one item per species
@@ -173,7 +175,21 @@ def speciesMeta(meta) {
         busco_lineage   : known(meta.busco_lineage),
         genetic_code    : genetic_code?.toInteger(),
         telomere_repeat : telomere_repeat ? telomere_repeat.toUpperCase() : null,
+        assembler       : known(meta.assembler),
+        // Nanopore reads are single reads, as nf-core's modules need to know.
+        single_end      : true,
     ]
+}
+
+//
+// A species may name the assembler whose contigs it keeps: one that runs
+//
+def validateAssemblers(species, assemblers) {
+    species.each { meta, _ont ->
+        if (meta.assembler && !(meta.assembler in assemblers)) {
+            error("--input: species ${meta.id} keeps the contigs of ${meta.assembler}, which --assemblers (${assemblers.join(',')}) does not run")
+        }
+    }
 }
 
 //
@@ -258,7 +274,36 @@ def toolCitationText() {
     // The tools of the run, as CITATIONS.md lists them: one line per tool, added with its step.
     def citation_text = [
             "Tools used in the workflow included:",
-            "NanoPlot (De Coster et al. 2023),",
+            "NanoPlot and chopper (De Coster et al. 2023),",
+            "SAMtools (Danecek et al. 2021),",
+            "Filtlong (Wick),",
+            "LRGE (Hall and Coin 2024),",
+            "Flye (Kolmogorov et al. 2019),",
+            "hifiasm (Cheng et al. 2021),",
+            "gfatools (Li),",
+            "Medaka and Dorado (Oxford Nanopore Technologies),",
+            "gfastats (Formenti et al. 2022),",
+            "BUSCO (Manni et al. 2021),",
+            "Merqury and meryl (Rhie et al. 2020),",
+            "GenomeScope 2.0 (Ranallo-Benavidez et al. 2020),",
+            "skani (Shaw and Yu 2023),",
+            "bwa-mem2 (Vasimuddin et al. 2019),",
+            "BWA (Li and Durbin 2009),",
+            "Polypolish (Wick and Holt 2022),",
+            "pypolca (Bouras et al. 2024),",
+            "minimap2 (Li 2018),",
+            "YaHS (Zhou et al. 2023),",
+            "pairtools (Open2C et al. 2024),",
+            "cooler (Abdennur and Mirny 2020),",
+            "STAR (Dobin et al. 2013),",
+            "RepeatModeler2 (Flynn et al. 2020),",
+            "RepeatMasker (Smit et al. 2015),",
+            "BRAKER3 (Gabriel et al. 2024),",
+            "AUGUSTUS (Stanke et al. 2008),",
+            "tRNAscan-SE (Chan et al. 2021),",
+            "barrnap (Seemann),",
+            "featureCounts (Liao et al. 2014),",
+            "deepTools (Ramírez et al. 2016),",
             "FastQC (Andrews 2010),",
             "MultiQC (Ewels et al. 2016)",
             "."
@@ -271,6 +316,35 @@ def toolBibliographyText() {
     // The references of toolCitationText(), in its order.
     def reference_text = [
             "<li>De Coster, W., & Rademakers, R. (2023). NanoPack2: population-scale evaluation of long-read sequencing data. Bioinformatics, 39(5), btad311. doi: 10.1093/bioinformatics/btad311</li>",
+            "<li>Danecek, P., et al. (2021). Twelve years of SAMtools and BCFtools. GigaScience, 10(2), giab008. doi: 10.1093/gigascience/giab008</li>",
+            "<li>Wick, R. R. Filtlong: quality filtering tool for long reads. URL: https://github.com/rrwick/Filtlong</li>",
+            "<li>Hall, M. B., & Coin, L. J. M. (2024). Genome size estimation from long read overlaps. bioRxiv. doi: 10.1101/2024.11.27.625777</li>",
+            "<li>Kolmogorov, M., Yuan, J., Lin, Y., & Pevzner, P. A. (2019). Assembly of long, error-prone reads using repeat graphs. Nature Biotechnology, 37(5), 540-546. doi: 10.1038/s41587-019-0072-8</li>",
+            "<li>Cheng, H., Concepcion, G. T., Feng, X., Zhang, H., & Li, H. (2021). Haplotype-resolved de novo assembly using phased assembly graphs with hifiasm. Nature Methods, 18(2), 170-175. doi: 10.1038/s41592-020-01056-5</li>",
+            "<li>Li, H. gfatools. URL: https://github.com/lh3/gfatools</li>",
+            "<li>Oxford Nanopore Technologies. Medaka and Dorado. URL: https://github.com/nanoporetech</li>",
+            "<li>Formenti, G., et al. (2022). Gfastats: conversion, evaluation and manipulation of genome sequences using assembly graphs. Bioinformatics, 38(17), 4214-4216. doi: 10.1093/bioinformatics/btac460</li>",
+            "<li>Manni, M., Berkeley, M. R., Seppey, M., Simão, F. A., & Zdobnov, E. M. (2021). BUSCO Update. Molecular Biology and Evolution, 38(10), 4647-4654. doi: 10.1093/molbev/msab199</li>",
+            "<li>Rhie, A., Walenz, B. P., Koren, S., & Phillippy, A. M. (2020). Merqury: reference-free quality, completeness, and phasing assessment for genome assemblies. Genome Biology, 21(1), 245. doi: 10.1186/s13059-020-02134-9</li>",
+            "<li>Ranallo-Benavidez, T. R., Jaron, K. S., & Schatz, M. C. (2020). GenomeScope 2.0 and Smudgeplot for reference-free profiling of polyploid genomes. Nature Communications, 11(1), 1432. doi: 10.1038/s41467-020-14998-3</li>",
+            "<li>Shaw, J., & Yu, Y. W. (2023). Fast and robust metagenomic sequence comparison through sparse chaining with skani. Nature Methods, 20(11), 1661-1665. doi: 10.1038/s41592-023-02018-3</li>",
+            "<li>Vasimuddin, M., Misra, S., Li, H., & Aluru, S. (2019). Efficient Architecture-Aware Acceleration of BWA-MEM for Multicore Systems. IEEE IPDPS, 314-324. doi: 10.1109/IPDPS.2019.00041</li>",
+            "<li>Li, H., & Durbin, R. (2009). Fast and accurate short read alignment with Burrows-Wheeler transform. Bioinformatics, 25(14), 1754-1760. doi: 10.1093/bioinformatics/btp324</li>",
+            "<li>Wick, R. R., & Holt, K. E. (2022). Polypolish: Short-read polishing of long-read bacterial genome assemblies. PLoS Computational Biology, 18(1), e1009802. doi: 10.1371/journal.pcbi.1009802</li>",
+            "<li>Bouras, G., et al. (2024). How low can you go? Short-read polishing of Oxford Nanopore bacterial genome assemblies. Microbial Genomics, 10(6), 001254. doi: 10.1099/mgen.0.001254</li>",
+            "<li>Li, H. (2018). Minimap2: pairwise alignment for nucleotide sequences. Bioinformatics, 34(18), 3094-3100. doi: 10.1093/bioinformatics/bty191</li>",
+            "<li>Zhou, C., McCarthy, S. A., & Durbin, R. (2023). YaHS: yet another Hi-C scaffolding tool. Bioinformatics, 39(1), btac808. doi: 10.1093/bioinformatics/btac808</li>",
+            "<li>Open2C, Abdennur, N., Fudenberg, G., Flyamer, I. M., Galitsyna, A. A., Goloborodko, A., Imakaev, M., & Venev, S. V. (2024). Pairtools: from sequencing data to chromosome contacts. PLoS Computational Biology, 20(5), e1012164. doi: 10.1371/journal.pcbi.1012164</li>",
+            "<li>Abdennur, N., & Mirny, L. A. (2020). Cooler: scalable storage for Hi-C data and other genomically labeled arrays. Bioinformatics, 36(1), 311-316. doi: 10.1093/bioinformatics/btz540</li>",
+            "<li>Dobin, A., et al. (2013). STAR: ultrafast universal RNA-seq aligner. Bioinformatics, 29(1), 15-21. doi: 10.1093/bioinformatics/bts635</li>",
+            "<li>Flynn, J. M., et al. (2020). RepeatModeler2 for automated genomic discovery of transposable element families. PNAS, 117(17), 9451-9457. doi: 10.1073/pnas.1921046117</li>",
+            "<li>Smit, A. F. A., Hubley, R., & Green, P. (2013-2015). RepeatMasker Open-4.0. URL: https://www.repeatmasker.org</li>",
+            "<li>Gabriel, L., et al. (2024). BRAKER3: Fully automated genome annotation using RNA-seq and protein evidence with GeneMark-ETP, AUGUSTUS, and TSEBRA. Genome Research, 34(5), 769-777. doi: 10.1101/gr.278090.123</li>",
+            "<li>Stanke, M., Diekhans, M., Baertsch, R., & Haussler, D. (2008). Using native and syntenically mapped cDNA alignments to improve de novo gene finding. Bioinformatics, 24(5), 637-644. doi: 10.1093/bioinformatics/btn013</li>",
+            "<li>Chan, P. P., Lin, B. Y., Mak, A. J., & Lowe, T. M. (2021). tRNAscan-SE 2.0: improved detection and functional classification of transfer RNA genes. Nucleic Acids Research, 49(16), 9077-9096. doi: 10.1093/nar/gkab688</li>",
+            "<li>Seemann, T. barrnap: BAsic Rapid Ribosomal RNA Predictor. URL: https://github.com/tseemann/barrnap</li>",
+            "<li>Liao, Y., Smyth, G. K., & Shi, W. (2014). featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics, 30(7), 923-930. doi: 10.1093/bioinformatics/btt656</li>",
+            "<li>Ramírez, F., et al. (2016). deepTools2: a next generation web server for deep-sequencing data analysis. Nucleic Acids Research, 44(W1), W160-W165. doi: 10.1093/nar/gkw257</li>",
             "<li>Andrews S, (2010) FastQC, URL: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/).</li>",
             "<li>Ewels, P., Magnusson, M., Lundin, S., & Käller, M. (2016). MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics , 32(19), 3047–3048. doi: /10.1093/bioinformatics/btw354</li>"
         ].join(' ').trim()

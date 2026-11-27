@@ -1,0 +1,64 @@
+name: "lrge"
+description: Estimates a genome's size from the overlaps of its long reads
+keywords:
+  - genome size
+  - long reads
+  - nanopore
+tools:
+  - "lrge":
+      description: "Genome size estimation from long read overlaps"
+      homepage: "https://github.com/mbhall88/lrge"
+      documentation: "https://github.com/mbhall88/lrge"
+      doi: "10.1101/2024.11.27.625777"
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: The species' meta map
+    - reads:
+        type: file
+        description: The species' nanopore reads, FASTQ, gzipped or not
+        pattern: "*.{fastq,fq}{,.gz}"
+output:
+  estimate:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${prefix}.lrge.txt:
+          type: file
+          description: The estimate, in bases, alone on its line
+          pattern: "*.lrge.txt"
+  log:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${prefix}.lrge.log:
+          type: file
+          description: LRGE's log, with the estimate's 95 % interval
+          pattern: "*.lrge.log"
+  versions_lrge:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - lrge:
+          type: string
+          description: The tool
+      - "lrge --version | sed 's/^lrge //'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - lrge:
+          type: string
+          description: The tool
+      - "lrge --version | sed 's/^lrge //'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

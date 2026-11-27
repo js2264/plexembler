@@ -1,0 +1,55 @@
+nextflow_workflow {
+
+    name "Test subworkflow POLISH_SR"
+    script "../main.nf"
+    workflow "POLISH_SR"
+
+    tag "subworkflows"
+    tag "subworkflows_local"
+    tag "polish_sr"
+
+    test("one species polished with WGS, one with Hi-C, one without reads - stub") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                def wgs = [
+                    file('${moduleDir}/../../../tests/data/pool_wgs_R1.fastq.gz', checkIfExists: true),
+                    file('${moduleDir}/../../../tests/data/pool_wgs_R2.fastq.gz', checkIfExists: true),
+                ]
+                def hic = [
+                    file('${moduleDir}/../../../tests/data/pool_hic_R1.fastq.gz', checkIfExists: true),
+                    file('${moduleDir}/../../../tests/data/pool_hic_R2.fastq.gz', checkIfExists: true),
+                ]
+                input[0] = channel.of(
+                    [ [ id: 'sp1', pool: 'poolA' ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ],
+                    [ [ id: 'sp2', pool: 'poolB' ], file('${moduleDir}/../../../tests/data/truth/sp2.fa', checkIfExists: true) ],
+                    [ [ id: 'sp3', pool: 'poolC' ], file('${moduleDir}/../../../tests/data/truth/sp2.fa', checkIfExists: true) ],
+                )
+                input[1] = channel.of(
+                    [ [ id: 'sp1', pool: 'poolA', library: 'wgs', type: 'wgs', enzymes: null, holdout: false ], wgs ],
+                    [ [ id: 'sp1', pool: 'poolA', library: 'wgs', type: 'wgs', enzymes: null, holdout: true ], wgs ],
+                    [ [ id: 'sp1', pool: 'poolA', library: 'hic', type: 'hic', enzymes: 'DpnII', holdout: false ], hic ],
+                    [ [ id: 'sp2', pool: 'poolB', library: 'hic', type: 'hic', enzymes: 'DpnII', holdout: false ], hic ],
+                    [ [ id: 'sp2', pool: 'poolB', library: 'hic', type: 'hic', enzymes: 'DpnII', holdout: true ], hic ],
+                )
+                input[2] = 'auto'
+                input[3] = 21
+                """
+            }
+        }
+
+        then {
+            def kept = workflow.out.contigs.collectEntries { meta, fasta -> [meta.id, fasta.toString().tokenize('/')[-1]] }
+            assertAll(
+                { assert workflow.success },
+                // sp1 with its WGS, sp2 with its Hi-C, cut; sp3 has no reads: as it came.
+                { assert kept == [sp1: 'sp1.polish.fa.gz', sp2: 'sp2.polish.fa.gz', sp3: 'sp2.fa'] },
+                { assert workflow.out.digest.size() == 1 },
+                { assert workflow.out.selection.size() == 2 },
+            )
+        }
+    }
+}

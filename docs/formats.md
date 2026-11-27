@@ -21,6 +21,66 @@ table of their names: tab-separated, with a header.
 | `original_name` | Its name before (the first word of its FASTA header) |
 | `length_bp` | Its length, in bases |
 
+## The candidates table { #candidates-table }
+
+What [`plexembler select`](cli.md#select) reads: tab-separated, with a header,
+a row per candidate. A relative path is read from the table's folder; an empty
+cell, or `NA`, is a check the candidate does not have, which leaves its rule
+out.
+
+| Column | Required | Description |
+|---|---|---|
+| `candidate` | yes | The candidate's name: the tool that made it (`flye`, `hifiasm`) |
+| `fasta` | yes | Its sequence, FASTA, gzipped or not |
+| `busco` | no | BUSCO's short summary (`.txt` or `.json`), or compleasm's `summary.txt` |
+| `qv` | no | Merqury's `.qv` file |
+| `stats` | no | gfastats' summary, tabular (`--tabular`) or not |
+
+## The selection table { #selection-table }
+
+What [`plexembler select`](cli.md#select) writes beside the kept sequence,
+`<species>.<step>.selection.tsv`: tab-separated, with a header, a row per
+candidate in the order of the candidates table; `NA` for a number the
+candidate lacks.
+
+| Column | Description |
+|---|---|
+| `candidate` | The candidate's name |
+| `kept` | `yes` for the candidate kept, `no` for the others |
+| `busco_complete`, `busco_single`, `busco_duplicated`, `busco_fragmented`, `busco_missing` | BUSCO's classes, in percent of `busco_n` |
+| `busco_n` | The BUSCO lineage's number of genes |
+| `qv` | Merqury's QV (`inf` when it found no error) |
+| `contigs`, `contig_n50`, `total_length` | gfastats' number of contigs, contig N50 and total length, in bases |
+| `reason` | For the kept candidate, the rule that kept it: `the most single-copy complete BUSCOs`, `the highest QV`, `the longest contig N50`, `named by the samplesheet`, `the only candidate`, or a tie on every rule |
+
+## The identity pairs { #identity-pairs }
+
+What [`plexembler ani`](cli.md#ani) writes for a pool, `<pool>.ani_pairs.tsv`:
+tab-separated, with a header, a row per pair of species, each pair once (the
+first species first in alphabetical order). Its matrix, `<pool>.ani.tsv`, has
+the same identities, a row and a column per species, `100.00` on its diagonal.
+
+| Column | Description |
+|---|---|
+| `species_a`, `species_b` | The pair's species |
+| `ani` | skani's average nucleotide identity, in percent; `NA` below skani's floor, about 80 % |
+| `aligned_fraction_a`, `aligned_fraction_b` | The share of each genome that skani aligned, in percent |
+| `verdict` | `too close` (above `--warn-above`, 95 %), `same genus` (from `--genus-above`, 85 %), or `distinct` |
+
+## The genome's names { #genome-names }
+
+What [`plexembler finalize`](cli.md#finalize) writes beside a species' genome,
+`<species>.names.tsv`: tab-separated, with a header, a row per sequence of the
+genome, in its order: the chromosomes, longest first, then the organelle, then
+the unplaced scaffolds, longest first.
+
+| Column | Description |
+|---|---|
+| `name` | Its name in the genome: `<species>_chr01`, …, `<species>_chrM`, `<species>_unplaced_01`, … |
+| `original_name` | Its name in the scaffolder's output (`scaffold_1`, …), or the contig's, for a species finished from its contigs |
+| `length_bp` | Its length, in bases |
+| `role` | `chromosome`, `organelle` or `unplaced` |
+
 ## The report of a species
 
 `plexembler report` (milestone 6 of the [plan](plan.md)) writes the report of
@@ -39,11 +99,33 @@ MultiQC column changes or goes.
 
 | Section | Key | Unit | MultiQC column |
 |---|---|---|---|
+| `report` | `format_version`, `sample`, `pool`, `files`, `plexembler_report_version`, `written` |  |  |
+| `assembly` | `candidates`, `kept`, `reason`, `contigs`, `contig_n50` | bp (N50) |  |
+| `polishing` | `kept`, `qv`, `reason` |  |  |
+| `screen` | `keep`, `move`, `drop`, `organelle` | contigs |  |
+| `genome` | `length_bp` | bp |  |
+| `genome` | `length_mb` | Mb | Genome (Mb) |
+| `genome` | `chromosomes` |  | Chromosomes |
+| `genome` | `chromosomes_bp`, `organelles`, `unplaced` | bp; sequences |  |
+| `quality` | `busco_complete` | % | BUSCO (%) |
+| `quality` | `busco_single`, `busco_duplicated`, `busco_fragmented`, `busco_missing`, `busco_n` | %; genes |  |
+| `quality` | `qv` | Phred | QV |
+| `scaffolding` | `joins`, `supported`, `unsupported`, `thin` | joins |  |
+| `annotation` | `genes` |  | Genes |
+| `annotation` | `transcripts`, `genes_with_introns` |  |  |
+| `annotation` | `proteins_busco_complete` | % | BUSCO, proteins (%) |
+| `expression` | `libraries`, `pairs_on_genes` | pairs |  |
+
+And its tables: `candidates` (each assembly candidate's `candidate`, `kept`,
+`busco_complete`, `qv`, `contigs`, `contig_n50`, `total_length`), `libraries`
+(the species' `pairs` and `share` of each pooled library), `chromosomes` (each
+sequence's `name`, `length_bp`, `role`, `original_name`) and `expression`
+(each library's `pairs_on_genes`).
 
 ### `<sample>.report_mqc.yaml` { #report_mqcyaml }
 
-[MultiQC](https://multiqc.info)'s custom content (`id: plexembler`):
-the sample's row of its General Statistics table.
+[MultiQC](https://multiqc.info)'s custom content (`id: plexembler_report`):
+the species' row of its General Statistics table, the columns above.
 
 ### `<sample>.report.html` { #reporthtml }
 

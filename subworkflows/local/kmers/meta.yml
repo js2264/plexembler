@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "kmers"
+description: The k-mers the genome checks count against - each species' nanopore reads', each pool's WGS reads' - and GenomeScope2's fit of each species' nanopore k-mers
+keywords:
+  - k-mers
+  - meryl
+  - genomescope
+components:
+  - meryl/count
+  - meryl/unionsum
+  - meryl/histogram
+  - genomescope2
+input:
+  - ch_ont_reads:
+      type: file
+      description: |
+        Each species' nanopore reads
+        Structure: [ val(meta), path(fastq) ]
+      pattern: "*.fastq.gz"
+  - ch_wgs_reads:
+      type: file
+      description: |
+        Each pool's WGS reads, every file of its WGS libraries; meta.id the pool
+        Structure: [ val(meta), [ path(fastq) ] ]
+      pattern: "*.fastq.gz"
+  - kmer_size:
+      type: integer
+      description: k
+output:
+  - ont_db:
+      type: directory
+      description: |
+        Each species' nanopore k-mers
+        Structure: [ val(meta), path(meryl) ]
+      pattern: "*.meryl"
+  - wgs_db:
+      type: directory
+      description: |
+        Each pool's WGS k-mers
+        Structure: [ val(meta), path(meryl) ]
+      pattern: "*.meryl"
+  - histogram:
+      type: file
+      description: |
+        The spectrum of each species' nanopore k-mers
+        Structure: [ val(meta), path(hist) ]
+      pattern: "*.hist"
+  - genomescope:
+      type: file
+      description: |
+        GenomeScope2's summary, for a spectrum it could fit
+        Structure: [ val(meta), path(txt) ]
+      pattern: "*_summary.txt"
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

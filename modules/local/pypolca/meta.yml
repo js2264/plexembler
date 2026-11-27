@@ -1,0 +1,68 @@
+name: "pypolca"
+description: Polishes a draft with short reads, POLCA's method in Python
+keywords:
+  - polishing
+  - short reads
+  - assembly
+tools:
+  - "pypolca":
+      description: "Standalone Python reimplementation of the POLCA genome polisher"
+      homepage: "https://github.com/gbouras13/pypolca"
+      documentation: "https://github.com/gbouras13/pypolca"
+      doi: "10.1099/mgen.0.001254"
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: The draft's meta map
+    - assembly:
+        type: file
+        description: The draft
+        pattern: "*.{fa,fasta}{,.gz}"
+    - reads:
+        type: file
+        description: A pair's two files, or single reads
+        pattern: "*.fastq.gz"
+output:
+  fasta:
+    - - meta:
+          type: map
+          description: The draft's meta map
+      - ${prefix}.fa.gz:
+          type: file
+          description: The polished contigs
+          pattern: "*.fa.gz"
+  report:
+    - - meta:
+          type: map
+          description: The draft's meta map
+      - ${prefix}.report:
+          type: file
+          description: pypolca's report
+          pattern: "*.report"
+  versions_pypolca:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - pypolca:
+          type: string
+          description: The tool
+      - "pypolca --version 2>/dev/null | sed -n 's/^.*version //p'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - pypolca:
+          type: string
+          description: The tool
+      - "pypolca --version 2>/dev/null | sed -n 's/^.*version //p'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

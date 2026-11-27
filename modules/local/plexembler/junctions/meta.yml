@@ -1,0 +1,77 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "plexembler_junctions"
+description: Scores each join of a species' scaffolds by the Hi-C pairs across it, against the species' contact decay
+keywords:
+  - hi-c
+  - scaffolding
+  - misjoin
+tools:
+  - "plexembler":
+      description: "The companion package of js2264/plexembler"
+      homepage: "https://js2264.github.io/plexembler/"
+      documentation: "https://js2264.github.io/plexembler/cli/#junctions"
+      tool_dev_url: "https://github.com/js2264/plexembler"
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: The species' meta map
+    - pairs:
+        type: file
+        description: The species' deduplicated pairs on its genome, 4DN pairs
+        pattern: "*.pairs{,.gz}"
+    - agp:
+        type: file
+        description: The genome's AGP, in the same names
+        pattern: "*.agp"
+output:
+  table:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.junctions.tsv:
+          type: file
+          description: Each join, its pairs across, those expected, and its verdict
+          pattern: "*.junctions.tsv"
+  multiqc:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.junctions_mqc.tsv:
+          type: file
+          description: The joins' verdicts, for MultiQC
+          pattern: "*_mqc.tsv"
+  log:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - "*.log":
+          type: file
+          description: The command's log
+          pattern: "*.log"
+  versions_plexembler:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

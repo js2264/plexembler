@@ -1,0 +1,56 @@
+nextflow_process {
+
+    name "Test process LRGE"
+    script "../main.nf"
+    process "LRGE"
+
+    tag "modules"
+    tag "modules_local"
+    tag "lrge"
+
+    test("a 30 kb genome's nanopore reads") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'sp2' ],
+                    file('${moduleDir}/../../../tests/data/sp2.ont.fastq.gz', checkIfExists: true),
+                ]
+                """
+            }
+        }
+
+        then {
+            def estimate = path(process.out.estimate[0][1]).text.trim().toLong()
+            assertAll(
+                { assert process.success },
+                { assert estimate > 20000 && estimate < 50000 },
+                { assert path(process.out.log[0][1]).text.contains('Estimated genome size') },
+            )
+        }
+    }
+
+    test("a 30 kb genome's nanopore reads - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'sp2' ],
+                    file('${moduleDir}/../../../tests/data/sp2.ont.fastq.gz', checkIfExists: true),
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.estimate.size() == 1 },
+            )
+        }
+    }
+}

@@ -48,3 +48,8 @@ CLAUDE.local.md
 .lineage/
 .nf-test/
 .nf-test.log
+
+# The benchmark data: generated or downloaded (benchmarks/README.md), never committed.
+/benchmarks/data/
+# nf-test's wrappers of a workflow test
+/.nf-test-*.nf

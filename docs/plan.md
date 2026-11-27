@@ -106,7 +106,7 @@ The repository, and what every later step relies on. Not released.
 - [x] Unknown values (`NA`) in the species samplesheet, and its `chemistry`
       column.
 - [ ] GitHub's settings (T5).
-- [ ] The benchmark pool's small set, `test-data-v1` (T2).
+- [ ] The benchmark pool's small set, `benchmark-data-v1` (T2): its generator is written; the release is made by `benchmarks.yml` once `main` has it.
 - [x] The package's container, which M1's local modules need (T1).
 
 ## M1 · Contigs, per species · v0.1.0
@@ -114,40 +114,47 @@ The repository, and what every later step relies on. Not released.
 **Goal:** for each species, its nanopore contigs, polished, with their checks;
 usable as a draft genome on its own.
 
-- [ ] **Nanopore input.** FASTQ or Dorado's unaligned BAM (`samtools fastq -T '*'`,
-      keeping its tags); filtered by length and quality (`chopper`); capped at
-      `--ont_max_depth` (100×) of the longest reads (`filtlong --target_bases`,
-      or `rasusa`). The samplesheet's `ont` takes `.bam`. The species'
+- [x] **Nanopore input.** FASTQ or Dorado's unaligned BAM (`samtools fastq -T '*'`,
+      keeping its tags), a species' runs as one FASTQ; filtered by length and
+      quality (`chopper`, the quality by chemistry); capped at
+      `--ont_max_depth` (100×) of the longest and best reads (`filtlong
+      --target_bases`). The samplesheet's `ont` takes `.bam`. The species'
       `chemistry` sets Flye's mode (`--nano-hq` for `r10`, `--nano-raw` for
       `r9`) and Medaka's model; `NA` is told from the reads' median quality
-      (Q15 and above: `r10`).
-- [ ] **What the samplesheet leaves unknown** (`NA`): the genome size, from the
-      nanopore reads (LRGE), before the depth cap needs it; the ploidy, from the
-      k-mer spectrum of the species' nanopore reads (GenomeScope2, Smudgeplot),
-      then of its own WGS reads once M2 has split them, the species treated as
-      haploid until then. Each estimate is reported as one, beside what the
-      samplesheet gave when it gave something.
-- [ ] **Assemblers, as candidates** (`--assemblers flye`, by default): Flye,
-      `--genome-size` from the samplesheet or its estimate; hifiasm `--ont`
-      opt-in (`--assemblers flye,hifiasm`), for R10 reads, its haplotypes kept
-      as candidates for a heterozygous species (nf-core: `flye`, `hifiasm`).
-- [ ] **Contigs named after their species:** `plexembler rename`, in a local
-      module `PLEXEMBLER_RENAME`.
-- [ ] **Nanopore polishing** (`--ont_polisher medaka|dorado|none`): Medaka
+      (NanoPlot; Q15 and above: `r10`).
+- [x] **What the samplesheet leaves unknown** (`NA`): the genome size, from the
+      nanopore reads (LRGE), before the depth cap needs it; the k-mer spectrum
+      of the species' nanopore reads fitted by GenomeScope2 as a diploid's,
+      reported (nanopore errors inflate its heterozygosity: a hint, not an
+      answer), the species treated as haploid. Its own WGS reads, once M2 has
+      split them, are fitted again, with Smudgeplot. Each estimate is reported
+      as one, beside what the samplesheet gave when it gave something.
+- [x] **Assemblers, as candidates** (`--assemblers flye`, by default): Flye,
+      `--no-alt-contigs` for a haploid species; hifiasm `--ont` opt-in
+      (`--assemblers flye,hifiasm`), for R10 reads, `-l0` for a haploid species
+      (nf-core: `flye`, `hifiasm`, `gfatools/gfa2fa`).
+- [x] **Contigs named after their species:** `plexembler rename`, in a local
+      module `PLEXEMBLER_RENAME` (plain FASTA: Medaka indexes it).
+- [x] **Nanopore polishing** (`--ont_polisher medaka|dorado|none`): Medaka
       (nf-core `medaka`); `dorado polish` (local, `process_gpu`, experimental
       until tested on a GPU) for Dorado's BAMs.
-- [ ] **The genome checks**, a subworkflow `GENOME_QC` that every later stage
-      reuses: `gfastats` (contiguity); BUSCO in genome mode, or compleasm, with
-      the samplesheet's lineage or BUSCO's choice; Merqury's QV against the
-      pool's WGS k-mers (valid per species: an assembly k-mer missing from the
-      pool is an error) and its completeness against the species' own nanopore
-      k-mers (the pool's short reads mix the species); the assembly graph (GFA).
-- [ ] **One candidate kept:** `plexembler select --step assembly`: BUSCO
-      complete minus duplicated, then QV, then contig N50; a samplesheet column
-      `assembler` names one instead. Every candidate stays under
-      `species/<species>/candidates/assembly/`.
-- [ ] **Identity between the species of a pool:** `skani` → a matrix; a warning
-      above 95 % ANI, where the pool's short reads stop telling two species apart.
+- [x] **The genome checks**, a subworkflow `GENOME_QC` that every later stage
+      reuses: `gfastats` (contiguity); BUSCO in genome mode, with the
+      samplesheet's lineage or `--busco_lineage` (BUSCO's choice by default),
+      offline with `--busco_db`; Merqury's QV against the pool's WGS k-mers
+      (valid per species: an assembly k-mer missing from the pool is an error)
+      or, for a pool without WGS, the species' own nanopore k-mers; its
+      completeness against the species' own nanopore k-mers (the pool's short
+      reads mix the species) (subworkflow `KMERS`); the assembly graph (GFA).
+      compleasm's summary is read by `plexembler select`, for a later option.
+- [x] **One candidate kept:** `plexembler select --step assembly`: BUSCO
+      complete minus duplicated, then QV, then contig N50, each with a
+      tolerance; a samplesheet column `assembler` names one instead. Every
+      candidate stays under `species/<species>/candidates/assembly/`.
+- [x] **Identity between the species of a pool:** `skani triangle`, then
+      `plexembler ani` → a matrix and each pair's verdict; a warning above 95 %
+      ANI, where the pool's short reads stop telling two species apart, and a
+      pair of the same genus named as one from 85 %.
 
 **Done when**, on the benchmark pool (T2): each species' BUSCO is within 1 point
 of its reference's; QV ≥ 40 after polishing; QUAST against the T2T references
@@ -159,7 +166,7 @@ finds no misassembly over 10 kb in the kept candidate.
 with their own species' short reads (WGS, or Hi-C cut at its junctions), and
 screened.
 
-- [ ] **`POOL_DECONVOLVE`**, the pool-level subworkflow
+- [x] **`POOL_DECONVOLVE`**, the pool-level subworkflow
       ([concepts](concepts.md#deconvolution)): the contigs of every species of a
       pool in one reference; `bwa-mem2` (`-5SP` for Hi-C); pairs sorted by name;
       `plexembler split` (pysam, in a local module) gives each pair to the species
@@ -171,10 +178,14 @@ screened.
       copy, 85 to 95 % identical (Decisions). It writes each species' BAM (and FASTQ where a
       tool wants reads) and the pool's numbers: each species' share of each
       library, the ambiguous fraction of each pair of species, the pairs between
-      species and the random-ligation rate ε. The pool's channels are grouped
-      with `groupKey(pool, n_species)`, so that a pool starts as soon as its own
-      species are ready.
-- [ ] **The polishing reads** (`--polish_reads auto|wgs|hic|both`, `auto` by
+      species and the random-ligation rate ε (Hi-C: the pairs between species
+      over 1 − Σpᵢ²), and, for Hi-C, the unique pairs between contigs (the
+      screen's Hi-C signal); 10 % of each library's pairs held out, by a hash of
+      their names, for the QV guard. Duplicates are dropped by `plexembler split`
+      itself (the mates' 5' ends), not by `pairtools dedup`. To come: a pool's
+      channels grouped with `groupKey(pool, n_species)`, so that a pool starts as
+      soon as its own species are ready (today, every pool waits for all).
+- [x] **The polishing reads** (`--polish_reads auto|wgs|hic`, `auto` by
       default): a species' WGS pairs when its pool has a WGS library; when it has
       none, or for a species whose WGS depth is under `--min_polish_depth`
       (30×), its **Hi-C reads, cut at their ligation junctions**. A Hi-C read is
@@ -191,7 +202,9 @@ screened.
       2 or more junctions are counted: a ligation-efficiency figure for the
       report. (hicstuff's own `cutsite` pairs the pieces again; a mode of it
       that writes them once, unpaired, would replace `plexembler digest`, T4.)
-- [ ] **Short-read polishing** (`--sr_polisher polypolish,pypolca|none`):
+      To come: `both`, and `--min_polish_depth`, Hi-C for a species whose WGS
+      depth is too low.
+- [x] **Short-read polishing** (`--sr_polisher polypolish,pypolca|none`):
       Polypolish on `bwa mem -a` alignments of the species' reads, single-end for
       Hi-C pieces (its insert-size filter needs true pairs), alignments with
       more than 5 clipped bases dropped (a junction the cutting missed); then
@@ -200,7 +213,19 @@ screened.
       before and after on k-mers of 10 % of the pairs, held out of the polishing
       (the polishing reads' own k-mers would flatter it, and Hi-C's uneven
       coverage makes a QV from its k-mers pessimistic); the polished version is
-      kept only if it is better (`plexembler select --step polish`).
+      kept only if it is better (`plexembler select --step polish`: the draft,
+      Polypolish's and pypolca's QVs). pypolca runs `--careful`.
+- [ ] **A polishing guard that sees past the held-out pairs' sampling.** On the
+      benchmark pool the held-out pairs are 3 to 4× of each genome, at which 3
+      to 7 % of a genome's 21-mers are missing from them by chance: the QV reads
+      about 24 to 27 whatever the genome's true quality, and a polishing's gain or
+      harm moves it by hundredths. There, measured against the references, the
+      WGS pairs' polishing fixed 2 of Scer's 3 indels and 2 of Spar's 9 errors,
+      and the Hi-C reads' added errors (Spar: 36 mismatches and 10 indels;
+      Scer: 20 mismatches and 2 indels); the QV saw neither, and the guard's
+      tolerance (1 QV) kept every draft: the small gains lost, the harm
+      avoided. To try: the assembly-only k-mers the candidates differ in,
+      rather than their QVs; a larger hold-out when the coverage allows it.
 - [ ] **Micro-C** (`enzymes` is `none`) has no junction sequence to cut at:
       such a pool's species stay polished with nanopore reads alone, by default.
       Polishing with the clipped local alignments of its reads (primary and
@@ -213,17 +238,20 @@ screened.
       --by genome` and `network` give each species' contacts, P(s) and the
       contacts between species, the noise floor's raw material; chromosomix
       opens it as it opens a metagenome's map.
-- [ ] **The contig screen,** `plexembler screen`, which weighs three signals for
+- [x] **The contig screen,** `plexembler screen`, which weighs three signals for
       each contig: the nanopore reads of every species of the pool mapped on the
       pool's contigs (`minimap2 -x map-ont`, the pool's cross-talk matrix); its
       identity to the other species' contigs (`minimap2 -x asm10`); and its Hi-C
-      contacts outside its species, from `chromosomix magpurity` on the pool's
-      `.metacool` (organelles left out: their contacts are mostly random
-      ligation). A verdict per contig, keep, move or drop, with its evidence; a
-      move is applied with `metacooler reassign`.
-- [ ] **Organelles and plasmids:** the mitochondrial contig, by circularity, GC,
+      contacts outside its species, from `plexembler split`'s unique pairs
+      between contigs (`chromosomix magpurity` on the pool's `.metacool`, once
+      the pool has one). A verdict per contig, keep, move, drop or organelle,
+      with its evidence and thresholds; a move renames the contig
+      `<species>_<contig>` (`metacooler reassign` for the pool's map, then).
+- [x] **Organelles and plasmids:** the mitochondrial contig, by circularity, GC,
       depth and `miniprot` hits of a small set of yeast mitochondrial proteins
-      (`assets/`), kept apart as `<species>_chrM`.
+      (`assets/`), kept apart as `<species>_chrM`. Today by depth and GC (the
+      screen's `organelle` verdict); circularity (Flye's graph) and miniprot's
+      hits to come.
 - [ ] **Foreign DNA:** FCS-adaptor always; FCS-GX with `--fcsgx_db` (nf-core's
       subworkflow `fasta_clean_fcs`); Tiara's labels (eukaryote, prokaryote,
       organelle) for the report.
@@ -243,11 +271,15 @@ alone gains at least 80 % of what WGS gains, species by species.
 **Goal:** each species' genome, scaffolded with its Hi-C pairs and finished, and
 its Hi-C maps.
 
-- [ ] **Pairs per species:** `pairtools parse/sort/dedup/stats` on the species'
-      Hi-C alignments (4DN `.pairs.gz`, with the `#chromsize` lines instaGRAAL
-      reads; pairtools' stats in MultiQC).
+- [x] **Pairs per species:** `pairtools parse/sort/dedup` on the species'
+      Hi-C alignments to its genome (4DN `.pairs.gz`, with the `#chromsize`
+      lines instaGRAAL reads; pairtools' stats in MultiQC). On the contigs, for
+      instaGRAAL, to come with it.
 - [ ] **Scaffolders, as candidates** (`--scaffolders yahs,instagraal,haphic`):
-      - YaHS (nf-core `yahs`), its motifs from the library's `enzymes`;
+      YaHS done, the only one for now (its candidate in
+      `candidates/scaffold/yahs/`); instaGRAAL waits for its CPU image (T4):
+      - YaHS (nf-core `yahs`), its motifs from the library's `enzymes` (none for
+        Micro-C);
       - instaGRAAL, a local module `INSTAGRAAL_ENDTOEND`:
         `instagraal-endtoend contigs.fa pairs.gz -e <enzymes> --mode cpu`, or
         `--instagraal_mode default` (MCMC and refine) on a GPU (`process_gpu`,
@@ -258,10 +290,10 @@ its Hi-C maps.
 - [ ] **Layouts as AGP:** `plexembler agp`: instaGRAAL's `final_info_frags.txt`
       to AGP (until instaGRAAL writes one, T4); AGP to FASTA, checked against the
       contigs.
-- [ ] **Each join scored:** `plexembler junctions`: the contacts across each
-      junction against the species' own contact decay P(s) (cooler), and the
-      joins they do not support; `instagraal-refine`, which scores the joins of
-      a layout, as a second opinion.
+- [x] **Each join scored:** `plexembler junctions`: the pairs across each
+      join against the species' own contact decay P(s), from the pairs within
+      its contigs, and the joins they do not support (`genome/qc/junctions/`).
+      `instagraal-refine` as a second opinion, with instaGRAAL.
 - [ ] **Telomeres:** `tidk explore` finds the repeat when the samplesheet has
       none, `tidk search` counts the chromosomes with telomeres at both ends
       (nf-core's subworkflow `fasta_explore_search_plot_tidk`).
@@ -274,14 +306,20 @@ its Hi-C maps.
 - [ ] **Curation:** a samplesheet column `curated_agp` replaces the kept layout
       with a curated one, checked against the contigs; each candidate's `.pretext`
       and `.hic` with its AGP are written for PretextView and Juicebox.
-- [ ] **Finishing:** `plexembler finalize`: chromosomes named by size
-      (`<species>_chr01`, …), `<species>_chrM`, `<species>_unplaced_01`; gap
-      closing (TGS-GapCloser, local) and telomere extension (teloclip, local)
-      behind `--close_gaps` and `--extend_telomeres`; bgzip, `.fai`, `.gzi`,
-      `chrom.sizes`, AGP. A related reference (`--orient_reference`) can orient
-      the chromosomes (`ragtag`), never reorder them.
+- [x] **Finishing:** `plexembler finalize`: chromosomes named by size
+      (`<species>_chr01`, …, the samplesheet's `n_chromosomes` of them, or every
+      scaffold of `--min_chromosome` or more), `<species>_chrM`,
+      `<species>_unplaced_01`; bgzip, `.fai`, `.gzi`, `chrom.sizes`, the names'
+      table, the AGP in the new names; a species without Hi-C finished from its
+      contigs. To come: gap closing (TGS-GapCloser, local) and telomere
+      extension (teloclip, local) behind `--close_gaps` and
+      `--extend_telomeres`; a related reference (`--orient_reference`) to
+      orient the chromosomes (`ragtag`), never reorder them.
 - [ ] **The pool on the final genomes** (a third `POOL_DECONVOLVE`: WGS, Hi-C).
-- [ ] **Maps:** `cooler cload pairs`, `zoomify --balance` (`.mcool`); `.hic`
+      The second, on the screened contigs, is done: the pairs each species is
+      scaffolded and mapped with.
+- [ ] **Maps:** `cooler cload pairs`, `zoomify --balance` (`.mcool`, done:
+      `species/<species>/hic/`); to come, `.hic`
       (hictk, local); `.pretext` and PNG (`pretextmap`, `pretextsnapshot`); the
       pool's map on the final genomes, a `.metacool` again, where the blocks
       between species show the noise.
@@ -301,34 +339,42 @@ benchmark's planted misjoins are flagged by `plexembler junctions`.
 **Goal:** each species' genes (GTF, GFF3, proteins), repeats, non-coding RNAs and
 mitochondrial genes.
 
-- [ ] **Repeats:** RepeatModeler2 (a library per species), RepeatMasker →
-      soft-masked genome and repeat landscape.
-- [ ] **RNA-seq, split:** STAR on the pool's final genomes (introns capped at
+- [x] **Repeats:** RepeatModeler2 (a library per species), RepeatMasker →
+      soft-masked genome (`--repeats`). The repeat landscape, to come.
+- [x] **RNA-seq, split:** STAR on the pool's final genomes (introns capped at
       5 kb, `--alignIntronMax 5000 --alignMatesGapMax 5000`: compact genomes get
-      false splices otherwise), `plexembler split --type rnaseq` (unique hits);
-      each species' libraries merged for the gene models.
-- [ ] **Genes:** BRAKER3 `--fungus` (nf-core `braker3`) with the species' RNA
-      alignments and OrthoDB's fungal proteins (`--orthodb_proteins`, downloaded
-      to the cache when absent). Without RNA-seq: BRAKER on proteins alone, or
-      GALBA (local), whichever does better on the benchmark. Helixer (local,
-      GPU, experimental until tested on one) as a second candidate (`--gene_predictors braker,helixer`), scored by
-      BUSCO's proteins and OMArk.
-- [ ] **Formats:** AGAT (`agat/convertspgff2gtf`, `agat/spextractsequences`,
-      `agat/spstatistics`): GTF and GFF3, locus tags `<species>_000010`, proteins
-      translated with the species' `genetic_code` (CUG is a sense codon in tables
-      1, 12 and 26 alike: gene structures do not change, proteins do), CDS.
+      false splices otherwise), `plexembler split --type rnaseq` (unique hits,
+      each species' pairs kept as alignments, already on its genome: no second
+      alignment); each species' libraries merged for the gene models.
+- [x] **Genes:** BRAKER3 `--fungus` (nf-core `braker3`) with the species' RNA
+      alignments and OrthoDB's fungal proteins (`--orthodb_proteins`, given;
+      its download to the cache, to come). Without RNA-seq, BRAKER on the
+      proteins alone; with neither, AUGUSTUS ab initio with a trained species
+      (`--augustus_species`, local module). To come: GALBA, if it does better
+      than BRAKER on proteins on the benchmark; Helixer (local, GPU,
+      experimental until tested on one) as a second candidate
+      (`--gene_predictors braker,helixer`), scored by BUSCO's proteins and
+      OMArk.
+- [x] **Formats:** `plexembler genes`, in place of AGAT: GTF and GFF3, locus
+      tags `<species>_000010`, proteins translated with the species'
+      `genetic_code` (CUG is a sense codon in tables 1, 12 and 26 alike: gene
+      structures do not change, proteins do; a protein with a stop inside is
+      warned of), CDS, a table of the genes. AGAT's statistics, to come with
+      the checks.
 - [ ] **The genetic code, checked:** Codetta (Shulgina and Eddy 2021) infers each
       species' nuclear code from its genome: it is the code used when the
       samplesheet says `NA`, and a warning when it differs from the one given.
 - [ ] **Non-coding RNAs:** tRNAscan-SE (`-E`), barrnap (`--kingdom euk`: the rDNA
-      locus), Infernal with Rfam.
+      locus), Infernal with Rfam. tRNAscan-SE and barrnap done; Infernal, to
+      come (`--rfam_cm`).
 - [ ] **Functions:** eggNOG-mapper (orthologue names, GO, KEGG, EC, Pfam) →
       `functions.tsv`; InterProScan with `--interproscan_db`.
 - [ ] **The mitochondrial genome's genes,** with the yeast mitochondrial code
       (table 3): MitoHiFi in its contig mode, or MFannot; the one that annotates
       the benchmark's mitochondria best.
 - [ ] **Annotation checks:** BUSCO's proteins, OMArk (local), AGAT's statistics,
-      the RNA-seq reads in genes.
+      the RNA-seq reads in genes. BUSCO's proteins done; the share of the
+      RNA-seq reads in genes comes with M5's counts.
 
 **Done when**, on the benchmark species with reference annotations: ≥ 90 % of
 the reference genes found (gffcompare); BUSCO's proteins within 2 points of
@@ -339,28 +385,37 @@ BUSCO's genome.
 **Goal:** each species' expression tables, counts and TPM, and its coverage
 tracks. Differential expression is out of scope (Decisions).
 
-- [ ] **Counts:** featureCounts on each RNA-seq library's per-species
-      alignments, its strandedness from Salmon's library type.
+- [x] **Counts:** featureCounts on each RNA-seq library's per-species
+      alignments, its strandedness `--rnaseq_strandedness` (from Salmon's
+      library type, to come).
 - [ ] **TPM:** Salmon on the pool's transcripts, every species with its genome
       as decoy, so that a read of a gene shared by two species is shared by
       Salmon's EM; TPM within each species, from that species' reads alone.
       `plexembler expression` writes `<species>.counts.tsv` and
       `<species>.tpm.tsv`: genes × libraries (`<condition>_<replicate>`), and each
-      gene's ambiguous fraction.
+      gene's ambiguous fraction. Done: `plexembler expression`'s counts and
+      TPM, from featureCounts' counts and the genes' lengths, the split's
+      pairs alone; to come: Salmon's EM for the shared reads, and each gene's
+      ambiguous fraction.
 - [ ] **Tracks:** bigWig of the RNA-seq (by strand), the WGS and the nanopore
-      reads (`deeptools bamCoverage`, `mosdepth`).
+      reads (`deeptools bamCoverage`, `mosdepth`). The RNA-seq's and the
+      nanopore reads' done; the WGS', to come.
 
 **Done when**, on the benchmark pool's simulated RNA-seq (known TPMs):
 Spearman's ρ ≥ 0.9 for every species.
 
 ## M6 · Reports and extras · v0.6.0
 
-- [ ] **`plexembler report`**, on chromokit's report kit (CONVENTIONS.md § 12):
+- [x] **`plexembler report`**, on chromokit's report kit (CONVENTIONS.md § 12):
       per species, `report.txt`, its MultiQC row and its page: the summary;
       its share of the pool; the candidates and the choice; contamination; a
       karyotype (chromosomes, telomeres, centromeres, rDNA, chrM); BUSCO, QV,
       OMArk; the annotation; the expression; versions and methods. A pool's
-      report beside it (`pools/<pool>/`).
+      report beside it (`pools/<pool>/`). Done on the kit's own page: the
+      assembly and polishing, the share of each library, the screen, the
+      chromosomes, BUSCO and QV, the joins, the genes and BUSCO on the
+      proteins, the expression. To come: its own template and plots, the
+      telomeres, centromeres and rDNA in the karyotype, the pool's report.
 - [ ] **Contamination, further:** EukCC; a GC × depth plot of the contigs,
       labelled by Tiara, FCS-GX and the screen.
 - [ ] **Ploidy, heterozygosity, aneuploidy:** Clair3 (nanopore) and bcftools (WGS)
@@ -373,7 +428,10 @@ Spearman's ρ ≥ 0.9 for every species.
       28S rRNA, against a local UNITE or NCBI set (BLAST): sample swaps show.
 - [ ] **Comparative**, per pool (`--comparative`): OrthoFinder (orthogroups,
       species tree), synteny (GENESPACE, local), the ANI matrix of M1.
-- [ ] **A browser for the delivery: chromosomix.** `plexembler browser` writes,
+- [x] **A browser for the delivery: chromosomix.** Done: the store, checked
+      by chromosomix's own `check_store` in the package's tests; the
+      species' workspaces, which name absolute URLs only, wait for
+      `--browser_base`. `plexembler browser` writes,
       for each species, a workspace (`<species>.chromosomix.json`: its map with
       its genome, genes, repeats, telomeres, centromeres and coverage tracks
       placed, a colour scale, a first window), and, at the top of the results, a
@@ -407,7 +465,7 @@ pipeline's own steps need a container before the package is anywhere else.
       publisher is set up), so that a release does not fail before.
 - [x] `pipeline.yml` builds `ghcr.io/js2264/plexembler:<version>` from the
       checkout before nf-test, so that a pull request tests its own code.
-- [ ] The local modules that run `plexembler`: `container
+- [x] The local modules that run `plexembler`: `container
       "ghcr.io/js2264/plexembler:${workflow.manifest.version}"`, and for conda
       an environment that installs the package at the release's tag (M1).
 
@@ -415,12 +473,28 @@ pipeline's own steps need a container before the package is anywhere else.
 
 - [x] `tests/data/`: two species of a few dozen kilobases and their pool, for
       the plumbing (`make_test_data.py`).
-- [ ] **`test-data-v1`**, a release asset (CONVENTIONS.md § 13, § 20), and its
-      generator beside it: two or three chromosomes each of three yeasts with T2T
-      references, nanopore reads by Badread (R10 error model), a pooled Hi-C by
-      sim3C (its abundance profile, and noise between species), a pooled WGS by
-      InSilicoSeq, RNA-seq by polyester, and planted bleed-through and misjoins;
-      some tens of megabytes. The nf-test of M1 onwards run on it.
+- [x] **`benchmark-data-v1`**, a release asset (CONVENTIONS.md § 13, § 20),
+      and its generator beside it (`benchmarks/make_benchmark_data.py`): two or
+      three chromosomes and the mitochondrion each of three yeasts with complete
+      references, two of a genus (*S. cerevisiae*, *S. paradoxus*) and one far
+      (*N. glabratus*); nanopore reads by Badread (R10 error model) with
+      planted bleed-through; a pooled WGS by InSilicoSeq; a pooled Arima Hi-C
+      simulated by the generator itself (ligation junctions in the reads,
+      contacts decaying with distance, noise between species, PCR duplicates).
+      `-profile benchmark`; `benchmarks/evaluate.py` checks a milestone's "Done
+      when"; `.github/workflows/benchmarks.yml` fetches the release, or makes
+      and publishes it, and runs both.
+- [ ] **`benchmark-data-v2`**: RNA-seq of each species' genes (polyester), and
+      misjoins planted in a draft, for M3 to M5. What v1 showed (the M1 to M3
+      PRs hold the numbers): Flye assembles each of its small chromosomes in
+      one contig, so YaHS joins nothing and `plexembler junctions` scores
+      nothing. v2 needs drafts broken where the scaffolds must join them
+      (shorter reads, or contigs cut before scaffolding), the references'
+      annotations for M4 (gffcompare), and RNA-seq with known levels for M5.
+      And drafts with errors for the short-read polishing to fix: v1's (Badread
+      at 98 %, Flye, Medaka) have under one mismatch or indel per 100 kb outside
+      a misjoined subtelomere, so no polishing is kept and M2's Hi-C check, a
+      gain against WGS's, is not judged.
 - [ ] **`test_full`**: an in-silico pool of public data (nanopore, Hi-C, Illumina,
       RNA-seq) of five to ten yeasts with T2T references, subsampled and mixed,
       on Zenodo; run by hand on a cluster before each release, its numbers on

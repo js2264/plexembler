@@ -1,0 +1,58 @@
+nextflow_process {
+
+    name "Test process PLEXEMBLER_FINALIZE"
+    script "../main.nf"
+    process "PLEXEMBLER_FINALIZE"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plexembler"
+    tag "plexembler/finalize"
+
+    test("a species' scaffolds, its chromosomes counted") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'sp1', n_chromosomes: 2 ],
+                    file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true),
+                    [],
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.sizes[0][1]).readLines() == ['sp1_chr01\t24000', 'sp1_chr02\t16000'] },
+                { assert process.out.fai.size() == 1 },
+            )
+        }
+    }
+
+    test("a species' scaffolds - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'sp1', n_chromosomes: null ],
+                    file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true),
+                    [],
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.fasta.size() == 1 },
+            )
+        }
+    }
+}

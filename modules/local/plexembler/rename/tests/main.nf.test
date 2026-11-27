@@ -1,0 +1,58 @@
+nextflow_process {
+
+    name "Test process PLEXEMBLER_RENAME"
+    script "../main.nf"
+    process "PLEXEMBLER_RENAME"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plexembler"
+    tag "plexembler/rename"
+
+    test("a species' contigs") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'sp1' ],
+                    file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true),
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.fasta[0][1]).readLines().findAll { line -> line.startsWith('>') } == ['>sp1_chr1', '>sp1_chr2'] },
+                { assert path(process.out.names[0][1]).readLines()[1] == 'sp1_chr1\tchr1\t24000' },
+                { assert process.out.versions_plexembler[0][1] == 'plexembler' },
+            )
+        }
+    }
+
+    test("a species' contigs - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'sp1' ],
+                    file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true),
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.fasta.size() == 1 },
+                { assert process.out.names.size() == 1 },
+            )
+        }
+    }
+}

@@ -1,0 +1,57 @@
+nextflow_process {
+
+    name "Test process PLEXEMBLER_ANI"
+    script "../main.nf"
+    process "PLEXEMBLER_ANI"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plexembler"
+    tag "plexembler/ani"
+
+    test("a pool of three species, two of a genus") {
+
+        when {
+            process {
+                """
+                def skani = file("\${launchDir}/poolA.tsv")
+                skani.text = [
+                    'Ref_file\\tQuery_file\\tANI\\tAlign_fraction_ref\\tAlign_fraction_query\\tRef_name\\tQuery_name',
+                    'Scer.fa\\tSpar.fa\\t88.40\\t80.10\\t79.00\\tScer_ctg1\\tSpar_ctg7',
+                ].join('\\n') + '\\n'
+                input[0] = [ [ id: 'poolA', species: ['Kmar', 'Scer', 'Spar'] ], skani ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.matrix[0][1]).readLines()[0] == 'species\tKmar\tScer\tSpar' },
+                { assert path(process.out.pairs[0][1]).readLines().contains('Scer\tSpar\t88.40\t80.10\t79.00\tsame genus') },
+            )
+        }
+    }
+
+    test("a pool - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                def skani = file("\${launchDir}/poolA.tsv")
+                skani.text = 'stub'
+                input[0] = [ [ id: 'poolA', species: ['Scer', 'Spar'] ], skani ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.matrix.size() == 1 },
+            )
+        }
+    }
+}

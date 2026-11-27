@@ -1,0 +1,42 @@
+nextflow_process {
+
+    name "Test process PLEXEMBLER_SCREEN"
+    script "../main.nf"
+    process "PLEXEMBLER_SCREEN"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plexembler"
+    tag "plexembler/screen"
+
+    test("a pool of two species - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                def one = file("\${launchDir}/sp1.paf")
+                one.text = ''
+                def two = file("\${launchDir}/sp2.paf")
+                two.text = ''
+                input[0] = [
+                    [ id: 'pool', species: ['sp1', 'sp2'] ],
+                    file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true),
+                    [ one, two ],
+                    [],
+                    [],
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.fasta[0][1].size() == 2 },
+                { assert process.out.table.size() == 1 },
+            )
+        }
+    }
+}

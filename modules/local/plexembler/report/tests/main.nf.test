@@ -1,0 +1,52 @@
+nextflow_process {
+
+    name "Test process PLEXEMBLER_REPORT"
+    script "../main.nf"
+    process "PLEXEMBLER_REPORT"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plexembler"
+    tag "plexembler/report"
+
+    test("a species' genome alone") {
+
+        when {
+            process {
+                """
+                def names = file("\${launchDir}/sp1.names.tsv")
+                names.text = 'name\\toriginal_name\\tlength_bp\\trole\\nsp1_chr01\\tscaffold_1\\t24000\\tchromosome\\n'
+                input[0] = [ [ id: 'sp1', pool: 'pool' ], [ names ] ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.txt[0][1]).text.contains('chromosomes') },
+                { assert path(process.out.multiqc[0][1]).text.contains('plexembler_report') },
+            )
+        }
+    }
+
+    test("a species - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [ [ id: 'sp1', pool: 'pool' ], [ file('${moduleDir}/main.nf') ] ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.html.size() == 1 },
+            )
+        }
+    }
+}

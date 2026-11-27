@@ -1,0 +1,56 @@
+nextflow_process {
+
+    name "Test process PLEXEMBLER_EXPRESSION"
+    script "../main.nf"
+    process "PLEXEMBLER_EXPRESSION"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plexembler"
+    tag "plexembler/expression"
+
+    test("a species' counts, a library labelled") {
+
+        when {
+            process {
+                """
+                def counts = file("\${launchDir}/sp1.featureCounts.tsv")
+                counts.text = [
+                    '# Program:featureCounts',
+                    ['Geneid', 'Chr', 'Start', 'End', 'Strand', 'Length', 'sp1.rna-ypd-1.bam'].join('\\t'),
+                    ['sp1_000010', 'sp1_chr01', 11, 1010, '+', 1000, 30].join('\\t'),
+                ].join('\\n') + '\\n'
+                input[0] = [ [ id: 'sp1', labels: ['rna-ypd-1=YPD_1'] ], counts ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.counts[0][1]).readLines() == ['gene\tlength_bp\tYPD_1', 'sp1_000010\t1000\t30'] },
+                { assert path(process.out.tpm[0][1]).readLines()[1] == 'sp1_000010\t1000000.000' },
+            )
+        }
+    }
+
+    test("a species' counts - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [ [ id: 'sp1' ], file('${moduleDir}/main.nf') ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.counts.size() == 1 },
+            )
+        }
+    }
+}

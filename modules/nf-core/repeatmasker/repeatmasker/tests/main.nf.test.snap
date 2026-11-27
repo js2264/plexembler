@@ -1,0 +1,152 @@
+{
+    "homo_sapiens - genome - fasta.gz - hmm lib": {
+        "content": [
+            {
+                "gff": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "test.gff:md5,5cd19732692c496fed8e7ad3c2f52f17"
+                    ]
+                ],
+                "masked": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "test.masked:md5,788f27945020adc342db9d56ff29a840"
+                    ]
+                ],
+                "out": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "test.out:md5,71ec2969baaa8ea492808c3ae6e7012e"
+                    ]
+                ],
+                "tbl": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "test.tbl"
+                    ]
+                ],
+                "versions_repeatmasker": [
+                    [
+                        "REPEATMASKER_REPEATMASKER",
+                        "repeatmasker",
+                        "4.1.5"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-10-16T15:18:58.047383",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.0"
+        }
+    },
+    "homo_sapiens - genome - fasta - hmm lib": {
+        "content": [
+            {
+                "gff": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "test.gff:md5,5cd19732692c496fed8e7ad3c2f52f17"
+                    ]
+                ],
+                "masked": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "test.masked:md5,788f27945020adc342db9d56ff29a840"
+                    ]
+                ],
+                "out": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "test.out:md5,71ec2969baaa8ea492808c3ae6e7012e"
+                    ]
+                ],
+                "tbl": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "test.tbl"
+                    ]
+                ],
+                "versions_repeatmasker": [
+                    [
+                        "REPEATMASKER_REPEATMASKER",
+                        "repeatmasker",
+                        "4.1.5"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-10-16T15:18:23.831268",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.0"
+        }
+    },
+    "sarscov2 - genome - fasta - stub": {
+        "content": [
+            {
+                "gff": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "test.gff:md5,d41d8cd98f00b204e9800998ecf8427e"
+                    ]
+                ],
+                "masked": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "test.masked:md5,d41d8cd98f00b204e9800998ecf8427e"
+                    ]
+                ],
+                "out": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "test.out:md5,d41d8cd98f00b204e9800998ecf8427e"
+                    ]
+                ],
+                "tbl": [
+                    [
+                        {
+                            "id": "test"
+                        },
+                        "test.tbl:md5,d41d8cd98f00b204e9800998ecf8427e"
+                    ]
+                ],
+                "versions_repeatmasker": [
+                    [
+                        "REPEATMASKER_REPEATMASKER",
+                        "repeatmasker",
+                        "4.1.5"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-08-03T12:54:16.336690987",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.6"
+        }
+    }
+}

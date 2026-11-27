@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "maps"
+description: Each species' Hi-C map on its genome - pairs aligned (bwa-mem2), parsed, sorted, deduplicated (pairtools), binned and zoomed (cooler)
+keywords:
+  - hi-c
+  - cooler
+  - pairtools
+components:
+  - bwamem2/index
+  - bwamem2/mem
+  - pairtools/parse
+  - pairtools/sort
+  - pairtools/dedup
+  - cooler/cload
+  - cooler/zoomify
+input:
+  - ch_genome:
+      type: file
+      description: |
+        Each species' genome. Structure: [ val(meta), path(fasta) ]
+  - ch_sizes:
+      type: file
+      description: |
+        Its chromosome sizes. Structure: [ val(meta), path(sizes) ]
+  - ch_hic:
+      type: file
+      description: |
+        Its Hi-C pairs. Structure: [ val(meta), [ path(R1), path(R2) ] ]
+  - resolution:
+      type: integer
+      description: |
+        The finest bin, in bases
+output:
+  - pairs:
+      type: file
+      description: |
+        Each species' pairs. Structure: [ val(meta), path(pairs) ]
+  - mcool:
+      type: file
+      description: |
+        Each species' map. Structure: [ val(meta), path(mcool) ]
+  - multiqc_files:
+      type: file
+      description: |
+        The files MultiQC reads. Structure: [ path(file) ]
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

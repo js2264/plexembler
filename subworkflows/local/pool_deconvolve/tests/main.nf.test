@@ -1,0 +1,61 @@
+nextflow_workflow {
+
+    name "Test subworkflow POOL_DECONVOLVE"
+    script "../main.nf"
+    workflow "POOL_DECONVOLVE"
+
+    tag "subworkflows"
+    tag "subworkflows_local"
+    tag "pool_deconvolve"
+
+    test("a pool of two species, its WGS and Hi-C libraries - stub") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                input[0] = channel.of(
+                    [ [ id: 'sp1', pool: 'pool' ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ],
+                    [ [ id: 'sp2', pool: 'pool' ], file('${moduleDir}/../../../tests/data/truth/sp2.fa', checkIfExists: true) ],
+                )
+                input[1] = channel.of(
+                    [
+                        [ id: 'wgs', pool: 'pool', type: 'wgs', enzymes: null, single_end: false ],
+                        [
+                            file('${moduleDir}/../../../tests/data/pool_wgs_R1.fastq.gz', checkIfExists: true),
+                            file('${moduleDir}/../../../tests/data/pool_wgs_R2.fastq.gz', checkIfExists: true),
+                        ],
+                    ],
+                    [
+                        [ id: 'hic', pool: 'pool', type: 'hic', enzymes: 'DpnII', single_end: false ],
+                        [
+                            file('${moduleDir}/../../../tests/data/pool_hic_R1.fastq.gz', checkIfExists: true),
+                            file('${moduleDir}/../../../tests/data/pool_hic_R2.fastq.gz', checkIfExists: true),
+                        ],
+                    ],
+                    [
+                        [ id: 'rna', pool: 'pool', type: 'rnaseq', enzymes: null, single_end: false ],
+                        [
+                            file('${moduleDir}/../../../tests/data/pool_rnaseq_R1.fastq.gz', checkIfExists: true),
+                            file('${moduleDir}/../../../tests/data/pool_rnaseq_R2.fastq.gz', checkIfExists: true),
+                        ],
+                    ],
+                )
+                input[2] = 'contigs'
+                """
+            }
+        }
+
+        then {
+            def reads = workflow.out.reads.collect { meta, _files -> "${meta.id}.${meta.library}.${meta.holdout}".toString() }
+            assertAll(
+                { assert workflow.success },
+                // Each species' pairs of each library, and those held out; RNA-seq is not split here.
+                { assert reads.sort() == ['sp1.hic.false', 'sp1.hic.true', 'sp1.wgs.false', 'sp1.wgs.true', 'sp2.hic.false', 'sp2.hic.true', 'sp2.wgs.false', 'sp2.wgs.true'] },
+                { assert workflow.out.split.size() == 2 },
+                { assert workflow.out.contacts.size() == 1 },
+            )
+        }
+    }
+}

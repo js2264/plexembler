@@ -1,0 +1,15 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/environment-schema.json
+# plexembler's own commands, from the release's tag (docs/plan.md, T1), and
+# samtools' bgzip, which compresses the kept sequence so that it can be
+# indexed. The containers run ghcr.io/js2264/plexembler:<version>, which holds
+# the same.
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bioconda::samtools=1.22.1
+  - conda-forge::python=3.13
+  - conda-forge::pip=25.3
+  - pip:
+      - "plexembler @ git+https://github.com/js2264/plexembler@v0.0.0"

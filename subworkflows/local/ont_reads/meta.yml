@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "ont_reads"
+description: A species' nanopore reads, ready to assemble - its runs as one FASTQ (Dorado's BAMs converted), NanoPlot, the chemistry and genome size the samplesheet left NA, filtered by length and quality, capped at a depth
+keywords:
+  - nanopore
+  - reads
+  - filtering
+  - genome size
+components:
+  - samtools/fastq
+  - cat/fastq
+  - nanoplot
+  - chopper
+  - lrge
+  - filtlong
+input:
+  - ch_species:
+      type: file
+      description: |
+        The species, one item per species, its runs in the samplesheet's order
+        Structure: [ val(meta), [ path(ont) ] ]
+      pattern: "*.{fastq,fq,bam}{,.gz}"
+  - max_depth:
+      type: integer
+      description: The depth the reads are capped at, from the genome size; 0 for no cap
+output:
+  - reads:
+      type: file
+      description: |
+        The reads to assemble, one item per species; meta has chemistry and genome_size_bp, and whether each was estimated
+        Structure: [ val(meta), path(fastq) ]
+      pattern: "*.fastq.gz"
+  - raw:
+      type: file
+      description: |
+        A species' runs as one FASTQ
+        Structure: [ val(meta), path(fastq) ]
+      pattern: "*.fastq.gz"
+  - nanostats:
+      type: file
+      description: |
+        NanoPlot's statistics of the reads as they came
+        Structure: [ val(meta), path(txt) ]
+      pattern: "*.txt"
+  - genome_size:
+      type: file
+      description: |
+        LRGE's log, for a species whose genome size was estimated
+        Structure: [ val(meta), path(log) ]
+      pattern: "*.lrge.log"
+  - filtlong_log:
+      type: file
+      description: |
+        Filtlong's log
+        Structure: [ val(meta), path(log) ]
+      pattern: "*.log"
+  - multiqc_files:
+      type: file
+      description: |
+        The files MultiQC reads
+        Structure: [ path(file) ]
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

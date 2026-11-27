@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "polish_sr"
+description: Each species polished with its own short reads - its WGS pairs, or its Hi-C reads cut at their junctions - by Polypolish then pypolca, kept only if the QV against held-out pairs rises
+keywords:
+  - polishing
+  - short reads
+  - hi-c
+components:
+  - plexembler/digest
+  - cat/fastq
+  - bwa/index
+  - bwa/mem
+  - find/concatenate
+  - polypolish/polish
+  - pypolca
+  - meryl/count
+  - meryl/unionsum
+  - merqury/merqury
+  - plexembler/select
+input:
+  - ch_contigs:
+      type: file
+      description: |
+        Each species' draft. Structure: [ val(meta), path(fasta) ]
+  - ch_reads:
+      type: file
+      description: |
+        Each species' split reads (pool_deconvolve). Structure: [ val(meta), [ path(R1), path(R2) ] ]
+  - polish_reads:
+      type: string
+      description: |
+        auto, wgs or hic
+  - kmer_size:
+      type: integer
+      description: |
+        k, for the QV guard
+output:
+  - contigs:
+      type: file
+      description: |
+        Each species' contigs: polished when it raised the QV, else as they came. Structure: [ val(meta), path(fasta) ]
+  - selection:
+      type: file
+      description: |
+        Each species' table of the draft and its polishings. Structure: [ val(meta), path(tsv) ]
+  - digest:
+      type: file
+      description: |
+        Each species' digestion numbers. Structure: [ val(meta), path(json) ]
+  - multiqc_files:
+      type: file
+      description: |
+        The files MultiQC reads. Structure: [ path(file) ]
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

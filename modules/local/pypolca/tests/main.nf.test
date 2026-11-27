@@ -1,0 +1,37 @@
+nextflow_process {
+
+    name "Test process PYPOLCA"
+    script "../main.nf"
+    process "PYPOLCA"
+
+    tag "modules"
+    tag "modules_local"
+    tag "pypolca"
+
+    test("a draft and a species' pairs - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'sp1' ],
+                    file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true),
+                    [
+                        file('${moduleDir}/../../../tests/data/pool_wgs_R1.fastq.gz', checkIfExists: true),
+                        file('${moduleDir}/../../../tests/data/pool_wgs_R2.fastq.gz', checkIfExists: true),
+                    ],
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.fasta.size() == 1 },
+            )
+        }
+    }
+}

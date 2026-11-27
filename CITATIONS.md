@@ -16,6 +16,130 @@ Every tool a step of the pipeline runs, added with its step ([docs/plan.md](docs
 
   > De Coster W, Rademakers R. NanoPack2: population-scale evaluation of long-read sequencing data. Bioinformatics. 2023 May 4;39(5):btad311. doi: 10.1093/bioinformatics/btad311. PubMed PMID: 37171891.
 
+- [SAMtools](https://doi.org/10.1093/gigascience/giab008)
+
+  > Danecek P, Bonfield JK, Liddle J, Marshall J, Ohan V, Pollard MO, Whitwham A, Keane T, McCarthy SA, Davies RM, Li H. Twelve years of SAMtools and BCFtools. GigaScience. 2021 Feb 16;10(2):giab008. doi: 10.1093/gigascience/giab008.
+
+- [chopper](https://doi.org/10.1093/bioinformatics/btad311)
+
+  > De Coster W, Rademakers R. NanoPack2: population-scale evaluation of long-read sequencing data. Bioinformatics. 2023 May 4;39(5):btad311. doi: 10.1093/bioinformatics/btad311.
+
+- [Filtlong](https://github.com/rrwick/Filtlong)
+
+  > Wick RR. Filtlong: quality filtering tool for long reads. GitHub.
+
+- [LRGE](https://doi.org/10.1101/2024.11.27.625777)
+
+  > Hall MB, Coin LJM. Genome size estimation from long read overlaps. bioRxiv. 2024. doi: 10.1101/2024.11.27.625777.
+
+- [Flye](https://doi.org/10.1038/s41587-019-0072-8)
+
+  > Kolmogorov M, Yuan J, Lin Y, Pevzner PA. Assembly of long, error-prone reads using repeat graphs. Nat Biotechnol. 2019 May;37(5):540-546. doi: 10.1038/s41587-019-0072-8.
+
+- [hifiasm](https://doi.org/10.1038/s41592-020-01056-5)
+
+  > Cheng H, Concepcion GT, Feng X, Zhang H, Li H. Haplotype-resolved de novo assembly using phased assembly graphs with hifiasm. Nat Methods. 2021 Feb;18(2):170-175. doi: 10.1038/s41592-020-01056-5.
+
+- [gfatools](https://github.com/lh3/gfatools)
+
+  > Li H. gfatools: tools for manipulating sequence graphs in the GFA and rGFA formats. GitHub.
+
+- [Medaka](https://github.com/nanoporetech/medaka)
+
+  > Oxford Nanopore Technologies. Medaka: sequence correction provided by ONT Research. GitHub.
+
+- [Dorado](https://github.com/nanoporetech/dorado)
+
+  > Oxford Nanopore Technologies. Dorado: Oxford Nanopore's basecaller, aligner and polisher. GitHub.
+
+- [gfastats](https://doi.org/10.1093/bioinformatics/btac460)
+
+  > Formenti G, Abueg L, Brajuka A, Brajuka N, Gallardo-Alba C, Giani A, Fedrigo O, Jarvis ED. Gfastats: conversion, evaluation and manipulation of genome sequences using assembly graphs. Bioinformatics. 2022 Aug 10;38(17):4214-4216. doi: 10.1093/bioinformatics/btac460.
+
+- [BUSCO](https://doi.org/10.1093/molbev/msab199)
+
+  > Manni M, Berkeley MR, Seppey M, Simão FA, Zdobnov EM. BUSCO Update: Novel and Streamlined Workflows along with Broader and Deeper Phylogenetic Coverage for Scoring of Eukaryotic, Prokaryotic, and Viral Genomes. Mol Biol Evol. 2021 Sep 27;38(10):4647-4654. doi: 10.1093/molbev/msab199.
+
+- [Merqury](https://doi.org/10.1186/s13059-020-02134-9)
+
+  > Rhie A, Walenz BP, Koren S, Phillippy AM. Merqury: reference-free quality, completeness, and phasing assessment for genome assemblies. Genome Biol. 2020 Sep 14;21(1):245. doi: 10.1186/s13059-020-02134-9.
+
+- [GenomeScope 2.0](https://doi.org/10.1038/s41467-020-14998-3)
+
+  > Ranallo-Benavidez TR, Jaron KS, Schatz MC. GenomeScope 2.0 and Smudgeplot for reference-free profiling of polyploid genomes. Nat Commun. 2020 Mar 18;11(1):1432. doi: 10.1038/s41467-020-14998-3.
+
+- [skani](https://doi.org/10.1038/s41592-023-02018-3)
+
+  > Shaw J, Yu YW. Fast and robust metagenomic sequence comparison through sparse chaining with skani. Nat Methods. 2023 Nov;20(11):1661-1665. doi: 10.1038/s41592-023-02018-3.
+
+- [bwa-mem2](https://doi.org/10.1109/IPDPS.2019.00041)
+
+  > Vasimuddin M, Misra S, Li H, Aluru S. Efficient Architecture-Aware Acceleration of BWA-MEM for Multicore Systems. IEEE IPDPS. 2019:314-324. doi: 10.1109/IPDPS.2019.00041.
+
+- [BWA](https://doi.org/10.1093/bioinformatics/btp324)
+
+  > Li H, Durbin R. Fast and accurate short read alignment with Burrows-Wheeler transform. Bioinformatics. 2009 Jul 15;25(14):1754-60. doi: 10.1093/bioinformatics/btp324.
+
+- [Polypolish](https://doi.org/10.1371/journal.pcbi.1009802)
+
+  > Wick RR, Holt KE. Polypolish: Short-read polishing of long-read bacterial genome assemblies. PLoS Comput Biol. 2022 Jan 24;18(1):e1009802. doi: 10.1371/journal.pcbi.1009802.
+
+- [pypolca](https://doi.org/10.1099/mgen.0.001254)
+
+  > Bouras G, Judd LM, Edwards RA, Vreugde S, Stinear TP, Wick RR. How low can you go? Short-read polishing of Oxford Nanopore bacterial genome assemblies. Microb Genom. 2024 Jun;10(6):001254. doi: 10.1099/mgen.0.001254.
+
+- [minimap2](https://doi.org/10.1093/bioinformatics/bty191)
+
+  > Li H. Minimap2: pairwise alignment for nucleotide sequences. Bioinformatics. 2018 Sep 15;34(18):3094-3100. doi: 10.1093/bioinformatics/bty191.
+
+- [YaHS](https://doi.org/10.1093/bioinformatics/btac808)
+
+  > Zhou C, McCarthy SA, Durbin R. YaHS: yet another Hi-C scaffolding tool. Bioinformatics. 2023 Jan 1;39(1):btac808. doi: 10.1093/bioinformatics/btac808.
+
+- [pairtools](https://doi.org/10.1371/journal.pcbi.1012164)
+
+  > Open2C, Abdennur N, Fudenberg G, Flyamer IM, Galitsyna AA, Goloborodko A, Imakaev M, Venev SV. Pairtools: from sequencing data to chromosome contacts. PLoS Comput Biol. 2024 May;20(5):e1012164. doi: 10.1371/journal.pcbi.1012164.
+
+- [cooler](https://doi.org/10.1093/bioinformatics/btz540)
+
+  > Abdennur N, Mirny LA. Cooler: scalable storage for Hi-C data and other genomically labeled arrays. Bioinformatics. 2020 Jan 1;36(1):311-316. doi: 10.1093/bioinformatics/btz540.
+
+- [STAR](https://doi.org/10.1093/bioinformatics/bts635)
+
+  > Dobin A, Davis CA, Schlesinger F, Drenkow J, Zaleski C, Jha S, Batut P, Chaisson M, Gingeras TR. STAR: ultrafast universal RNA-seq aligner. Bioinformatics. 2013 Jan 1;29(1):15-21. doi: 10.1093/bioinformatics/bts635.
+
+- [RepeatModeler2](https://doi.org/10.1073/pnas.1921046117)
+
+  > Flynn JM, Hubley R, Goubert C, Rosen J, Clark AG, Feschotte C, Smit AF. RepeatModeler2 for automated genomic discovery of transposable element families. Proc Natl Acad Sci U S A. 2020 Apr 28;117(17):9451-9457. doi: 10.1073/pnas.1921046117.
+
+- [RepeatMasker](https://www.repeatmasker.org)
+
+  > Smit AFA, Hubley R, Green P. RepeatMasker Open-4.0. 2013-2015.
+
+- [BRAKER3](https://doi.org/10.1101/gr.278090.123)
+
+  > Gabriel L, Brůna T, Hoff KJ, Ebel M, Lomsadze A, Borodovsky M, Stanke M. BRAKER3: Fully automated genome annotation using RNA-seq and protein evidence with GeneMark-ETP, AUGUSTUS, and TSEBRA. Genome Res. 2024 Jun 25;34(5):769-777. doi: 10.1101/gr.278090.123.
+
+- [AUGUSTUS](https://doi.org/10.1093/bioinformatics/btn013)
+
+  > Stanke M, Diekhans M, Baertsch R, Haussler D. Using native and syntenically mapped cDNA alignments to improve de novo gene finding. Bioinformatics. 2008 Mar 1;24(5):637-44. doi: 10.1093/bioinformatics/btn013.
+
+- [tRNAscan-SE](https://doi.org/10.1093/nar/gkab688)
+
+  > Chan PP, Lin BY, Mak AJ, Lowe TM. tRNAscan-SE 2.0: improved detection and functional classification of transfer RNA genes. Nucleic Acids Res. 2021 Sep 20;49(16):9077-9096. doi: 10.1093/nar/gkab688.
+
+- [barrnap](https://github.com/tseemann/barrnap)
+
+  > Seemann T. barrnap: BAsic Rapid Ribosomal RNA Predictor.
+
+- [featureCounts](https://doi.org/10.1093/bioinformatics/btt656)
+
+  > Liao Y, Smyth GK, Shi W. featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics. 2014 Apr 1;30(7):923-30. doi: 10.1093/bioinformatics/btt656.
+
+- [deepTools](https://doi.org/10.1093/nar/gkw257)
+
+  > Ramírez F, Ryan DP, Grüning B, Bhardwaj V, Kilpert F, Richter AS, Heyne S, Dündar F, Manke T. deepTools2: a next generation web server for deep-sequencing data analysis. Nucleic Acids Res. 2016 Jul 8;44(W1):W160-5. doi: 10.1093/nar/gkw257.
+
 - [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
 
 > Andrews, S. (2010). FastQC: A Quality Control Tool for High Throughput Sequence Data [Online].

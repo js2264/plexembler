@@ -1,0 +1,89 @@
+nextflow_process {
+
+    name "Test process PLEXEMBLER_SELECT"
+    script "../main.nf"
+    process "PLEXEMBLER_SELECT"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plexembler"
+    tag "plexembler/select"
+
+    test("two candidates, one without a BUSCO summary") {
+
+        when {
+            process {
+                """
+                def dir = file("\${launchDir}/checks")
+                dir.mkdirs()
+                def busco = file("\${dir}/short_summary.flye.txt")
+                busco.text = '\\tC:98.5%[S:97.9%,D:0.6%],F:0.3%,M:1.2%,n:2137\\n'
+                def qv_flye = file("\${dir}/flye.qv")
+                qv_flye.text = 'flye\\t10\\t1000\\t45.2\\t3e-05\\n'
+                def qv_hifiasm = file("\${dir}/hifiasm.qv")
+                qv_hifiasm.text = 'hifiasm\\t10\\t1000\\t50.1\\t1e-05\\n'
+                def stats_flye = file("\${dir}/flye.assembly_summary")
+                stats_flye.text = '# contigs\\t2\\nContig N50\\t24000\\n'
+                def stats_hifiasm = file("\${dir}/hifiasm.assembly_summary")
+                stats_hifiasm.text = '# contigs\\t3\\nContig N50\\t16000\\n'
+                def contigs = file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true)
+                def flye = file("\${dir}/sp1.flye.fa")
+                flye.text = contigs.text
+                def hifiasm = file("\${dir}/sp1.hifiasm.fa")
+                hifiasm.text = contigs.text
+                input[0] = [
+                    [ id: 'sp1', keep: null ],
+                    ['flye', 'hifiasm'],
+                    [flye, hifiasm],
+                    [busco, file('${moduleDir}/../../../../assets/NO_FILE', checkIfExists: true)],
+                    [qv_flye, qv_hifiasm],
+                    [stats_flye, stats_hifiasm],
+                ]
+                input[1] = 'assembly'
+                """
+            }
+        }
+
+        then {
+            def table = path(process.out.selection[0][1]).readLines()
+            assertAll(
+                { assert process.success },
+                // hifiasm has no BUSCO number: the rule is left out, and the QV decides.
+                { assert table[2].startsWith('hifiasm\tyes') },
+                { assert table[2].endsWith('the highest QV') },
+                { assert table[2].split('\t')[2] == 'NA' },
+                { assert process.out.multiqc.size() == 1 },
+                { assert process.out.fasta[0][1].toString().endsWith('sp1.assembly.fa.gz') },
+            )
+        }
+    }
+
+    test("one candidate - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'sp1', keep: 'flye' ],
+                    ['flye'],
+                    [file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true)],
+                    [file('${moduleDir}/../../../../assets/NO_FILE', checkIfExists: true)],
+                    [file('${moduleDir}/../../../../assets/NO_FILE', checkIfExists: true)],
+                    [file('${moduleDir}/../../../../assets/NO_FILE', checkIfExists: true)],
+                ]
+                input[1] = 'assembly'
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.fasta.size() == 1 },
+                { assert process.out.selection.size() == 1 },
+            )
+        }
+    }
+}

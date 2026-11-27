@@ -1,0 +1,89 @@
+nextflow_workflow {
+
+    name "Test subworkflow CONTIGS"
+    script "../main.nf"
+    workflow "CONTIGS"
+
+    tag "subworkflows"
+    tag "subworkflows_local"
+    tag "contigs"
+
+    test("two species, two assemblers, one kept by the samplesheet - stub") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                def meryl = file("\${launchDir}/k.meryl")
+                meryl.mkdirs()
+                def species = [
+                    [ id: 'sp1', pool: 'pool', chemistry: 'r10', ploidy: 1, busco_lineage: null, assembler: null, single_end: true ],
+                    [ id: 'sp2', pool: 'pool', chemistry: 'r9', ploidy: 1, busco_lineage: null, assembler: 'hifiasm', single_end: true ],
+                ]
+                input[0] = channel.of(
+                    [ species[0], file('${moduleDir}/../../../tests/data/sp1.ont.fastq.gz', checkIfExists: true) ],
+                    [ species[1], file('${moduleDir}/../../../tests/data/sp2.ont.fastq.gz', checkIfExists: true) ],
+                )
+                input[1] = channel.empty()
+                input[2] = channel.of([ [ id: 'sp1' ], meryl ], [ [ id: 'sp2' ], meryl ])
+                input[3] = channel.of([ [ id: 'pool' ], meryl ])
+                input[4] = ['flye', 'hifiasm']
+                input[5] = 'medaka'
+                input[6] = 'eukaryota_odb12'
+                input[7] = []
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                // Each species' kept contigs, its meta as it came.
+                { assert workflow.out.contigs.size() == 2 },
+                { assert workflow.out.contigs.every { meta, _fasta -> !meta.containsKey('candidate') && !meta.containsKey('keep') } },
+                // Two candidates per species, each polished and checked.
+                { assert workflow.out.candidates.size() == 4 },
+                { assert workflow.out.selection.size() == 2 },
+                { assert workflow.out.qv.size() == 4 },
+                // The pool's two species, their identity.
+                { assert workflow.out.ani.size() == 1 },
+            )
+        }
+    }
+
+    test("one species, no polishing - stub") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                def meryl = file("\${launchDir}/k.meryl")
+                meryl.mkdirs()
+                input[0] = channel.of([
+                    [ id: 'sp1', pool: 'pool', chemistry: 'r10', ploidy: 1, busco_lineage: null, assembler: null, single_end: true ],
+                    file('${moduleDir}/../../../tests/data/sp1.ont.fastq.gz', checkIfExists: true),
+                ])
+                input[1] = channel.empty()
+                input[2] = channel.of([ [ id: 'sp1' ], meryl ])
+                input[3] = channel.empty()
+                input[4] = ['flye']
+                input[5] = 'none'
+                input[6] = 'eukaryota_odb12'
+                input[7] = []
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.out.contigs.size() == 1 },
+                { assert workflow.out.candidates.size() == 1 },
+                // One species: no pair to compare.
+                { assert workflow.out.ani.size() == 0 },
+            )
+        }
+    }
+}
