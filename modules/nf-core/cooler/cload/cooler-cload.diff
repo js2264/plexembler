@@ -1,0 +1,16 @@
+Changes in component 'nf-core/cooler/cload'
+'modules/nf-core/cooler/cload/meta.yml' is unchanged
+'modules/nf-core/cooler/cload/main.nf' is unchanged
+Changes in 'cooler/cload/environment.yml':
+--- modules/nf-core/cooler/cload/environment.yml
++++ modules/nf-core/cooler/cload/environment.yml
+@@ -5,3 +5,4 @@
+   - bioconda
+ dependencies:
+   - bioconda::cooler=0.10.4
++  - conda-forge::numpy=1.26.4
+
+'modules/nf-core/cooler/cload/tests/main.nf.test' is unchanged
+'modules/nf-core/cooler/cload/tests/main.nf.test.snap' is unchanged
+'modules/nf-core/cooler/cload/tests/nextflow.config' is unchanged
+************************************************************

@@ -30,7 +30,9 @@ the steps labelled `process_gpu` (instaGRAAL's MCMC mode, Helixer,
 
 ## On a SLURM cluster
 
-Apptainer (or Singularity), and the SLURM executor. If your institution has a
+Apptainer (or Singularity), and the SLURM executor; on a cluster without
+either, conda's environments instead (`-profile micromamba`,
+[usage](../usage.md#without-a-container-engine)). If your institution has a
 profile in [nf-core/configs](https://nf-co.re/configs/), use it: it sets the
 executor, the queues and the container cache. On Institut Pasteur's Maestro:
 

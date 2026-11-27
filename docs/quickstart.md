@@ -5,9 +5,20 @@
 Two species of a few dozen kilobases, and a pool of three libraries made from
 both (`tests/data/`, written by `tests/data/make_test_data.py`):
 
-```bash
-nextflow run js2264/plexembler -profile test,docker --outdir results
-```
+=== "Nextflow"
+
+    ```bash
+    nextflow run js2264/plexembler -profile test,docker --outdir results
+    ```
+
+=== "uv"
+
+    ```bash
+    uvx plexembler run -profile test,docker --outdir results
+    ```
+
+    The same run, of the latest release, with nothing installed but uv and
+    Java ([installation](installation.md#with-uv)).
 
 Open `results/multiqc/multiqc_report.html`.
 
@@ -34,10 +45,19 @@ Open `results/multiqc/multiqc_report.html`.
 3. Run it, with the profile of your machine ([on a workstation or a
    cluster](guides/compute.md)):
 
-    ```bash
-    nextflow run js2264/plexembler -profile docker \
-        --input species.csv --libraries libraries.csv --outdir results
-    ```
+    === "Nextflow"
+
+        ```bash
+        nextflow run js2264/plexembler -profile docker \
+            --input species.csv --libraries libraries.csv --outdir results
+        ```
+
+    === "uv"
+
+        ```bash
+        uvx plexembler run -profile docker \
+            --input species.csv --libraries libraries.csv --outdir results
+        ```
 
 [Usage](usage.md) describes every column, and [outputs](output.md) every
 result.

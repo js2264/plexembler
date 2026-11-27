@@ -189,11 +189,13 @@ jobs:
       - name: The wheel
         run: python -m pip wheel --no-deps --wheel-dir dist .
 
-      # Fails if a dependency has no wheel in any version the package allows.
+      # Fails if a dependency has no wheel in any version the package allows,
+      # but nextflow: PyPI has Nextflow's launcher, a shell script, as an sdist
+      # alone, which builds without a compiler.
       - name: Installed from wheels, in a fresh environment
         run: |
           python -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install --only-binary :all: dist/*.whl
+          "$RUNNER_TEMP/venv/bin/pip" install --only-binary :all: --no-binary nextflow dist/*.whl
 
       - name: Every command answers --help, and plexembler --version, with nothing on PATH
         run: |

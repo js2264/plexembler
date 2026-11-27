@@ -11,6 +11,58 @@ with a table whose first column lists its options, short form first:
 
 ## Commands
 
+### `run` { #run }
+
+Runs the pipeline with Nextflow, at plexembler's own version: `plexembler run
+ARGS…` runs `nextflow run js2264/plexembler -r v<version> ARGS…`, and every
+argument but its own options goes to Nextflow as it is: Nextflow's options
+(`-profile`, `-resume`, `-c`, `-r`) and the pipeline's
+[parameters](parameters.md) (`--input`, `--libraries`, `--outdir`).
+plexembler brings Nextflow's launcher with it, PyPI's `nextflow`, which
+fetches Nextflow at its first run ([installation](installation.md#with-uv)):
+with Java, plexembler is all a machine needs to run the pipeline, but a
+container engine.
+
+```bash
+plexembler run -profile docker \
+    --input species.csv --libraries libraries.csv --outdir results
+```
+
+- **The pipeline, and its revision.** A release of plexembler (PyPI's, as
+  `uvx plexembler` takes it) runs `js2264/plexembler` at its tag,
+  `v<version>`: the package's version is the pipeline's. Installed from a folder that holds the
+  pipeline (a clone, by `uv sync` or `pip install -e .`), it runs that folder
+  as it is; installed from the git repository by pip or uv, that repository at
+  the commit installed. `-r` runs another revision of the repository,
+  `--pipeline` another pipeline.
+- **Nextflow** is the one beside plexembler's Python, the launcher that uv
+  and pip install with it (conda, its Nextflow), else the one on `PATH`:
+  26.04.0 or newer, which needs Java 17 or newer, the machine's, or jdk4py's
+  with the `java` extra (`plexembler[java]`), which plexembler gives it
+  (`NXF_JAVA_HOME`, unless set). plexembler hands
+  its process over to it, so that Nextflow's exit status and logs are the
+  run's (`.nextflow.log` where it runs, `<outdir>/pipeline_info/`), and Ctrl-C
+  stops Nextflow as it would without plexembler.
+- **Its own options** are read word for word, wherever they are; every
+  argument after `--` goes to Nextflow, so that `plexembler run -- --help`
+  lists the pipeline's parameters, which `--help` alone does not.
+- **No log of its own,** and none of the options of the commands that write
+  outputs (`-o`, `--force`, `-p`, `-v`, `-q`): the run's outputs and log are
+  Nextflow's, and a single-dash option is Nextflow's, as `-profile` is.
+
+`--dry-run` prints the command:
+
+```console
+$ plexembler run --dry-run -profile docker --input species.csv --outdir results
+/usr/local/bin/nextflow run js2264/plexembler -r v0.1.0 -profile docker --input species.csv --outdir results
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `NEXTFLOW_ARGS` | | Nextflow's options and the pipeline's parameters, as `nextflow run` takes them. |
+| `--pipeline` | the folder or the commit plexembler was installed from, else `js2264/plexembler` | The pipeline: a folder (a clone), run as it is, or a repository, which Nextflow pulls, run at `v<version>` unless `-r` names a revision. |
+| `--dry-run` | off | Print the Nextflow command, and run nothing. |
+
 ### `rename` { #rename }
 
 Names every contig after its species, `<species>_<contig>`: the name of every
@@ -25,12 +77,38 @@ plexembler rename contigs.fa -p Scer -o Scer.contigs.fa.gz
 It writes the renamed FASTA, the table of names beside it (`Scer.contigs.names.tsv`:
 [format](formats.md#names-table)), and its log, `Scer.plexembler_<YYYYMMDDHHMMSS>.log`.
 
+**A circle written twice.** An assembler can write a circular genome, a
+mitochondrion or a plasmid, as two or more copies of itself joined end to end:
+on some runs, Flye wrote the benchmark's 20,063-bp *N. glabratus*
+mitochondrion as one 40,128-bp contig, which QUAST reads as a misassembly. A
+contig that is such copies is cut to its first copy, before anything else sees
+it, and the log says so: its copies, the unit's length and how alike they are.
+A contig is `k` copies of a unit when its 21-mers, but the last copy's, are
+found again one unit on (within as many bases as the copies may differ by),
+at `--min-identity` or more (the share found is about the identity to the
+21st power), and when it is a whole number of units long: a circle's copies
+are, the last one closing on the first, and a tandem repeat of a linear
+chromosome seldom is. The unit is `--min-unit` bases or more, and a contig that
+is a tandem repeat of a shorter one throughout, a satellite, stays whole. With
+`--assembly-info`, Flye's table of its contigs, a contig Flye says is linear
+(`circ.` N), a tandem repeat such as the rDNA's, is never cut; its circular
+ones (`circ.` Y, a doubled one with a `mult.` of 2 or more) and every contig of
+an assembler without such a table (hifiasm) are judged by their sequence.
+
+```bash
+plexembler rename assembly.fasta -p Cgla -o Cgla.contigs.fa -a assembly_info.txt
+```
+
 | Option | Default | Description |
 |---|---|---|
 | `FASTA` | (required) | The contigs, as FASTA; gzipped or not. |
 | `-p, --prefix` | (required) | The species' ID, which every new name starts with: a letter, then letters, digits and hyphens. It names the log. |
 | `-o, --output` | (required) | The renamed contigs, as FASTA; gzipped when the name ends in `.gz`. |
 | `-n, --names` | `<output>.names.tsv` | The table of new and original names; by default beside the output, its `.fa`/`.fasta`/`.fna` and `.gz` extensions replaced. |
+| `-a, --assembly-info` | | The assembler's table of its contigs, Flye's `assembly_info.txt`: a contig it says is linear (`circ.` N) is never cut. |
+| `--collapse/--no-collapse` | on | Cut a contig that is two or more copies of a unit, end to end (a circle its assembler went round twice), to its first copy. |
+| `--min-unit` | `1000` | The shortest unit, in bases, that a contig is looked at as copies of. |
+| `--min-identity` | `0.99` | The lowest identity between a contig's copies, from their 21-mers, at which it is cut. |
 | `--force` | off | Overwrite outputs that exist already. |
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |

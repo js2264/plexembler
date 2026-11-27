@@ -92,8 +92,9 @@ nanopore reads (Medaka, or `dorado polish`), and checked; one is kept by
   its MultiQC table and the command's log.
 - `species/<species>/candidates/assembly/<assembler>/`, for each candidate:
     - `<species>.<assembler>.contigs.fa`, its contigs named after the species,
-      before polishing, and their names' table (`.contigs.names.tsv`,
-      [format](formats.md#names-table));
+      before polishing, a circle the assembler wrote as copies of itself cut
+      to one copy, and their names' table (`.contigs.names.tsv`: the copies
+      cut, and which contigs are circular; [format](formats.md#names-table));
     - `<species>.<assembler>.polished.fa.gz`, the polished contigs;
     - the assembler's own files: Flye's graph (`.assembly_graph.gfa.gz`),
       contig table (`.assembly_info.txt`), log and parameters; hifiasm's

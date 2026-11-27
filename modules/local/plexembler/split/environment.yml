@@ -10,5 +10,11 @@ dependencies:
   - bioconda::samtools=1.22.1
   - conda-forge::python=3.13
   - conda-forge::pip=25.3
+  # plexembler's dependencies, from conda-forge: pip then adds plexembler alone,
+  # whatever ~/.local holds, which the steps do not see (PYTHONNOUSERSITE).
+  - conda-forge::click=8.5.1
+  - conda-forge::jinja2=3.1.6
+  - conda-forge::pyyaml=6.0.3
+  - conda-forge::rich-click=1.9.9
   - pip:
       - "plexembler @ git+https://github.com/js2264/plexembler@v0.0.0"

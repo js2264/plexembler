@@ -34,6 +34,13 @@ nf-core pipelines lint                                  # nf-core's checks (.nf-
 nf-core pipelines schema docs nextflow_schema.json --output docs/parameters.md --force
 ```
 
+The pipeline as uv runs it, with PyPI's Nextflow launcher (Java ≥ 17;
+docs/contributing.md):
+
+```bash
+uvx --from . plexembler run --pipeline . -profile test -preview --outdir results
+```
+
 ## Layout
 
 ```text
@@ -83,8 +90,23 @@ docs/                        the site's pages; docs/plan.md is the implementatio
   (docs/concepts.md). A species' ID has no underscore.
 - **The version is the package's** (`pyproject.toml`), written again as the
   pipeline's `manifest.version`; bump-my-version changes both.
+- **Nextflow comes with the package**: PyPI's `nextflow`, Nextflow's
+  launcher, is a dependency whose floor is the pipeline's
+  `manifest.nextflowVersion` (`tests/test_run.py` checks); bioconda's recipe
+  has bioconda's instead (docs/contributing.md).
+- **The steps that run plexembler take its dependencies from conda-forge**:
+  a dependency of `pyproject.toml` is pinned in
+  `modules/local/plexembler/*/environment.yml` too, at its floor or above
+  (`tests/test_environments.py` checks), and pip adds plexembler alone.
+- **`plexembler run` passes everything else to Nextflow**: no pipeline
+  parameter is named after one of its options (`pipeline`, `dry-run`), which
+  would hide it (`tests/test_run.py` checks).
 - **Every process has a `stub:` block**, and every local module and
   subworkflow an nf-test with a `-stub` test.
+- **Every step runs with conda too** (`-profile conda`, `mamba`,
+  `micromamba`), or the run refuses it at its start under them
+  (`validateCondaSteps`, `subworkflows/local/utils_nfcore_plexembler_pipeline`),
+  as it refuses BRAKER3 and Dorado.
 - **GPU runs cost money**: ask before starting one.
 
 ## Procedures

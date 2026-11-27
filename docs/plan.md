@@ -18,6 +18,7 @@ flowchart LR
   T2[T2 Test data, benchmark pool] -.-> M1
   T1[T1 The package's container] -.-> M1
   T7[T7 chromosomix, metacooler] -.-> M2
+  T8[T8 plexembler run, uv] -.-> C
 ```
 
 ## Versions: 0.x, for good
@@ -137,7 +138,13 @@ usable as a draft genome on its own.
       (`--assemblers flye,hifiasm`), for R10 reads, `-l0` for a haploid species
       (nf-core: `flye`, `hifiasm`, `gfatools/gfa2fa`).
 - [x] **Contigs named after their species:** `plexembler rename`, in a local
-      module `PLEXEMBLER_RENAME` (plain FASTA: Medaka indexes it).
+      module `PLEXEMBLER_RENAME` (plain FASTA: Medaka indexes it). A circle
+      that the assembler wrote as copies of itself is cut to one copy there,
+      before Medaka, the checks and the screen see it: on some runs of the
+      benchmark, Flye wrote Cgla's 20 kb mitochondrion as one 40 kb contig,
+      which QUAST counted as a misassembly. The copies are found on the
+      sequence (whole, near-identical); Flye's `assembly_info.txt` keeps the
+      contigs it says are linear whole, and hifiasm gives no such table.
 - [x] **Nanopore polishing** (`--ont_polisher medaka|dorado|none`): Medaka
       (nf-core `medaka`); `dorado polish` (local, `process_gpu`, experimental
       until tested on a GPU) for Dorado's BAMs.
@@ -274,8 +281,9 @@ screened.
 - [x] **Organelles and plasmids:** the mitochondrial contig, by circularity, GC,
       depth and `miniprot` hits of a small set of yeast mitochondrial proteins
       (`assets/`), kept apart as `<species>_chrM`. Today by depth and GC (the
-      screen's `organelle` verdict); circularity (Flye's graph) and miniprot's
-      hits to come.
+      screen's `organelle` verdict); circularity (Flye's table, which
+      `plexembler rename` reads already: its names table's `circular`) and
+      miniprot's hits to come.
 - [ ] **Foreign DNA:** FCS-adaptor always; FCS-GX with `--fcsgx_db` (nf-core's
       subworkflow `fasta_clean_fcs`); Tiara's labels (eukaryote, prokaryote,
       organelle) for the report.
@@ -501,7 +509,8 @@ pipeline's own steps need a container before the package is anywhere else.
       checkout before nf-test, so that a pull request tests its own code.
 - [x] The local modules that run `plexembler`: `container
       "ghcr.io/js2264/plexembler:${workflow.manifest.version}"`, and for conda
-      an environment that installs the package at the release's tag (M1).
+      an environment that installs the package at the release's tag (M1),
+      which bump-my-version writes and `pipeline.yml`'s lint checks.
 
 ### T2 · Test data and the benchmark pool
 
@@ -633,6 +642,30 @@ from M2 on.
       pipeline from 1.0.0, which plexembler does not plan
       ([Versions](#versions-0x-for-good)), and nf-core's layout would replace some
       of the conventions' choices (`CHANGELOG.md`, the docs' site).
+
+### T8 · plexembler run, and uv
+
+The pipeline, run by a machine that has uv, and micromamba or a container
+engine, nothing else: the package runs the pipeline of its own version, and
+brings Nextflow's launcher with it, and Java with its `java` extra.
+
+- [x] **`plexembler run`**: `nextflow run js2264/plexembler -r v<version>`,
+      every other argument going to Nextflow as it is
+      ([command line](cli.md#run)).
+- [x] **PyPI's `nextflow`**, Nextflow's launcher, a dependency of the package:
+      `uvx plexembler run …` ([installation](installation.md#with-uv)), with
+      Java. `pipeline.yml`'s `uv` job runs it, from the checkout, on the test
+      profile in preview, with Java 17 and 25.
+- [x] **Java from PyPI**, the `java` extra (jdk4py), which `plexembler run`
+      gives Nextflow: with micromamba for the steps' environments, a machine
+      needs uv and micromamba alone (`pipeline.yml`'s `conda` job).
+- [ ] **PyPI's publishing turned on** (T1): PyPI's trusted publisher for
+      `release.yml`, then the repository variable `PUBLISH_PYPI`. `uvx
+      plexembler` runs from the first release published.
+- [ ] **bioconda's recipe**, optional (docs/contributing.md, CONVENTIONS.md
+      § 0), from PyPI's sdist: `conda install plexembler`, its BioContainers
+      image, and `pixi exec` or `pixi global install` of the package; then
+      chromokit's `bioconda` answer, for its badge and install line.
 
 ## Questions that change defaults
 

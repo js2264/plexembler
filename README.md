@@ -30,21 +30,33 @@ map, its expression table and its report.
 
 ## Install
 
-The pipeline needs [Nextflow](https://www.nextflow.io) (26.04.0 or newer) and
-a container engine (Docker, Apptainer, Singularity) or conda:
-
 ```bash
-nextflow pull js2264/plexembler
+# 1. uv
+curl -LsSf https://astral.sh/uv/install.sh | sh && . ~/.local/bin/env
+# 2. [Optional] micromamba, to run the tools without Docker or Apptainer
+curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C ~/.local bin/micromamba
+# 3. plexembler, with Nextflow's launcher and Java
+uv tool install 'plexembler[java]'
+# 4. Run it on the test data (-profile test,docker without micromamba)
+plexembler run -profile test,micromamba --outdir results
 ```
+
+On an Apple silicon Mac, micromamba's URL ends in `osx-arm64`. Without the
+`java` extra, Nextflow runs on the machine's Java, 17 or newer.
+`plexembler run` runs `nextflow run js2264/plexembler -r v<version>`, the
+pipeline of the release installed, and passes it every other argument: with a
+Nextflow of your own (26.04.0 or newer), `nextflow run js2264/plexembler`
+takes the same.
 
 ## Quick start
 
 ```bash
-nextflow run js2264/plexembler -profile test,docker --outdir results
-```
+# with micromamba (step 2): AUGUSTUS's genes, BRAKER3 having no conda environment
+plexembler run -profile micromamba --gene_predictor augustus \
+    --input species.csv --libraries libraries.csv --outdir results
 
-```bash
-nextflow run js2264/plexembler -profile docker \
+# with a container engine: BRAKER3's genes
+plexembler run -profile docker \
     --input species.csv --libraries libraries.csv --outdir results
 ```
 

@@ -52,9 +52,16 @@ workflow CONTIGS {
     GFATOOLS_GFA2FA(HIFIASM.out.primary_contigs)
 
     //
-    // MODULE: every contig named after its species, <species>_<contig>
+    // MODULE: every contig named after its species, <species>_<contig>; a
+    // circular contig that the assembler wrote as copies of itself (Flye's
+    // doubled mitochondrion) cut to one copy, by its sequence. Flye's table of
+    // contigs says which are linear, and stay whole; hifiasm writes none.
     //
-    PLEXEMBLER_RENAME(FLYE.out.fasta.mix(GFATOOLS_GFA2FA.out.fasta))
+    PLEXEMBLER_RENAME(
+        FLYE.out.fasta
+            .join(FLYE.out.txt)
+            .mix(GFATOOLS_GFA2FA.out.fasta.map { meta, fasta -> [meta, fasta, []] })
+    )
 
     //
     // MODULES: the candidates polished with their species' nanopore reads:

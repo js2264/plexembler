@@ -1,20 +1,24 @@
-"""plexembler's command line: the commands the pipeline's steps run.
+"""plexembler's command line: the pipeline, and the commands its steps run.
 
-Each command that writes outputs takes ``-o/--output`` (or ``-o/--outdir``),
-refuses to overwrite without ``--force``, names its run with ``-p/--prefix``
-(the species, or the pool) and writes its log beside its outputs
-(CONVENTIONS.md § 10, § 11). docs/cli.md documents every command and option.
+``plexembler run`` runs the pipeline with Nextflow. Each command that writes
+outputs takes ``-o/--output`` (or ``-o/--outdir``), refuses to overwrite
+without ``--force``, names its run with ``-p/--prefix`` (the species, or the
+pool) and writes its log beside its outputs (CONVENTIONS.md § 10, § 11).
+docs/cli.md documents every command and option.
 """
 
 from __future__ import annotations
 
+import shlex
 from pathlib import Path
 
 import rich_click as click
 
 from . import __version__
-from ._log import logger, run_log
+from ._log import logger, run_log, stderr_log
+from .circular import MIN_IDENTITY, MIN_UNIT, read_assembly_info
 from .rename import SPECIES, rename_contigs, write_names
+from .run import REPOSITORY, split_arguments
 
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
@@ -64,6 +68,7 @@ _QUIET = click.option(
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, "--version", prog_name="plexembler")
+@click.command_panel("Pipeline", commands=["run"])
 @click.command_panel("Contigs", commands=["rename", "select", "screen"])
 @click.command_panel(
     "Genomes", commands=["finalize", "junctions", "genes", "expression"]
@@ -72,7 +77,92 @@ _QUIET = click.option(
 @click.command_panel("Reads", commands=["digest"])
 @click.command_panel("Pools", commands=["ani", "split"])
 def cli() -> None:
-    """The commands plexembler's pipeline runs on its data."""
+    """plexembler's pipeline, and the commands it runs on its data."""
+
+
+#: What `plexembler run` says when it finds no Nextflow to run.
+NO_NEXTFLOW = (
+    "Nextflow was not found, beside plexembler or on PATH: install plexembler "
+    "with its dependencies (uvx plexembler run …, or uv tool install plexembler), "
+    "which bring Nextflow's launcher, or install Nextflow 26.04.0 or newer "
+    "(https://js2264.github.io/plexembler/installation/)"
+)
+
+
+class _NextflowCommand(click.RichCommand):
+    """A command whose arguments, but its own options, go to Nextflow as they are.
+
+    click would read Nextflow's single-dash options (``-profile``,
+    ``-with-docker``) as bundles of its short options, ``-h`` among them: the
+    command's own options are taken out by their exact words, and the rest is
+    handed to click after ``--``, untouched.
+    """
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        if not args:
+            return super().parse_args(ctx, args)
+        flags: set[str] = set()
+        valued: set[str] = set()
+        for param in self.get_params(ctx):
+            if isinstance(param, click.Option):
+                names = [*param.opts, *param.secondary_opts]
+                (flags if param.is_flag else valued).update(names)
+        try:
+            own, nextflow_args = split_arguments(args, flags, valued)
+        except ValueError as error:
+            raise click.UsageError(str(error), ctx=ctx) from error
+        return super().parse_args(ctx, [*own, "--", *nextflow_args])
+
+
+@cli.command(
+    name="run",
+    cls=_NextflowCommand,
+    no_args_is_help=True,
+    context_settings=CONTEXT_SETTINGS,
+    epilog=(
+        "Every other argument goes to Nextflow as it is: its options (-profile, "
+        "-resume, -c, -r) and the pipeline's parameters (--input, --libraries, "
+        "--outdir). After --, every argument does: plexembler run -- --help "
+        "lists the pipeline's parameters."
+    ),
+)
+@click.argument("nextflow_args", nargs=-1, type=click.UNPROCESSED)
+@click.option(
+    "--pipeline",
+    help=(
+        "The pipeline: a folder (a clone), run as it is, or a repository, which "
+        f"Nextflow pulls, run at v{__version__} unless -r names a revision "
+        f"[default: the folder or the commit plexembler was installed from, "
+        f"else {REPOSITORY}]."
+    ),
+)
+@click.option(
+    "--dry-run", is_flag=True, help="Print the Nextflow command, and run nothing."
+)
+def run_command(
+    nextflow_args: tuple[str, ...], pipeline: str | None, dry_run: bool
+) -> None:
+    """Run the pipeline with Nextflow, at this version of plexembler."""
+    from .run import find_nextflow, launch, nextflow_command, pipeline_to_run
+
+    with stderr_log():
+        name, revision = pipeline_to_run(pipeline, nextflow_args)
+        nextflow = find_nextflow()
+        if nextflow is None and not dry_run:
+            raise click.ClickException(NO_NEXTFLOW)
+        command = nextflow_command(
+            nextflow or "nextflow", name, revision, nextflow_args
+        )
+        if dry_run:
+            if nextflow is None:
+                logger.warning(NO_NEXTFLOW)
+            click.echo(shlex.join(command))
+            return
+        logger.info("Running %s", shlex.join(command))
+        try:
+            launch(command)
+        except OSError as error:
+            raise click.ClickException(f"{command[0]}: {error}") from error
 
 
 @cli.command(context_settings=CONTEXT_SETTINGS)
@@ -97,6 +187,32 @@ def cli() -> None:
     type=click.Path(dir_okay=False, path_type=Path),
     help="The table of new and original names (default: the output's name, with .names.tsv for its extensions).",
 )
+@click.option(
+    "-a",
+    "--assembly-info",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="The assembler's table of its contigs, Flye's assembly_info.txt: a contig it says is linear (circ. N) is never cut.",
+)
+@click.option(
+    "--collapse/--no-collapse",
+    default=True,
+    show_default=True,
+    help="Cut a contig that is two or more copies of a unit, end to end (a circle its assembler went round twice), to its first copy.",
+)
+@click.option(
+    "--min-unit",
+    type=click.IntRange(100),
+    default=MIN_UNIT,
+    show_default=True,
+    help="The shortest unit, in bases, that a contig is looked at as copies of.",
+)
+@click.option(
+    "--min-identity",
+    type=click.FloatRange(0.9, 1),
+    default=MIN_IDENTITY,
+    show_default=True,
+    help="The lowest identity between a contig's copies, from their 21-mers, at which it is cut.",
+)
 @click.option("--force", is_flag=True, help="Overwrite outputs that exist already.")
 @click.option(
     "-v", "--verbose", is_flag=True, help="Debug messages, in the log and on stderr."
@@ -112,11 +228,19 @@ def rename(
     prefix: str,
     output: Path,
     names: Path | None,
+    assembly_info: Path | None,
+    collapse: bool,
+    min_unit: int,
+    min_identity: float,
     force: bool,
     verbose: bool,
     quiet: bool,
 ) -> None:
-    """Name every contig after its species: <species>_<contig>."""
+    """Name every contig after its species: <species>_<contig>.
+
+    A contig that is two or more copies of a unit, end to end, a circular
+    genome its assembler went round more than once, is cut to its first copy.
+    """
     if names is None:
         stem = output.name.removesuffix(".gz")
         for extension in (".fasta", ".fa", ".fna"):
@@ -128,11 +252,21 @@ def rename(
         "prefix": prefix,
         "output": output,
         "names": names,
+        "assembly_info": assembly_info,
+        "collapse": collapse,
+        "min_unit": min_unit,
+        "min_identity": min_identity,
         "force": force,
     }
     with run_log(output.parent, prefix, parameters, verbose=verbose, quiet=quiet):
         try:
-            renamed = rename_contigs(fasta, output, prefix)
+            info = read_assembly_info(assembly_info) if assembly_info else None
+        except ValueError as error:
+            raise click.ClickException(f"{assembly_info}: {error}") from error
+        try:
+            renamed = rename_contigs(
+                fasta, output, prefix, info, collapse, min_unit, min_identity
+            )
         except ValueError as error:
             raise click.ClickException(f"{fasta}: {error}") from error
         write_names(renamed, names)
