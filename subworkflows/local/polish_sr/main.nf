@@ -12,6 +12,7 @@ include { PLEXEMBLER_DIGEST                        } from '../../../modules/loca
 include { CAT_FASTQ as CAT_FASTQ_POLISH            } from '../../../modules/nf-core/cat/fastq/main'
 include { BWA_INDEX                                } from '../../../modules/nf-core/bwa/index/main'
 include { BWA_MEM                                  } from '../../../modules/nf-core/bwa/mem/main'
+include { FIND_CONCATENATE as CAT_DRAFT_PLAIN      } from '../../../modules/nf-core/find/concatenate/main'
 include { POLYPOLISH_POLISH                        } from '../../../modules/nf-core/polypolish/polish/main'
 include { PYPOLCA                                  } from '../../../modules/local/pypolca/main'
 include { MERYL_COUNT as MERYL_COUNT_HOLDOUT       } from '../../../modules/nf-core/meryl/count/main'
@@ -99,8 +100,11 @@ workflow POLISH_SR {
     def ch_sams = BWA_MEM.out.sam
         .map { meta, sam -> [meta.id, sam] }
         .groupTuple()
-    def ch_polypolish = ch_drafts
-        .map { meta, fasta, _reads -> [meta.id, meta, fasta] }
+    // Polypolish reads a gzipped FASTA's first member alone: a bgzipped draft
+    // (the screen's, a member per 64 kb) goes to it plain.
+    CAT_DRAFT_PLAIN(ch_drafts.map { meta, fasta, _reads -> [meta, [fasta]] })
+    def ch_polypolish = CAT_DRAFT_PLAIN.out.file_out
+        .map { meta, fasta -> [meta.id, meta, fasta] }
         .join(ch_sams)
         .multiMap { _id, meta, fasta, sams ->
             fasta: [meta, fasta]

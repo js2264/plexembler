@@ -133,7 +133,9 @@ follow [semantic versioning](https://semver.org).
   second split, on the screened contigs: in the first, a species whose DNA
   another species' contigs held (bleed-through, assembled) lost those pairs
   as ambiguous between the two; the benchmark's Cgla lost three quarters of
-  its WGS pairs to Spar's copies of its chromosomes.
+  its WGS pairs to Spar's copies of its chromosomes. Polypolish gets the
+  screened contigs decompressed: it reads a gzipped FASTA's first member
+  alone, 64 kb of a bgzipped one.
 - **The test data**, version 4: genes every 6 kb (open reading frames of
   yeast's codon usage, which AUGUSTUS's yeast model finds), the RNA-seq read
   from them; the second species of the CUG-Ser clade (table 12).
