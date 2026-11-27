@@ -139,3 +139,14 @@ follow [semantic versioning](https://semver.org).
 - **The test data**, version 4: genes every 6 kb (open reading frames of
   yeast's codon usage, which AUGUSTUS's yeast model finds), the RNA-seq read
   from them; the second species of the CUG-Ser clade (table 12).
+- **A circle written twice, cut to one copy**: `plexembler rename` cuts a
+  contig that is two or more near-identical copies of a unit, end to end, to
+  its first copy, and logs it. On some runs, Flye wrote the benchmark's
+  20,063-bp *N. glabratus* mitochondrion as one 40,128-bp contig, kept as
+  `Cgla_chrM`, which QUAST counted as a misassembly; it is now one copy from
+  the assembly on, polished and screened as one. The copies are found on the
+  sequence; Flye's `assembly_info.txt`, which the pipeline now gives the
+  command (`-a, --assembly-info`), keeps the contigs it says are linear whole.
+  `--no-collapse`, `--min-unit` and `--min-identity` set it; the names table
+  has three more columns: `original_length_bp`, `copies` and `circular`.
+  ([#9](https://github.com/js2264/plexembler/pull/9))

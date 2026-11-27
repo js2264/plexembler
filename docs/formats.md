@@ -19,7 +19,10 @@ table of their names: tab-separated, with a header.
 |---|---|
 | `name` | The contig's name, starting with its species: `<species>_<contig>` |
 | `original_name` | Its name before (the first word of its FASTA header) |
-| `length_bp` | Its length, in bases |
+| `length_bp` | Its length, in bases, as written: one copy's, for a contig cut to one |
+| `original_length_bp` | Its length as assembled |
+| `copies` | The copies of its unit it was assembled as, cut to one; `1` for a contig left whole |
+| `circular` | `yes` when the assembler's table says it is circular, or when it was cut (a circle's copies, the last closing on the first); `no` when the table says it is linear; `NA` when nothing says |
 
 ## The candidates table { #candidates-table }
 
