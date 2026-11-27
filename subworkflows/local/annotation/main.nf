@@ -33,6 +33,10 @@ workflow ANNOTATION {
 
     main:
 
+    // Whether there are proteins to go by, taken now: once given to BRAKER3,
+    // `proteins` is a channel, which the branch below would read as true.
+    def with_proteins = proteins as boolean
+
     //
     // MODULES: the repeats, found de novo and masked soft
     //
@@ -86,7 +90,7 @@ workflow ANNOTATION {
             .join(ch_rnaseq, remainder: true)
             .filter { _id, meta, _fasta, _bam -> meta != null }
             .branch { _id, _meta, _fasta, bam ->
-                braker: predictor == 'braker' && (bam != null || proteins)
+                braker: predictor == 'braker' && (bam != null || with_proteins)
                 augustus: true
             }
         def ch_braker = ch_predict.braker
