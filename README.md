@@ -30,17 +30,17 @@ map, its expression table and its report.
 
 ## Install
 
-1. **[Optional] micromamba**, for the tools' conda environments on a machine
-   without Docker or Apptainer (`osx-arm64` on an Apple silicon Mac):
-
-   ```bash
-   mkdir -p ~/.local && curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C ~/.local bin/micromamba
-   ```
-
-2. **[uv](https://docs.astral.sh/uv/)**:
+1. **[uv](https://docs.astral.sh/uv/)**:
 
    ```bash
    curl -LsSf https://astral.sh/uv/install.sh | sh && . ~/.local/bin/env
+   ```
+
+2. **[Optional] micromamba**, for the tools' conda environments on a machine
+   without Docker or Apptainer (`osx-arm64` on an Apple silicon Mac):
+
+   ```bash
+   curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C ~/.local bin/micromamba
    ```
 
 3. **plexembler**, with [Nextflow](https://www.nextflow.io)'s launcher, and
@@ -50,7 +50,7 @@ map, its expression table and its report.
    uv tool install 'plexembler[java]'
    ```
 
-4. **Run it**, on the test data: `-profile micromamba` after step 1, else a
+4. **Run it**, on the test data: `-profile micromamba` after step 2, else a
    container engine's (`docker`, `apptainer`, …):
 
    ```bash
@@ -65,7 +65,7 @@ takes the same.
 ## Quick start
 
 ```bash
-# with micromamba (step 1): AUGUSTUS's genes, BRAKER3 having no conda environment
+# with micromamba (step 2): AUGUSTUS's genes, BRAKER3 having no conda environment
 plexembler run -profile micromamba --gene_predictor augustus \
     --input species.csv --libraries libraries.csv --outdir results
 
