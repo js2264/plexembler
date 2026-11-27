@@ -4,7 +4,8 @@
 ARG BASE=ghcr.io/mamba-org/micromamba:2.10.0
 FROM ${BASE}
 
-RUN micromamba install -y -n base -c conda-forge python=3.14 pip \
+# procps: ps, which Nextflow runs in every step's container to measure it.
+RUN micromamba install -y -n base -c conda-forge python=3.14 pip procps-ng \
     && micromamba clean --all --yes
 
 COPY --chown=$MAMBA_USER:$MAMBA_USER dist/*.whl /tmp/dist/
