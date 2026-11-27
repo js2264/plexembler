@@ -76,7 +76,9 @@ jobs:
   nf-test:
     name: nf-test, Nextflow ${{ matrix.nextflow }}, shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # The shard that holds tests/default.nf.test runs the whole pipeline on
+    # the test profile, on the runner's two CPUs.
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
