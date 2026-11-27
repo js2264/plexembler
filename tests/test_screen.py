@@ -283,3 +283,48 @@ def test_the_command(pool, tmp_path: Path):
         cli, [*arguments[:3], "Scer=nowhere.paf", *arguments[4:], "--force"]
     )
     assert missing.exit_code == 2
+
+
+def test_an_alignment_counts_for_both_contigs(pool, tmp_path: Path):
+    """minimap2's -X reports each pair of contigs once: Scer_dup found in Cgla
+    though Cgla_c1 is the query."""
+    pool["identity"].write_text(
+        paf_line("Cgla_c1", 2000, 0, 1000, "Scer_dup", 1000, 0, 1000, matches=999)
+        + "\n",
+        encoding="ascii",
+    )
+    found = screen(
+        pool["fasta"],
+        pool["reads"],
+        pool["identity"],
+        [pool["contacts"]],
+        tmp_path / "out",
+        "poolA",
+    )
+    assert found["Scer_dup"].found_in == {"Cgla": 1.0}
+    assert found["Scer_dup"].verdict == "drop"
+    assert found["Cgla_c1"].found_in == {"Scer": 0.5}
+
+
+def test_a_duplicate_another_species_covers_deeper(pool, tmp_path: Path):
+    """Another species' organelle, assembled from bleed-through: its own reads
+    at 0.4 of their depth (not thin enough on their own), the other species'
+    at 2.7 of theirs."""
+    pool["reads"]["Scer"].write_text(
+        "\n".join(depth("Scer_c1", 40) + depth("Scer_c2", 40) + depth("Scer_dup", 16))
+        + "\n"
+    )
+    pool["reads"]["Cgla"].write_text(
+        "\n".join(depth("Cgla_c1", 30) + depth("Cgla_c2", 30) + depth("Scer_dup", 81))
+        + "\n"
+    )
+    found = screen(
+        pool["fasta"],
+        pool["reads"],
+        pool["identity"],
+        [],
+        tmp_path / "out",
+        "poolA",
+    )
+    assert found["Scer_dup"].verdict == "drop"
+    assert "Cgla's at 2.70" in found["Scer_dup"].reason

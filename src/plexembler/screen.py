@@ -20,8 +20,9 @@ And gives a verdict:
   times) and AT-rich (GC under ``--organelle-gc``): its mitochondrion, kept as
   ``<species>_chrM``;
 - ``drop``: most of it (``--duplicate-share``) found in another species' contigs,
-  and its own species' reads thin on it (under ``--own-depth`` of their depth):
-  that species' DNA, which it holds already;
+  and its own species' reads thin on it (under ``--own-depth`` of their depth),
+  or that species' reads ``--depth-ratio`` times as deep on it, each against its
+  own species' depth: that species' DNA, which it holds already;
 - ``move``: its own species' reads thin on it while another species' reads
   cover it (``--other-depth`` of their depth); or its own species' reads under
   ``--hic-own-depth`` of their depth and its Hi-C contacts with another
@@ -84,7 +85,7 @@ class Contig:
 class Thresholds:
     """What each verdict needs."""
 
-    organelle_depth: float = 3.0
+    organelle_depth: float = 2.0
     organelle_gc: float = 0.3
     duplicate_share: float = 0.9
     duplicate_identity: float = 0.99
@@ -93,6 +94,7 @@ class Thresholds:
     hic_ratio: float = 2.0
     min_contacts: int = 20
     hic_own_depth: float = 0.5
+    depth_ratio: float = 2.0
 
 
 def open_text(path: Path) -> TextIO:
@@ -136,7 +138,8 @@ def read_depths(paf: Path, species: str, contigs: dict[str, Contig]) -> None:
 def read_identity(paf: Path, contigs: dict[str, Contig], identity: float) -> None:
     """The share of each contig found in each other species' contigs, at
     ``identity`` or more: minimap2's alignments of the pool's contigs to each
-    other (``-X``: no self-alignments)."""
+    other. ``-X`` reports each pair of contigs once, one of them the query:
+    an alignment counts for both."""
     intervals: dict[tuple[str, str], list[tuple[int, int]]] = defaultdict(list)
     with open_text(paf) as handle:
         for line in handle:
@@ -144,14 +147,18 @@ def read_identity(paf: Path, contigs: dict[str, Contig], identity: float) -> Non
             if len(fields) < 12:
                 continue
             query, target = fields[0], fields[5]
-            if query not in contigs or species_of(query) == species_of(target):
+            if species_of(query) == species_of(target):
                 continue
             block = int(fields[10])
             if not block or int(fields[9]) / block < identity:
                 continue
-            intervals[(query, species_of(target))].append(
-                (int(fields[2]), int(fields[3]))
+            sides = (
+                (query, int(fields[2]), int(fields[3]), target),
+                (target, int(fields[7]), int(fields[8]), query),
             )
+            for this, start, end, other in sides:
+                if this in contigs:
+                    intervals[(this, species_of(other))].append((start, end))
     for (query, other), found in intervals.items():
         contig = contigs[query]
         contig.found_in[other] = (
@@ -207,14 +214,24 @@ def judge(contigs: dict[str, Contig], thresholds: Thresholds) -> None:
             for other, share in contig.found_in.items()
             if share >= thresholds.duplicate_share
         }
-        if duplicates and own_ratio < thresholds.own_depth:
+        if duplicates:
             other = max(duplicates, key=lambda name: duplicates[name])
-            contig.verdict = "drop"
-            contig.reason = (
-                f"{100 * duplicates[other]:.0f} % of it in {other}'s contigs, "
-                f"{own}'s reads at {own_ratio:.2f} of their depth"
+            other_ratio = (
+                contig.depth.get(other, 0.0) / typical[other]
+                if typical.get(other)
+                else 0.0
             )
-            continue
+            if (
+                own_ratio < thresholds.own_depth
+                or other_ratio >= thresholds.depth_ratio * own_ratio
+            ):
+                contig.verdict = "drop"
+                contig.reason = (
+                    f"{100 * duplicates[other]:.0f} % of it in {other}'s contigs, "
+                    f"{own}'s reads at {own_ratio:.2f} of their depth, "
+                    f"{other}'s at {other_ratio:.2f}"
+                )
+                continue
         own_contacts = contig.contacts.get(own, 0)
         others = {k: v for k, v in contig.contacts.items() if k != own}
         if others:

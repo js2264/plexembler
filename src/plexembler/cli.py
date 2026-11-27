@@ -566,7 +566,7 @@ def _species_paf(
 @click.option(
     "--organelle-depth",
     type=float,
-    default=3.0,
+    default=2.0,
     show_default=True,
     help="An organelle's depth, in times its species' contigs'.",
 )
@@ -620,6 +620,14 @@ def _species_paf(
     help="Its own species' depth on a contig, as a share of their depth, under "
     "which Hi-C contacts can move it.",
 )
+@click.option(
+    "--depth-ratio",
+    type=float,
+    default=2.0,
+    show_default=True,
+    help="Another species' depth on a duplicate, over its own species', each against "
+    "their depth, from which the duplicate goes.",
+)
 @_FORCE
 @_VERBOSE
 @_QUIET
@@ -638,6 +646,7 @@ def screen_command(
     hic_ratio: float,
     min_contacts: int,
     hic_own_depth: float,
+    depth_ratio: float,
     force: bool,
     verbose: bool,
     quiet: bool,
@@ -655,6 +664,7 @@ def screen_command(
         hic_ratio=hic_ratio,
         min_contacts=min_contacts,
         hic_own_depth=hic_own_depth,
+        depth_ratio=depth_ratio,
     )
     parameters = {
         "contigs": contigs,

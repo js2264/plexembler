@@ -72,7 +72,9 @@ follow [semantic versioning](https://semver.org).
   another species of its pool, dropped, or named its species' mitochondrion
   (`<species>_chrM`), from each species' nanopore depth on it, its identity to
   the other species' contigs and its Hi-C contacts (which move a contig only
-  when its own species' reads cover it thinly: `--hic-own-depth`); a moved
+  when its own species' reads cover it thinly: `--hic-own-depth`; a duplicate
+  goes when its own reads are thin on it or another species' twice as deep,
+  `--depth-ratio`; an alignment between two contigs counts for both); a moved
   contig is named after the species it goes to, its name kept; each species'
   contigs after it in `species/<species>/contigs/`.
 - **The test data**, version 2: 30× of nanopore reads per species and 10,000
