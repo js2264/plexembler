@@ -123,6 +123,15 @@ within `--busco-tolerance` points is a tie), the highest QV (Merqury; within
 its rule out for all of them; `--keep` keeps a candidate whatever its numbers,
 which is what the samplesheet's `assembler` column does.
 
+The polishing step's candidates are the draft, first, then each polishing.
+Where a polishing changed the draft, its `kmers` count the k-mers that reads
+held out of the polishing lack: the draft's that it removed (fixed) and its own
+(introduced). The polishing kept is the one that fixed the most more than it
+introduced, if one did; otherwise the draft. Only the changed k-mers count, so
+that a k-mer the held-out reads miss by chance, where no polishing touched the
+draft, cannot decide. Without `kmers` for every polishing, one is kept when its
+QV beats the draft's by more than `--qv-tolerance`.
+
 ```bash
 plexembler select candidates.tsv -p Scer -o Scer/
 ```
@@ -130,8 +139,9 @@ plexembler select candidates.tsv -p Scer -o Scer/
 `candidates.tsv` has a row per candidate: its name (`candidate`), its sequence
 (`fasta`), and its BUSCO summary (`busco`: BUSCO's short summary, `.txt` or
 `.json`, or compleasm's `summary.txt`), its Merqury QV (`qv`) and its gfastats
-summary (`stats`); a check may be empty or `NA`, and a relative path is read
-from the table's folder ([format](formats.md#candidates-table)).
+summary (`stats`), and, for a polishing, the k-mers it changed (`kmers`); a
+check may be empty or `NA`, and a relative path is read from the table's folder
+([format](formats.md#candidates-table)).
 
 It writes the kept sequence (`Scer.assembly.fa.gz`), the table of candidates
 (`Scer.assembly.selection.tsv`: [format](formats.md#selection-table)), its
@@ -145,7 +155,7 @@ MultiQC table (`Scer.assembly_selection_mqc.tsv`) and its log.
 | `-o, --outdir` | (required) | The folder of the kept sequence, the table of candidates and the log. |
 | `-k, --keep` | | A candidate to keep whatever its numbers: the samplesheet's choice. |
 | `--busco-tolerance` | `0.5` | Single-copy BUSCOs within this many points of the best are a tie. |
-| `--qv-tolerance` | `1.0` | QVs within this many units of the best are a tie. |
+| `--qv-tolerance` | `1.0` | QVs within this many units of the best are a tie; a polishing without k-mer counts must beat the draft's QV by more. |
 | `--force` | off | Overwrite outputs that exist already. |
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
@@ -276,8 +286,10 @@ Keeps, moves or drops each contig of a pool, and names its organelles. A
 species' nanopore run can hold another species' reads (bleed-through), which
 assemble into contigs of the wrong species; the screen weighs three signals
 for each contig: each species' nanopore depth on it (against that species'
-depth on its own contigs), the share of it found in another species' contigs
-at 99 % identity or more, and its Hi-C contacts with each species' contigs.
+depth on its own contigs, those its reads cover the most: a whole genome of
+bleed-through, assembled, can outweigh a species' own), the share of it found
+in another species' contigs at 99 % identity or more, and its Hi-C contacts
+with each species' contigs.
 
 - `organelle`: `--organelle-depth` times its species' depth and under
   `--organelle-gc` GC: kept as `<species>_chrM` (`chrM2`, … for more);

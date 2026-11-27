@@ -7,8 +7,9 @@ process PLEXEMBLER_SELECT {
 
     input:
     // A species' candidates, each list in the order of `candidates`; a check a
-    // candidate lacks is the placeholder NO_FILE (assets/), written as NA.
-    tuple val(meta), val(candidates), path(fastas, stageAs: 'fasta?/*'), path(buscos, stageAs: 'busco?/*'), path(qvs, stageAs: 'qv?/*'), path(stats, stageAs: 'stats?/*')
+    // candidate lacks is the placeholder NO_FILE (assets/), written as NA. The
+    // k-mers a polishing changed (MERYL_CHANGES) are the polishing step's.
+    tuple val(meta), val(candidates), path(fastas, stageAs: 'fasta?/*'), path(buscos, stageAs: 'busco?/*'), path(qvs, stageAs: 'qv?/*'), path(stats, stageAs: 'stats?/*'), path(kmers, stageAs: 'kmers?/*')
     val step
 
     output:
@@ -26,15 +27,15 @@ process PLEXEMBLER_SELECT {
     def args = task.ext.args ?: ''
     // The samplesheet's choice, when it named one (its `assembler` column).
     def keep = meta.keep ? "--keep ${meta.keep}" : ''
-    def columns = [candidates, fastas, buscos, qvs, stats].collect { item -> [item].flatten() }
+    def columns = [candidates, fastas, buscos, qvs, stats, kmers].collect { item -> [item].flatten() }
     if (columns*.size().unique().size() != 1) {
-        error("PLEXEMBLER_SELECT: ${meta.id} has ${columns*.size()} candidates, sequences, BUSCO summaries, QVs and statistics")
+        error("PLEXEMBLER_SELECT: ${meta.id} has ${columns*.size()} candidates, sequences, BUSCO summaries, QVs, statistics and k-mer changes")
     }
-    def rows = columns.transpose().collect { name, fasta, busco, qv, stat ->
-        "printf '%s\\t%s\\t%s\\t%s\\t%s\\n' '${name}' '${fasta}' '${checkCell(busco)}' '${checkCell(qv)}' '${checkCell(stat)}' >> candidates.tsv"
+    def rows = columns.transpose().collect { name, fasta, busco, qv, stat, kmer ->
+        "printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' '${name}' '${fasta}' '${checkCell(busco)}' '${checkCell(qv)}' '${checkCell(stat)}' '${checkCell(kmer)}' >> candidates.tsv"
     }.join('\n    ')
     """
-    printf 'candidate\\tfasta\\tbusco\\tqv\\tstats\\n' > candidates.tsv
+    printf 'candidate\\tfasta\\tbusco\\tqv\\tstats\\tkmers\\n' > candidates.tsv
     ${rows}
 
     plexembler select \\

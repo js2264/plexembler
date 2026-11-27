@@ -62,6 +62,9 @@ it applies.
 | RNA-seq | Counts and TPM per species and library; no differential expression (M5) |
 | Delivery | A pull request per milestone into `main`, squash-merged by the maintainer: each milestone on its own branch, its pull request stacked on the previous milestone's until that one is merged, then rebased onto `main` |
 | Benchmark | Public data of yeasts with T2T references, mixed in silico (T2) |
+| Benchmark sets | Three, from the easiest to the hardest (2026-11-27): each plants more of the repeats yeast genomes hold and gives worse long reads and Hi-C, R10 in all three. Milestone 4 counts the characterized genes, not the uncharacterized ORFs (T2) |
+| Benchmark checks | A misassembly is a misjoin between two pieces over 10 kb each, QUAST's translocations included (a subtelomere's copy at a contig's end is not one); epsilon is judged on the screened contigs, the first split's, before the screen, reported (2026-11-27) |
+| Hi-C polishing | The fallback of a pool without WGS, never a rival to WGS's (2026-11-27): a pool with WGS polishes with it. Milestone 2 asks that it never leave a genome with more errors and be kept when it fixes some; its gain against WGS's is reported, 80 % its aim |
 | Upstream | hicstuff, instaGRAAL, chromosomix and metacooler are attached: their changes are prepared there (T4, T7), and worked around here until they are released |
 | The package's container | An image on GHCR per release, `ghcr.io/js2264/plexembler:X.Y.Z`, built from the released wheel; PyPI later (T1) |
 
@@ -107,7 +110,7 @@ The repository, and what every later step relies on. Not released.
 - [x] Unknown values (`NA`) in the species samplesheet, and its `chemistry`
       column.
 - [ ] GitHub's settings (T5).
-- [ ] The benchmark pool's small set, `benchmark-data-v1` (T2): its generator is written; the release is made by `benchmarks.yml` once `main` has it.
+- [x] The benchmark pool (T2): its three sets, `benchmark-data-v4`, released by `benchmarks.yml` (v1 never was; v2 was, by the workflow's first run).
 - [x] The package's container, which M1's local modules need (T1).
 
 ## M1 · Contigs, per species · v0.1.0
@@ -165,7 +168,8 @@ usable as a draft genome on its own.
 
 **Done when**, on the benchmark pool (T2): each species' BUSCO is within 1 point
 of its reference's; QV ≥ 40 after polishing; QUAST against the T2T references
-finds no misassembly over 10 kb in the kept candidate.
+finds no misassembly over 10 kb in the kept candidate (a misjoin between two
+pieces over 10 kb each: Decisions, "Benchmark checks").
 
 ## M2 · The pool, split · v0.2.0
 
@@ -210,11 +214,20 @@ screened.
       report. (hicstuff's own `cutsite` pairs the pieces again; a mode of it
       that writes them once, unpaired, would replace `plexembler digest`, T4.)
       To come: `both`, and `--min_polish_depth`, Hi-C for a species whose WGS
-      depth is too low.
+      depth is too low: the WGS pairs and the Hi-C reads pooled in one round,
+      where the WGS alone are too thin. Not Hi-C after WGS, nor the two side by
+      side with the best kept: both are Illumina reads, of one error profile,
+      and Hi-C adds depth, unevenly, not evidence; WGS fixed more for every
+      species of the benchmark's medium set. Measured on the benchmark first.
 - [x] **Short-read polishing** (`--sr_polisher polypolish,pypolca|none`):
       Polypolish on `bwa mem -a` alignments of the species' reads, single-end for
       Hi-C pieces (its insert-size filter needs true pairs), alignments with
-      more than 5 clipped bases dropped (a junction the cutting missed); then
+      more than 5 clipped bases dropped (a junction the cutting missed), and
+      `--careful` for them: a single piece from a repeat aligns to every copy,
+      and voted there for the other copies' bases (on the benchmark's easy set,
+      Spar's errors against its reference went from 2.14 to 5.51 per 100 kb,
+      0.51 with it; WGS pairs, which keep every alignment, fare better
+      without); then
       pypolca. Hi-C's coverage is uneven, highest near restriction sites: a base
       it does not cover is left as it was, not changed. The guard: Merqury's QV
       before and after on k-mers of 10 % of the pairs, held out of the polishing
@@ -222,17 +235,23 @@ screened.
       coverage makes a QV from its k-mers pessimistic); the polished version is
       kept only if it is better (`plexembler select --step polish`: the draft,
       Polypolish's and pypolca's QVs). pypolca runs `--careful`.
-- [ ] **A polishing guard that sees past the held-out pairs' sampling.** On the
-      benchmark pool the held-out pairs are 3 to 4× of each genome, at which 3
-      to 7 % of a genome's 21-mers are missing from them by chance: the QV reads
-      about 24 to 27 whatever the genome's true quality, and a polishing's gain or
-      harm moves it by hundredths. There, measured against the references, the
-      WGS pairs' polishing fixed 2 of Scer's 3 indels and 2 of Spar's 9 errors,
-      and the Hi-C reads' added errors (Spar: 36 mismatches and 10 indels;
-      Scer: 20 mismatches and 2 indels); the QV saw neither, and the guard's
-      tolerance (1 QV) kept every draft: the small gains lost, the harm
-      avoided. To try: the assembly-only k-mers the candidates differ in,
-      rather than their QVs; a larger hold-out when the coverage allows it.
+- [x] **A polishing guard that sees past the held-out pairs' sampling.** The
+      held-out pairs are thin: on the benchmark's medium set, a held-out tenth
+      of the Hi-C reads misses 197,501 to 272,975 of a genome's 21-mers by
+      chance, which holds their QV near 18 whatever the genome's quality. A
+      polishing's gain or harm moves it by hundredths, and the QV's tolerance
+      (1, then 0.1) kept every draft there: the Hi-C polishing raised it by
+      0.01 to 0.07, although, against the references, it took Cgla's errors
+      from 5.00 to 0.65 per 100 kb, Spar's from 8.03 to 5.52 and Scer's from
+      47.92 to 45.62. A polishing is now judged by the k-mers it changed
+      (`MERYL_CHANGES`): the draft's that the held-out pairs lack and that it
+      removed (fixed), against those it made that they lack (introduced). The
+      k-mers the pairs miss by chance, where no polishing touched the draft,
+      are the same in every candidate, and cancel out. There, the Hi-C
+      polishing fixed 2,233 for 147 introduced (Scer), 920 for 108 (Spar) and
+      920 for 211 (Cgla), and is kept; the WGS pairs' choices are unchanged
+      (2,101 for 80, 1,248 for 7, 968 for none). The selection table gives both
+      counts (`kmers_fixed`, `kmers_introduced`).
 - [ ] **Micro-C** (`enzymes` is `none`) has no junction sequence to cut at:
       such a pool's species stay polished with nanopore reads alone, by default.
       Polishing with the clipped local alignments of its reads (primary and
@@ -254,6 +273,11 @@ screened.
       the pool has one). A verdict per contig, keep, move, drop or organelle,
       with its evidence and thresholds; a move renames the contig
       `<species>_<contig>` (`metacooler reassign` for the pool's map, then).
+      Each depth is against the species' own: on the contigs its reads cover
+      the most. On the benchmark's easy set, bleed-through assembled into all
+      of Cgla's genome, longer than Spar's own contigs, had set Spar's depth;
+      the screen kept it as Spar's, and the pool's split then found 360,598 of
+      Cgla's WGS pairs ambiguous, leaving it 4,856 (js2264/plexembler#8).
 - [x] **Organelles and plasmids:** the mitochondrial contig, by circularity, GC,
       depth and `miniprot` hits of a small set of yeast mitochondrial proteins
       (`assets/`), kept apart as `<species>_chrM`. Today by depth and GC (the
@@ -270,9 +294,11 @@ screened.
 
 **Done when**, on the benchmark pool: ≥ 99.5 % of the assigned pairs go to their
 true species (the reads' names carry it) for pairs of species below 90 % ANI;
-ε within 10 % of the simulated rate; every planted bleed-through contig moved
+ε within 10 % of the simulated rate, on the screened contigs; every planted bleed-through contig moved
 or dropped; no species' QV lower after polishing; polishing with digested Hi-C
-alone gains at least 80 % of what WGS gains, species by species.
+alone, the fallback of a pool without WGS, never leaves a species with more
+errors, and is kept when it fixes some, species by species (its gain against
+WGS's reported, 80 % its aim: Decisions, "Hi-C polishing").
 
 ## M3 · Chromosomes · v0.3.0
 
@@ -287,7 +313,7 @@ its Hi-C maps.
       YaHS done, the only one for now (its candidate in
       `candidates/scaffold/yahs/`); instaGRAAL waits for its CPU image (T4):
       - YaHS (nf-core `yahs`), its motifs from the library's `enzymes` (none for
-        Micro-C);
+        Micro-C), in two passes, the second (`-a`) on the first's scaffolds;
       - instaGRAAL, a local module `INSTAGRAAL_ENDTOEND`:
         `instagraal-endtoend contigs.fa pairs.gz -e <enzymes> --mode cpu`, or
         `--instagraal_mode default` (MCMC and refine) on a GPU (`process_gpu`,
@@ -339,7 +365,8 @@ its Hi-C maps.
       `plexembler junctions` scores joins against).
 
 **Done when**, on the benchmark pool: ≥ 90 % of the reference chromosomes are
-T2T in the kept candidate; no misjoin against the T2T references; the
+T2T in the kept candidate; no misjoin against the T2T references (between two
+pieces over 10 kb each: Decisions, "Benchmark checks"); the
 benchmark's planted misjoins are flagged by `plexembler junctions`.
 
 ## M4 · Annotation · v0.4.0
@@ -356,9 +383,14 @@ mitochondrial genes.
       alignment); each species' libraries merged for the gene models.
 - [x] **Genes:** BRAKER3 `--fungus` (nf-core `braker3`) with the species' RNA
       alignments and OrthoDB's fungal proteins (`--orthodb_proteins`, given;
-      its download to the cache, to come). Without RNA-seq, BRAKER on the
-      proteins alone; with neither, AUGUSTUS ab initio with a trained species
-      (`--augustus_species`, local module). To come: GALBA, if it does better
+      its download to the cache, to come), as hints to AUGUSTUS's model of
+      `--augustus_species`, without training: on the benchmark's second set,
+      GeneMark-ET failed on S. cerevisiae's 14 introns, and the models BRAKER3
+      trained on Spar and Cgla found 88.8 and 87.4 % of their genes, where
+      S. cerevisiae's model found 94.0 and 95.1 % ab initio. `--braker_train`
+      trains on the species (far from any model, rich in introns). Without
+      RNA-seq, BRAKER on the proteins alone; with neither, AUGUSTUS ab initio
+      with a trained species (`--augustus_species`, local module). To come: GALBA, if it does better
       than BRAKER on proteins on the benchmark; Helixer (local, GPU,
       experimental until tested on one) as a second candidate
       (`--gene_predictors braker,helixer`), scored by BUSCO's proteins and
@@ -385,8 +417,10 @@ mitochondrial genes.
       RNA-seq reads in genes comes with M5's counts.
 
 **Done when**, on the benchmark species with reference annotations: ≥ 90 % of
-the reference genes found (gffcompare); BUSCO's proteins within 2 points of
-BUSCO's genome.
+the characterized reference genes found, the uncharacterized ORFs left out
+(Decisions; a predicted CDS over 80 % of each reference CDS, at 95 % identity:
+the genome's coordinates are not the reference's, which gffcompare would need);
+BUSCO's proteins within 2 points of BUSCO's genome.
 
 ## M5 · Expression and tracks · v0.5.0
 
@@ -505,17 +539,57 @@ pipeline's own steps need a container before the package is anywhere else.
       `-profile benchmark`; `benchmarks/evaluate.py` checks a milestone's "Done
       when"; `.github/workflows/benchmarks.yml` fetches the release, or makes
       and publishes it, and runs both.
-- [ ] **`benchmark-data-v2`**: RNA-seq of each species' genes (polyester), and
-      misjoins planted in a draft, for M3 to M5. What v1 showed (the M1 to M3
-      PRs hold the numbers): Flye assembles each of its small chromosomes in
-      one contig, so YaHS joins nothing and `plexembler junctions` scores
-      nothing. v2 needs drafts broken where the scaffolds must join them
-      (shorter reads, or contigs cut before scaffolding), the references'
-      annotations for M4 (gffcompare), and RNA-seq with known levels for M5.
-      And drafts with errors for the short-read polishing to fix: v1's (Badread
-      at 98 %, Flye, Medaka) have under one mismatch or indel per 100 kb outside
-      a misjoined subtelomere, so no polishing is kept and M2's Hi-C check, a
-      gain against WGS's, is not judged.
+- [x] **`benchmark-data-v2`**: a 9 kb repeat planted every 200 kb and
+      nanopore reads under 7 kb, so that the drafts break where the scaffolds
+      must join them; errors the nanopore reads share, for the polishing;
+      the references' annotations (M4) and RNA-seq at known levels (M5);
+      misjoins laid out at evaluation (M3). What it found (js2264/plexembler#8
+      holds the numbers): the polishing guard too strict for the held-out
+      QV's floor (its tolerance now 0.1); YaHS's own resolutions joining
+      nothing below a contig N50 of 100 kb, and a clear join left apart (its
+      resolutions given, from 1 kb, and a second pass on its scaffolds);
+      BRAKER3's training failing on a yeast's few introns (the clade's
+      AUGUSTUS model, `--braker_train` to train). And what it could not
+      measure: reads under 7 kb collapse the yeasts' own subtelomeric
+      paralogs as well as the planted repeat, so chromosome ends went
+      missing before any scaffolding.
+- [x] **`benchmark-data-v3`**: three sets, from the easiest to the hardest,
+      each planting more of the repeats yeast genomes hold, S288C's own (Ty1
+      upstream of tRNA genes, Ty1 in tandem, Y' arrays inside the telomeres,
+      an rDNA array), with R10 reads and Hi-C less able to resolve them
+      (`benchmarks/README.md`); each reference gene characterized or not,
+      milestone 4 counting the characterized ones; milestone 3 leaving out the
+      tandem arrays no read crosses. `benchmarks.yml` runs the three, the easy
+      set gating, the medium and hard ones reported.
+- [x] **`benchmark-data-v4`**: the easy set's nanopore reads without
+      Badread's artifacts (junk, random and chimeric reads, glitches), its
+      recipe for good reads. Its junk reads, a short motif repeated over the
+      whole read (up to 37 kb), stalled Flye for hours on `Scer`: two of them
+      share millions of k-mer matches, which its overlapper chains in
+      quadratic time. The
+      medium and hard sets keep Badread's defaults, their reads v3's (the
+      seed kept).
+- [ ] **Long junk nanopore reads** (js2264/plexembler#8): a short motif
+      repeated over tens of kb, which real runs have too, stalls Flye as
+      above. Drop such reads before assembling (a read mostly one
+      short-period repeat), then give the easy set Badread's junk reads back.
+- [ ] **What the medium set found** (js2264/plexembler#8), the next pull
+      requests; the medium set gates the benchmarks once they pass it:
+      - YaHS joins two chromosomes' ends through a subtelomeric Y' the
+        assembly collapsed (Scer, in its first pass at 5 kb; Spar on the hard
+        set): `plexembler junctions` flags the join (6 % of the pairs
+        expected across it), and nothing cuts it. Cut the joins it flags, or
+        keep the scaffolder candidate without them (M3, "One candidate kept").
+      - The Hi-C polishing was never kept, its held-out pairs too thin for
+        the guard's QV to see a gain; the guard now counts the k-mers a
+        polishing changed (M2). Kept, it fixes 42 % of the errors the WGS
+        pairs' polishing fixes against the references for Scer and 37 % for
+        Spar (87 % for Cgla): 80 % is now its aim, reported, not a bar
+        (Decisions, "Hi-C polishing").
+      - The first split's epsilon, on the contigs before the screen, is 14 %
+        low (0.0259 of 0.03); the second split's is within 10 % (M2).
+      - A circular contig that Flye writes as two copies of itself (Cgla's
+        mitochondrion, once, on the first set) is kept as it is.
 - [ ] **`test_full`**: an in-silico pool of public data (nanopore, Hi-C, Illumina,
       RNA-seq) of five to ten yeasts with T2T references, subsampled and mixed,
       on Zenodo; run by hand on a cluster before each release, its numbers on

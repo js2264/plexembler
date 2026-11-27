@@ -1,11 +1,12 @@
 """A milestone's "Done when" (docs/plan.md), checked on the benchmark's results.
 
-Reads a run of the pipeline on the benchmark pool's small set (``-profile
-benchmark``) and the set's truth, runs the checks the milestone names, and
-writes ``<results>/benchmark/m<N>.md`` and ``m<N>.json``. It exits 1 when a
-check fails; a check with nothing to judge reads "not judged" and fails nothing.
+Reads a run of the pipeline on one of the benchmark pool's sets (``-profile
+benchmark_easy``, ``benchmark_medium`` or ``benchmark_hard``) and the set's
+truth, runs the checks the milestone names, and writes
+``<results>/benchmark/m<N>.md`` and ``m<N>.json``. It exits 1 when a check
+fails; a check with nothing to judge reads "not judged" and fails nothing.
 
-    python benchmarks/evaluate.py --results results --data benchmarks/data/small \\
+    python benchmarks/evaluate.py --results results --data benchmarks/data/medium \\
         --milestone 1 --busco-db busco_downloads
 
 Milestone 1, for each species: BUSCO's completeness of the kept contigs within
@@ -19,16 +20,32 @@ names each read after its sequence: ``--save_split_reads``) and epsilon within
 the screened contigs); each species' screened contigs its own (minimap2 against
 the references: the planted bleed-through moved or dropped); no QV lower after
 the short-read polishing, nor more errors against the reference (QUAST's
-mismatches and indels, what the QV guards); and, with ``--hic-results`` (a run with
-``--polish_reads hic``), the Hi-C reads' polishing gain 80 % of the WGS pairs'
-(not judged when the WGS pairs' polishing was not kept: no gain to compare).
+mismatches and indels); and a polishing that fixes some of them kept (when one
+of the run's candidates has fewer errors than the draft). With
+``--hic-results`` (a run with ``--polish_reads hic``), the same of the Hi-C
+reads' polishing, the fallback of a pool without WGS; and, reported without
+deciding the run, the errors it fixed against those the WGS pairs' fixed (80 %
+or more is the aim: their held-out QVs, on different pairs, do not compare).
 
 Milestone 3, for each species: 90 % or more of its reference's chromosomes
 each 90 % in one of its genome's chromosomes, and as many end to end (both ends
 of the reference chromosome, within 2 kb, in that chromosome: their telomeres,
-since the references are complete); no misassembly over 10 kb against its
-reference (QUAST); no join flagged by ``plexembler junctions`` (the set plants
-no misjoin yet).
+since the references are complete); a tandem array the set planted (Ty1
+elements in tandem, Y' elements, the rDNA), which no read crosses, left out of
+both, an array at a chromosome's end moving that end inside it; no misassembly over 10 kb against its
+reference (QUAST); none of its scaffolds' joins flagged by ``plexembler
+junctions``; and, on its own Hi-C pairs, its chromosomes cut in two and laid
+back each join supported, a planted inversion and translocation flagged.
+
+Milestone 4, for each species: 90 % or more of its reference's characterized
+nuclear genes found (``truth/<species>.genes.tsv``; every gene in a set that
+does not class them), a predicted CDS covering 80 % of the reference's at 95 %
+identity (minimap2: the genome's coordinates are not the reference's); BUSCO on
+its proteins within 2 points of BUSCO on its genome.
+
+Milestone 5, for each species: Spearman's rho of 0.9 or more between its TPM
+and the true TPM (``truth/<species>.tpm.tsv``) in every RNA-seq library, on its
+genes paired with the reference's (each the other's best CDS match).
 
 The tools run as ``--busco``, ``--quast`` and ``--minimap2`` say: commands on PATH by default,
 or in a container (``"apptainer exec busco.sif busco"``).
@@ -40,6 +57,7 @@ import argparse
 import csv
 import gzip
 import json
+import math
 import re
 import shlex
 import subprocess
@@ -104,15 +122,25 @@ def reference_busco(
     return float(found["complete"])
 
 
+#: The smallest misassembly the checks count: a misjoin of two pieces this long.
+MISASSEMBLY_SIZE = 10_000
+
+
 def quast_report(
-    quast: list[str], assembly: Path, reference: Path, out: Path
+    quast: list[str],
+    assembly: Path,
+    reference: Path,
+    out: Path,
+    min_alignment: int | None = None,
 ) -> dict[str, str]:
     """QUAST's report of an assembly against its reference, misassemblies
-    over 10 kb."""
+    over 10 kb; with ``min_alignment``, only its alignments that long."""
     command = [
         *quast, str(assembly), "-r", str(reference), "-o", str(out),
         "--extensive-mis-size", "10000", "--min-identity", "90", "-t", "4", "--fast",
     ]  # fmt: skip
+    if min_alignment is not None:
+        command += ["--min-alignment", str(min_alignment)]
     subprocess.run(
         command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
@@ -125,11 +153,23 @@ def quast_report(
 def quast_misassemblies(
     quast: list[str], assembly: Path, reference: Path, workdir: Path
 ) -> int:
-    """QUAST's misassemblies of an assembly against its reference, over 10 kb."""
+    """QUAST's misassemblies of an assembly against its reference, over 10 kb:
+    between two of its pieces each aligned over 10 kb. A piece shorter, such as
+    another chromosome's subtelomere at a contig's end, is not one (QUAST's
+    ``--extensive-mis-size`` sizes relocations alone, not translocations)."""
     report = quast_report(
-        quast, assembly, reference, workdir / f"quast_{reference.stem}"
+        quast,
+        assembly,
+        reference,
+        workdir / f"quast_{reference.stem}",
+        min_alignment=MISASSEMBLY_SIZE,
     )
     return int(report.get("# misassemblies", "0"))
+
+
+def phred(rate: float) -> float:
+    """An error rate per base as a QV, 60 for none."""
+    return 60.0 if rate <= 0 else min(60.0, -10 * math.log10(rate))
 
 
 def quast_errors(quast: list[str], assembly: Path, reference: Path, out: Path) -> float:
@@ -165,12 +205,31 @@ def milestone_1(
                 "passed": complete >= expected - 1,
             }
         )
-        qv = float(kept["qv"]) if kept["qv"] not in ("NA", "") else 0.0
+        # "QV >= 40 after polishing": the genome the polishing kept, against
+        # its reference. The kept contigs' own QV (their candidates' table,
+        # against the pool's WGS k-mers) is before the short reads' polishing
+        # and the screen: it counts the errors the nanopore reads share, which
+        # the second set plants for that polishing, and the bleed-through
+        # contigs' (Spar's).
+        before = float(kept["qv"]) if kept["qv"] not in ("NA", "") else None
+        polished = results / "species" / species / "polish" / f"{species}.polish.fa.gz"
+        errors = quast_errors(
+            quast,
+            polished if polished.exists() else assembly,
+            reference,
+            workdir / f"quast_polished_{species}",
+        )
+        qv = phred(errors / 100_000)
         checks.append(
             {
                 "species": species,
-                "check": "QV of 40 or more",
-                "value": f"{qv:.1f}",
+                "check": "QV of 40 or more after polishing (against the reference)",
+                "value": f"{qv:.1f}, {errors:.2f} errors per 100 kb"
+                + (
+                    f" (the kept contigs' own QV, before: {before:.1f})"
+                    if before is not None
+                    else ""
+                ),
                 "passed": qv >= 40,
             }
         )
@@ -288,6 +347,10 @@ def milestone_2(
                 "passed": bool(
                     found and expected and abs(found - expected) <= 0.1 * expected
                 ),
+                # Before the screen, a species' bleed-through assembled in
+                # another's contigs makes its pairs ambiguous, and epsilon low:
+                # the estimate is the screened contigs' (docs/plan.md, M2).
+                "reported": stage == "contigs",
             }
         )
     every = workdir / "references.fa"
@@ -319,27 +382,13 @@ def milestone_2(
                     "passed": gain[1] >= gain[0],
                 }
             )
-        if hic_results is not None and gain is not None:
-            hic = polish_gain(hic_results, species)
-            wgs_gain = gain[1] - gain[0]
-            hic_gain = (hic[1] - hic[0]) if hic else 0.0
-            # A polishing is kept only when it raises the QV by more than the
-            # choice's tolerance: without one from the WGS pairs, there is no
-            # gain to hold the Hi-C reads' to.
-            passed = None if wgs_gain <= 0 else hic_gain >= 0.8 * wgs_gain
-            checks.append(
-                {
-                    "species": species,
-                    "check": "Hi-C's polishing gain 80 % of WGS's",
-                    "value": f"{hic_gain:.1f} vs {wgs_gain:.1f}",
-                    "passed": passed,
-                }
-            )
-        # What the QV guards, against the truth: the polished genome's errors
-        # against its reference, the draft's (its screened contigs) before.
+        # What the guard guards, against the truth: the polished genome's
+        # errors against its reference, the draft's (its screened contigs)
+        # before.
         reference = data / "references" / f"{species}.fa"
         runs = [("", results)] + ([(" with Hi-C", hic_results)] if hic_results else [])
         draft = None
+        errors: dict[str, float] = {}
         for how, run in runs:
             kept = run / "species" / species / "polish" / f"{species}.polish.fa.gz"
             if not kept.exists():
@@ -352,12 +401,53 @@ def milestone_2(
             after = quast_errors(
                 quast, kept, reference, workdir / f"quast_{name}_{species}"
             )
+            errors[name] = after
             checks.append(
                 {
                     "species": species,
                     "check": f"no more errors against its reference after polishing{how}",
                     "value": f"{draft:.2f} -> {after:.2f} per 100 kb (QUAST)",
                     "passed": after <= draft,
+                }
+            )
+            # The guard's other half: when one of the run's polishings has
+            # fewer errors than the draft, a polishing is kept.
+            folder = run / "species" / species / "candidates" / "polish"
+            polished = {
+                path.name.removeprefix(f"{species}.").split(".")[0]: quast_errors(
+                    quast, path, reference, workdir / f"quast_{name}_{path.name}"
+                )
+                for path in sorted(folder.glob(f"{species}.*"))
+                if path.is_file() and path.name.endswith((".fa", ".fasta", ".fa.gz"))
+            }
+            if polished:
+                best = min(polished, key=lambda tool: polished[tool])
+                helps = polished[best] < draft
+                checks.append(
+                    {
+                        "species": species,
+                        "check": f"a polishing that fixes errors kept{how}",
+                        "value": f"{best} {polished[best]:.2f}, kept {after:.2f}, "
+                        f"draft {draft:.2f} per 100 kb",
+                        "passed": after < draft if helps else None,
+                    }
+                )
+        # The Hi-C reads' polishing against the WGS pairs', by the errors each
+        # run's kept polishing fixed against the reference: their held-out QVs
+        # are measured on different pairs, the Hi-C ones far thinner, and do not
+        # compare. Without a WGS gain there is nothing to hold Hi-C's to.
+        if draft is not None and {"wgs", "hic"} <= errors.keys():
+            wgs_fixed = draft - errors["wgs"]
+            hic_fixed = draft - errors["hic"]
+            # Hi-C's polishing is a pool's fallback when it has no WGS: its gain
+            # against WGS's is reported, and decides nothing (docs/plan.md, M2).
+            checks.append(
+                {
+                    "species": species,
+                    "check": "Hi-C's polishing gain 80 % of WGS's",
+                    "value": f"{hic_fixed:.2f} vs {wgs_fixed:.2f} errors per 100 kb fixed",
+                    "passed": None if wgs_fixed <= 0 else hic_fixed >= 0.8 * wgs_fixed,
+                    "reported": True,
                 }
             )
     return checks
@@ -373,11 +463,31 @@ def merged(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
     return found
 
 
+def tandem_arrays(data: Path, species: str) -> dict[str, list[tuple[int, int]]]:
+    """The tandem arrays the set planted in a species' genome, by chromosome:
+    0-based, half-open."""
+    truth = json.loads((data / "truth.json").read_text())
+    arrays: dict[str, list[tuple[int, int]]] = {}
+    for repeat in truth["species"][species].get("repeats", []):
+        if repeat.get("tandem"):
+            arrays.setdefault(repeat["chromosome"], []).append(
+                (repeat["start"] - 1, repeat["end"])
+            )
+    return arrays
+
+
 def chromosome_cover(
-    minimap2: list[str], genome: Path, reference: Path, workdir: Path
-) -> dict[str, tuple[str, float, bool]]:
+    minimap2: list[str],
+    genome: Path,
+    reference: Path,
+    workdir: Path,
+    arrays: dict[str, list[tuple[int, int]]] | None = None,
+) -> dict[str, tuple[str, float, bool, str]]:
     """Each reference chromosome's best genome sequence: its name, the share of
-    the reference chromosome it covers, and whether it holds both its ends."""
+    the reference chromosome it covers, and whether it holds both its ends (and
+    if not, where its sequence stops short of them). The ``arrays`` (0-based,
+    half-open), which no read crosses, are left out of the share; one within
+    2 kb of an end moves that end inside it."""
     paf = workdir / f"{genome.name}.vs_reference.paf"
     with paf.open("w") as sink:
         subprocess.run(
@@ -395,18 +505,158 @@ def chromosome_cover(
         covered.setdefault((target, fields[0]), []).append(
             (int(fields[7]), int(fields[8]))
         )
-    best: dict[str, tuple[str, float, bool]] = {}
+    best: dict[str, tuple[str, float, bool, str]] = {}
     for (target, query), intervals in covered.items():
         pieces = merged(intervals)
-        share = sum(end - start for start, end in pieces) / lengths[target]
-        ends = pieces[0][0] <= 2000 and pieces[-1][1] >= lengths[target] - 2000
+        holes = merged((arrays or {}).get(target, []))
+        length = lengths[target]
+        inside = sum(
+            max(0, min(end, hole_end) - max(start, hole_start))
+            for start, end in pieces
+            for hole_start, hole_end in holes
+        )
+        kept = length - sum(end - start for start, end in holes)
+        share = (sum(end - start for start, end in pieces) - inside) / kept
+        first, last = 0, length
+        for hole_start, hole_end in holes:
+            if hole_start <= first + 2000:
+                first = max(first, hole_end)
+        for hole_start, hole_end in reversed(holes):
+            if hole_end >= last - 2000:
+                last = min(last, hole_start)
+        missed = []
+        if pieces[0][0] > first + 2000:
+            missed.append(f"its left end from {pieces[0][0]:,}")
+        if pieces[-1][1] < last - 2000:
+            missed.append(f"its right end to {pieces[-1][1]:,} of {length:,}")
         if target not in best or share > best[target][1]:
-            best[target] = (query, share, ends)
+            best[target] = (query, share, not missed, ", ".join(missed))
     return best
 
 
+#: A piece of a chromosome in a planted layout: its name, 0-based half-open
+#: bounds, and whether it is laid reversed.
+Piece = tuple[str, int, int, bool]
+
+
+def planted_layouts(lengths: dict[str, int]) -> dict[str, list[list[Piece]]]:
+    """Scaffolds of a genome's chromosomes, laid out three ways: each
+    chromosome cut at its middle and laid back (true joins); the first one's
+    second half reversed (an inversion); the first one's first half before the
+    second one's second half (a translocation)."""
+    names = list(lengths)
+    half = {name: lengths[name] // 2 for name in names}
+    first = names[0]
+    layouts = {
+        "true": [
+            [(n, 0, half[n], False), (n, half[n], lengths[n], False)] for n in names
+        ],
+        "inversion": [
+            [(first, 0, half[first], False), (first, half[first], lengths[first], True)]
+        ],
+    }
+    if len(names) > 1:
+        second = names[1]
+        layouts["translocation"] = [
+            [
+                (first, 0, half[first], False),
+                (second, half[second], lengths[second], False),
+            ]
+        ]
+    return layouts
+
+
+def write_layout(
+    layout: list[list[Piece]], pairs: Path, agp: Path, moved: Path
+) -> None:
+    """The layout's AGP, and the pairs within it in its scaffolds' coordinates
+    (a pair with a mate outside it left out)."""
+    places: dict[str, list[tuple[int, int, str, int, bool]]] = {}
+    with agp.open("w", encoding="ascii") as sink:
+        for index, pieces in enumerate(layout, 1):
+            scaffold = f"scaffold_{index}"
+            offset = 0
+            for part, (name, start, end, reverse) in enumerate(pieces, 1):
+                length = end - start
+                strand = "-" if reverse else "+"
+                sink.write(
+                    f"{scaffold}\t{offset + 1}\t{offset + length}\t{part}\tW\t"
+                    f"{name}:{start + 1}-{end}\t1\t{length}\t{strand}\n"
+                )
+                places.setdefault(name, []).append(
+                    (start, end, scaffold, offset, reverse)
+                )
+                offset += length
+
+    def where(name: str, position: int) -> tuple[str, int] | None:
+        """A 1-based position's scaffold and place in it."""
+        for start, end, scaffold, offset, reverse in places.get(name, []):
+            if start < position <= end:
+                return scaffold, (
+                    offset + end - position + 1
+                    if reverse
+                    else offset + position - start
+                )
+        return None
+
+    with gzip.open(pairs, "rt") as handle, moved.open("w", encoding="ascii") as sink:
+        for line in handle:
+            if line.startswith("#"):
+                continue
+            fields = line.rstrip("\n").split("\t")
+            one = where(fields[1], int(fields[2]))
+            two = where(fields[3], int(fields[4]))
+            if one and two:
+                fields[1], fields[2] = one[0], str(one[1])
+                fields[3], fields[4] = two[0], str(two[1])
+                sink.write("\t".join(fields) + "\n")
+
+
+def planted_verdicts(
+    plexembler: list[str], results: Path, species: str, workdir: Path
+) -> dict[str, list[str]]:
+    """``plexembler junctions``'s verdicts on each planted layout of a species'
+    chromosomes, from its own pairs."""
+    genome = results / "species" / species / "genome"
+    with (genome / f"{species}.names.tsv").open(newline="") as handle:
+        chromosomes = [
+            r["name"]
+            for r in csv.DictReader(handle, delimiter="\t")
+            if r["role"] == "chromosome"
+        ]
+    lengths = {}
+    with (genome / f"{species}.chrom.sizes").open() as handle:
+        for line in handle:
+            name, length = line.split()[:2]
+            if name in chromosomes:
+                lengths[name] = int(length)
+    pairs = results / "species" / species / "hic" / f"{species}.pairs.gz"
+    verdicts = {}
+    for kind, layout in planted_layouts(lengths).items():
+        out = workdir / f"planted_{species}_{kind}"
+        out.mkdir(parents=True, exist_ok=True)
+        write_layout(layout, pairs, out / "layout.agp", out / "layout.pairs")
+        subprocess.run(
+            [
+                *plexembler, "junctions", str(out / "layout.pairs"),
+                "--agp", str(out / "layout.agp"), "--prefix", species,
+                "--outdir", str(out), "--force", "--quiet",
+            ],
+            check=True, stdout=subprocess.DEVNULL,
+        )  # fmt: skip
+        with (out / f"{species}.junctions.tsv").open(newline="") as handle:
+            verdicts[kind] = [
+                r["verdict"] for r in csv.DictReader(handle, delimiter="\t")
+            ]
+    return verdicts
+
+
 def milestone_3(
-    results: Path, data: Path, minimap2: list[str], quast: list[str]
+    results: Path,
+    data: Path,
+    minimap2: list[str],
+    quast: list[str],
+    plexembler: list[str],
 ) -> list[dict]:
     workdir = results / "benchmark"
     workdir.mkdir(parents=True, exist_ok=True)
@@ -423,7 +673,7 @@ def milestone_3(
         cover = {
             target: found
             for target, found in chromosome_cover(
-                minimap2, genome, reference, workdir
+                minimap2, genome, reference, workdir, tandem_arrays(data, species)
             ).items()
             if not target.endswith("_chrM")
         }
@@ -440,6 +690,7 @@ def milestone_3(
             and roles.get(cover[t][0]) == "chromosome"
         ]
         end_to_end = [t for t in whole if cover[t][2]]
+        short = [f"{t} ({cover[t][3]})" for t in whole if not cover[t][2]]
         checks.append(
             {
                 "species": species,
@@ -452,7 +703,8 @@ def milestone_3(
             {
                 "species": species,
                 "check": "90 % of its chromosomes end to end",
-                "value": f"{len(end_to_end)} of {len(nuclear)}",
+                "value": f"{len(end_to_end)} of {len(nuclear)}"
+                + (f"; not {', '.join(short)}" if short else ""),
                 "passed": len(end_to_end) >= 0.9 * len(nuclear),
             }
         )
@@ -478,32 +730,286 @@ def milestone_3(
             checks.append(
                 {
                     "species": species,
-                    "check": "no join flagged (none planted)",
+                    "check": "none of its scaffolds' joins flagged",
                     "value": f"{flagged} of {len(verdicts)} joins",
                     "passed": flagged == 0,
                 }
             )
+        planted = planted_verdicts(plexembler, results, species, workdir)
+        true = planted.pop("true")
+        checks.append(
+            {
+                "species": species,
+                "check": "its chromosomes, cut in two, each join supported",
+                "value": f"{true.count('supported')} of {len(true)}",
+                "passed": true.count("supported") == len(true),
+            }
+        )
+        wrong = [v for verdicts in planted.values() for v in verdicts]
+        checks.append(
+            {
+                "species": species,
+                "check": f"the planted misjoins ({', '.join(planted)}) flagged",
+                "value": f"{wrong.count('unsupported')} of {len(wrong)}",
+                "passed": wrong.count("unsupported") == len(wrong),
+            }
+        )
     return checks
 
 
-def write_report(checks: list[dict], results: Path, milestone: int) -> bool:
+def busco_summary(folder: Path, pattern: str) -> float | None:
+    """BUSCO's completeness in the summary of ``folder`` matching ``pattern``."""
+    summaries = sorted(folder.glob(pattern)) if folder.exists() else []
+    if not summaries:
+        return None
+    found = BUSCO_LINE.search(summaries[0].read_text())
+    return float(found["complete"]) if found else None
+
+
+def cds_matches(
+    minimap2: list[str], predicted: Path, reference: Path, workdir: Path
+) -> list[dict]:
+    """Each alignment of a predicted CDS (its gene's) to a reference one: its
+    identity, and how much of each it covers."""
+    paf = workdir / f"{reference.stem}.genes.paf"
+    with paf.open("w") as sink:
+        subprocess.run(
+            [
+                *minimap2, "-c", "-x", "asm20", "-k", "15", "-w", "5", "-N", "10",
+                str(reference), str(predicted),
+            ],
+            check=True, stdout=sink, stderr=subprocess.DEVNULL,
+        )  # fmt: skip
+    found = []
+    for line in paf.read_text().splitlines():
+        f = line.split("\t")
+        if f[4] != "+":
+            continue
+        query_length, target_length = int(f[1]), int(f[6])
+        found.append(
+            {
+                "gene": f[0].rsplit("-T", 1)[0],
+                "reference": f[5],
+                "matches": int(f[9]),
+                "identity": int(f[9]) / int(f[10]),
+                "query_cover": (int(f[3]) - int(f[2])) / query_length,
+                "reference_cover": (int(f[8]) - int(f[7])) / target_length,
+            }
+        )
+    return found
+
+
+def gene_pairs(matches: list[dict]) -> dict[str, str]:
+    """Each reference gene's predicted gene, where each is the other's best
+    match (95 % identity, half of each covered)."""
+    good = [
+        m
+        for m in matches
+        if m["identity"] >= 0.95
+        and m["query_cover"] >= 0.5
+        and m["reference_cover"] >= 0.5
+    ]
+    best_of_gene: dict[str, dict] = {}
+    best_of_reference: dict[str, dict] = {}
+    for m in good:
+        if m["matches"] > best_of_gene.get(m["gene"], {"matches": -1})["matches"]:
+            best_of_gene[m["gene"]] = m
+        if (
+            m["matches"]
+            > best_of_reference.get(m["reference"], {"matches": -1})["matches"]
+        ):
+            best_of_reference[m["reference"]] = m
+    return {
+        reference: m["gene"]
+        for reference, m in best_of_reference.items()
+        if best_of_gene[m["gene"]]["reference"] == reference
+    }
+
+
+def gene_classes(data: Path, species: str) -> dict[str, str]:
+    """Each reference gene's class (characterized or not), from the set's
+    truth; none in a set that does not class them."""
+    table = data / "truth" / f"{species}.genes.tsv"
+    if not table.exists():
+        return {}
+    with table.open(newline="") as handle:
+        return {r["gene"]: r["class"] for r in csv.DictReader(handle, delimiter="\t")}
+
+
+def reference_cds(data: Path, species: str) -> Path:
+    return data / "references" / f"{species}.cds.fa"
+
+
+def predicted_cds(results: Path, species: str) -> Path:
+    return results / "species" / species / "annotation" / f"{species}.cds.fna.gz"
+
+
+def milestone_4(results: Path, data: Path, minimap2: list[str]) -> list[dict]:
+    workdir = results / "benchmark"
+    workdir.mkdir(parents=True, exist_ok=True)
+    checks = []
+    for row in species_rows(data):
+        species = row["species"]
+        reference = reference_cds(data, species)
+        every = re.findall(r"^>(\S+)", reference.read_text(), re.MULTILINE)
+        matches = cds_matches(
+            minimap2, predicted_cds(results, species), reference, workdir
+        )
+        found = {
+            m["reference"]
+            for m in matches
+            if m["identity"] >= 0.95 and m["reference_cover"] >= 0.8
+        }
+        classes = gene_classes(data, species)
+        counted = (
+            [g for g in every if classes.get(g) == "characterized"]
+            if classes
+            else every
+        )
+        hits = sum(g in found for g in counted)
+        which = "characterized reference genes" if classes else "reference genes"
+        checks.append(
+            {
+                "species": species,
+                "check": f"90 % of its {which} found (80 % of their CDS)",
+                "value": f"{hits} of {len(counted)} ({100 * hits / len(counted):.1f} %)"
+                + (
+                    f"; all genes {sum(g in found for g in every)} of {len(every)}"
+                    if classes
+                    else ""
+                ),
+                "passed": hits >= 0.9 * len(counted),
+            }
+        )
+        base = results / "species" / species
+        genome = busco_summary(
+            base / "genome" / "qc" / "busco", f"short_summary.*.{species}.fa.txt"
+        )
+        proteins = busco_summary(
+            base / "annotation" / "qc" / "busco",
+            f"short_summary.*.{species}.proteins*.txt",
+        )
+        checks.append(
+            {
+                "species": species,
+                "check": "BUSCO on its proteins within 2 points of its genome's",
+                "value": f"{proteins} % vs {genome} %",
+                "passed": genome is not None
+                and proteins is not None
+                and proteins >= genome - 2,
+            }
+        )
+    return checks
+
+
+def ranks(values: list[float]) -> list[float]:
+    """Each value's rank, ties sharing their average rank."""
+    order = sorted(range(len(values)), key=values.__getitem__)
+    found = [0.0] * len(values)
+    i = 0
+    while i < len(order):
+        j = i
+        while j + 1 < len(order) and values[order[j + 1]] == values[order[i]]:
+            j += 1
+        for k in range(i, j + 1):
+            found[order[k]] = (i + j) / 2 + 1
+        i = j + 1
+    return found
+
+
+def spearman(x: list[float], y: list[float]) -> float:
+    """Spearman's rho: Pearson's correlation of the ranks."""
+    rx, ry = ranks(x), ranks(y)
+    n = len(rx)
+    mx, my = sum(rx) / n, sum(ry) / n
+    cov = sum((a - mx) * (b - my) for a, b in zip(rx, ry, strict=True))
+    sx = sum((a - mx) ** 2 for a in rx) ** 0.5
+    sy = sum((b - my) ** 2 for b in ry) ** 0.5
+    return cov / (sx * sy) if sx and sy else float("nan")
+
+
+def read_tpm(path: Path) -> tuple[list[str], dict[str, list[float]]]:
+    """A TPM table's libraries, and each gene's TPM in them."""
+    with path.open(newline="") as handle:
+        rows = list(csv.reader(handle, delimiter="\t"))
+    header = rows[0]
+    first = 2 if len(header) > 1 and header[1] == "length_bp" else 1
+    return header[first:], {r[0]: [float(v) for v in r[first:]] for r in rows[1:]}
+
+
+def milestone_5(results: Path, data: Path, minimap2: list[str]) -> list[dict]:
+    workdir = results / "benchmark"
+    workdir.mkdir(parents=True, exist_ok=True)
+    checks = []
+    for row in species_rows(data):
+        species = row["species"]
+        pairs = gene_pairs(
+            cds_matches(
+                minimap2,
+                predicted_cds(results, species),
+                reference_cds(data, species),
+                workdir,
+            )
+        )
+        labels, truth = read_tpm(data / "truth" / f"{species}.tpm.tsv")
+        found_labels, found = read_tpm(
+            results / "species" / species / "expression" / f"{species}.tpm.tsv"
+        )
+        genes = sorted(g for g in truth if g in pairs and pairs[g] in found)
+        rhos = {}
+        for label in labels:
+            if label not in found_labels:
+                continue
+            column = found_labels.index(label)
+            rhos[label] = spearman(
+                [truth[g][labels.index(label)] for g in genes],
+                [found[pairs[g]][column] for g in genes],
+            )
+        worst = min(rhos.values()) if rhos else float("nan")
+        checks.append(
+            {
+                "species": species,
+                "check": "Spearman's rho of 0.9 against the true TPM, in every library",
+                "value": f"{worst:.3f} at worst, on {len(genes)} genes ("
+                + ", ".join(f"{k} {v:.3f}" for k, v in rhos.items())
+                + ")",
+                "passed": len(rhos) == len(labels) and worst >= 0.9,
+            }
+        )
+    return checks
+
+
+def set_name(data: Path) -> str:
+    """The set's level (easy, medium, hard), from its truth; its folder's name
+    for a set without one."""
+    truth = json.loads((data / "truth.json").read_text())
+    return truth.get("level", {}).get("name", data.name)
+
+
+def write_report(
+    checks: list[dict], results: Path, milestone: int, name: str = ""
+) -> bool:
     out = results / "benchmark"
     out.mkdir(parents=True, exist_ok=True)
     (out / f"m{milestone}.json").write_text(json.dumps(checks, indent=2) + "\n")
+    on = f"the benchmark pool's {name} set" if name else "the benchmark pool"
     lines = [
-        f"# Milestone {milestone}, on the benchmark pool",
+        f"# Milestone {milestone}, on {on}",
         "",
         "| Species | Check | Value | Passed |",
         "|---|---|---|---|",
     ]
     verdicts = {True: "yes", False: "**no**", None: "not judged"}
+    # A reported check says how far the pipeline gets, and decides nothing.
+    reported = {True: "yes (reported)", False: "no (reported)", None: "not judged"}
     lines += [
-        f"| {c['species']} | {c['check']} | {c['value']} | {verdicts[c['passed']]} |"
+        f"| {c['species']} | {c['check']} | {c['value']} | "
+        f"{(reported if c.get('reported') else verdicts)[c['passed']]} |"
         for c in checks
     ]
     (out / f"m{milestone}.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
-    return all(c["passed"] is not False for c in checks)
+    return all(c["passed"] is not False for c in checks if not c.get("reported"))
 
 
 def main() -> int:
@@ -512,12 +1018,15 @@ def main() -> int:
         "--results", type=Path, required=True, help="the pipeline's --outdir"
     )
     parser.add_argument(
-        "--data", type=Path, default=Path(__file__).parent / "data" / "small"
+        "--data", type=Path, default=Path(__file__).parent / "data" / "medium"
     )
-    parser.add_argument("--milestone", type=int, choices=[1, 2, 3], default=1)
+    parser.add_argument("--milestone", type=int, choices=[1, 2, 3, 4, 5], default=1)
     parser.add_argument("--busco", default="busco", help="how to run BUSCO")
     parser.add_argument("--quast", default="quast.py", help="how to run QUAST")
     parser.add_argument("--minimap2", default="minimap2", help="how to run minimap2")
+    parser.add_argument(
+        "--plexembler", default="plexembler", help="how to run plexembler (milestone 3)"
+    )
     parser.add_argument(
         "--busco-db", type=Path, help="BUSCO's lineages, downloaded beforehand"
     )
@@ -543,14 +1052,26 @@ def main() -> int:
             shlex.split(arguments.quast),
             arguments.hic_results,
         )
-    else:
+    elif arguments.milestone == 3:
         checks = milestone_3(
             arguments.results,
             arguments.data,
             shlex.split(arguments.minimap2),
             shlex.split(arguments.quast),
+            shlex.split(arguments.plexembler),
         )
-    return 0 if write_report(checks, arguments.results, arguments.milestone) else 1
+    elif arguments.milestone == 4:
+        checks = milestone_4(
+            arguments.results, arguments.data, shlex.split(arguments.minimap2)
+        )
+    else:
+        checks = milestone_5(
+            arguments.results, arguments.data, shlex.split(arguments.minimap2)
+        )
+    name = set_name(arguments.data)
+    return (
+        0 if write_report(checks, arguments.results, arguments.milestone, name) else 1
+    )
 
 
 if __name__ == "__main__":

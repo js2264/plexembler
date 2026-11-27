@@ -11,11 +11,14 @@ from plexembler.cli import cli
 from plexembler.select import (
     Busco,
     Candidate,
+    KmerChange,
     choose_assembly,
+    choose_polish,
     copy_sequence,
     read_busco,
     read_candidates,
     read_gfastats,
+    read_kmer_change,
     read_qv,
 )
 
@@ -65,6 +68,12 @@ def gfastats(tmp_path: Path, name: str, contigs=17, n50=924431) -> Path:
     return path
 
 
+def kmers(tmp_path: Path, name: str, fixed: int, introduced: int) -> Path:
+    path = tmp_path / f"{name}.kmers.tsv"
+    path.write_text(f"fixed\tintroduced\n{fixed}\t{introduced}\n", "utf-8")
+    return path
+
+
 def fasta(tmp_path: Path, name: str) -> Path:
     path = tmp_path / f"{name}.fa.gz"
     with gzip.open(path, "wt") as handle:
@@ -74,7 +83,7 @@ def fasta(tmp_path: Path, name: str) -> Path:
 
 def table(tmp_path: Path, rows: list[dict[str, str]]) -> Path:
     path = tmp_path / "candidates.tsv"
-    header = ["candidate", "fasta", "busco", "qv", "stats"]
+    header = ["candidate", "fasta", "busco", "qv", "stats", "kmers"]
     lines = ["\t".join(header)]
     lines += ["\t".join(row.get(key, "") for key in header) for row in rows]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -258,8 +267,6 @@ def test_a_species_id_is_checked(tmp_path: Path):
 
 
 def test_the_polishing_step(tmp_path: Path):
-    from plexembler.select import choose_polish
-
     def make(name, qv):
         return Candidate(name, tmp_path / name, qv=qv)
 
@@ -302,3 +309,86 @@ def test_the_polishing_step(tmp_path: Path):
         from plexembler.select import select
 
         select(table(tmp_path, rows), outdir, "Scer", "scaffold")
+
+
+def test_the_changed_kmers(tmp_path: Path):
+    assert read_kmer_change(kmers(tmp_path, "a", 2233, 147)) == KmerChange(2233, 147)
+    assert KmerChange(920, 211).net == 709
+    for name, text in (("none", ""), ("words", "fixed\tintroduced\nmany\t1\n")):
+        path = tmp_path / f"{name}.kmers.tsv"
+        path.write_text(text, encoding="utf-8")
+        with pytest.raises(ValueError, match="k-mer counts"):
+            read_kmer_change(path)
+
+
+def test_the_polishing_step_by_the_changed_kmers(tmp_path: Path):
+    def make(name, change=None, qv=None):
+        return Candidate(name, tmp_path / name, qv=qv, kmers=change)
+
+    # The held-out pairs judge each polishing where it changed the draft: the
+    # largest margin of fixed over introduced k-mers wins, whatever the QVs.
+    kept = choose_polish(
+        [
+            make("draft", qv=18.47),
+            make("polypolish", KmerChange(2221, 147), qv=18.54),
+            make("pypolca", KmerChange(2233, 147), qv=18.54),
+        ],
+        qv_tolerance=0.1,
+    )
+    assert (kept.kept.name, kept.reason) == (
+        "pypolca",
+        "the held-out reads lack 2233 of the draft's k-mers it removed and 147 of "
+        "those it made",
+    )
+    # A tie keeps the earlier polishing, the one that changed less.
+    tie = choose_polish(
+        [make("draft"), make("p1", KmerChange(10, 2)), make("p2", KmerChange(12, 4))]
+    )
+    assert tie.kept.name == "p1"
+    # A polishing that made as many unsupported k-mers as it removed, or more,
+    # is not kept, nor one that changed nothing.
+    for change in (KmerChange(30, 30), KmerChange(5, 40), KmerChange(0, 0)):
+        harm = choose_polish([make("draft", qv=40), make("p", change, qv=41)])
+        assert (harm.kept.name, harm.reason) == (
+            "draft",
+            "no polishing removed more k-mers the held-out reads lack than it made",
+        )
+    # Without counts for every polishing, the QVs decide.
+    partial = choose_polish(
+        [make("draft", qv=40), make("p1", KmerChange(1, 0), qv=40), make("p2", qv=45)]
+    )
+    assert (partial.kept.name, partial.reason) == ("p2", "a higher QV than the draft's")
+
+
+def test_select_writes_the_changed_kmers(tmp_path: Path):
+    rows = [
+        {"candidate": "draft", "fasta": fasta(tmp_path, "draft").name},
+        {
+            "candidate": "polypolish",
+            "fasta": fasta(tmp_path, "polypolish").name,
+            "kmers": kmers(tmp_path, "polypolish", 873, 81).name,
+        },
+        {
+            "candidate": "pypolca",
+            "fasta": fasta(tmp_path, "pypolca").name,
+            "kmers": kmers(tmp_path, "pypolca", 920, 108).name,
+        },
+    ]
+    outdir = tmp_path / "out"
+    result = run(
+        str(table(tmp_path, rows)), "-s", "polish", "-p", "Spar", "-o", str(outdir)
+    )
+    assert result.exit_code == 0, result.output
+    lines = (outdir / "Spar.polish.selection.tsv").read_text().splitlines()
+    header = lines[0].split("\t")
+    rows_by_name = {
+        line.split("\t")[0]: dict(zip(header, line.split("\t"), strict=True))
+        for line in lines[1:]
+    }
+    assert rows_by_name["draft"]["kmers_fixed"] == "NA"
+    assert rows_by_name["pypolca"]["kept"] == "yes"
+    assert rows_by_name["pypolca"]["kmers_fixed"] == "920"
+    assert rows_by_name["pypolca"]["kmers_introduced"] == "108"
+    multiqc = (outdir / "Spar.polish_selection_mqc.tsv").read_text()
+    assert "\tK-mers fixed\tK-mers introduced" in multiqc
+    assert "Spar_polypolish\tno\tNA\tNA\tNA\tNA\tNA\t873\t81" in multiqc

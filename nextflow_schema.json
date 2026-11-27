@@ -238,15 +238,21 @@
                         "augustus",
                         "none"
                     ],
-                    "description": "Each species' genes: BRAKER3 (--fungus) with its RNA-seq alignments and --orthodb_proteins, AUGUSTUS ab initio for a species with neither; augustus for AUGUSTUS alone; or none.",
-                    "help_text": "BRAKER3 trains GeneMark and AUGUSTUS on the species itself, from its RNA-seq, related proteins, or both. A species with neither is predicted ab initio by AUGUSTUS with --augustus_species, a species it was trained on.",
+                    "description": "Each species' genes: BRAKER3 with its RNA-seq alignments and --orthodb_proteins as hints, AUGUSTUS ab initio for a species with neither; augustus for AUGUSTUS alone; or none.",
+                    "help_text": "BRAKER3 predicts with AUGUSTUS's model of --augustus_species, the species' evidence as hints, without training: a yeast genome holds too few genes and introns to train on. With --braker_train, it trains GeneMark and AUGUSTUS on the species itself instead. A species with neither RNA-seq nor proteins is predicted ab initio by AUGUSTUS with --augustus_species.",
                     "fa_icon": "fas fa-dna"
                 },
                 "augustus_species": {
                     "type": "string",
                     "default": "saccharomyces_cerevisiae_S288C",
-                    "description": "The species AUGUSTUS predicts ab initio with: one it was trained on (augustus --species=help), as close as can be.",
+                    "description": "AUGUSTUS's model the genes are predicted with: a species it was trained on (augustus --species=help), as close as can be.",
                     "fa_icon": "fas fa-paw"
+                },
+                "braker_train": {
+                    "type": "boolean",
+                    "description": "BRAKER3 trains its own model on each species (GeneMark-ET/EP/ETP, then AUGUSTUS), instead of predicting with --augustus_species.",
+                    "help_text": "For a species far from any model AUGUSTUS knows, and with enough introns for GeneMark-ET to train on: it fails on a few dozen, as in a yeast's few chromosomes.",
+                    "fa_icon": "fas fa-graduation-cap"
                 },
                 "orthodb_proteins": {
                     "type": "string",

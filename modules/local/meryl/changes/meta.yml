@@ -1,0 +1,67 @@
+name: "meryl_changes"
+description: The k-mers a polishing changed that reads held out of it lack, from the draft it removed and of its own
+keywords:
+  - polishing
+  - k-mers
+  - quality
+tools:
+  - "meryl":
+      description: "A genomic k-mer counter and sequence utility"
+      homepage: "https://github.com/marbl/meryl"
+      documentation: "https://meryl.readthedocs.io/en/latest/"
+      doi: "10.1186/s13059-020-02134-9"
+      licence: ["GPL"]
+      identifier: biotools:meryl
+input:
+  - - meta:
+        type: map
+        description: The polishing's meta map
+    - draft:
+        type: file
+        description: The draft the polishing started from
+        pattern: "*.{fa,fasta}{,.gz}"
+    - polished:
+        type: file
+        description: The polishing
+        pattern: "*.{fa,fasta}{,.gz}"
+    - reads_db:
+        type: directory
+        description: The k-mers of the reads held out of the polishing (meryl)
+        pattern: "*.meryl"
+  - kmer_size:
+      type: integer
+      description: k, the reads' database's
+output:
+  kmers:
+    - - meta:
+          type: map
+          description: The polishing's meta map
+      - ${prefix}.kmers.tsv:
+          type: file
+          description: "Two counts under a header: fixed, the draft's k-mers the reads lack that the polishing removed; introduced, the polishing's k-mers they lack that the draft has not"
+          pattern: "*.kmers.tsv"
+  versions_meryl:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - meryl:
+          type: string
+          description: The tool
+      - "1.4.1":
+          type: string
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - meryl:
+          type: string
+          description: The tool
+      - "1.4.1":
+          type: string
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

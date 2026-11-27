@@ -41,6 +41,9 @@ nextflow_pipeline {
                 { assert path("$outputDir/pools/pool/deconvolution/contigs/pool.hic.contacts.tsv").exists() },
                 { assert path("$outputDir/pools/pool/screen/pool.screen.tsv").exists() },
                 { assert path("$outputDir/species/sp1/contigs/sp1.contigs.fa.gz").exists() },
+                // Each polishing judged by the k-mers it changed (M2).
+                { assert path("$outputDir/species/sp1/candidates/polish/qc/kmers/sp1.pypolca.kmers.tsv").readLines()[0] == 'fixed\tintroduced' },
+                { assert path("$outputDir/species/sp1/polish/sp1.polish.selection.tsv").readLines()[0].contains('\tkmers_fixed\tkmers_introduced\t') },
                 // Each species' genome, its joins and its map (M3): sp1's two chromosomes.
                 { assert path("$outputDir/species/sp1/genome/sp1.names.tsv").readLines().count { it.endsWith('\tchromosome') } == 2 },
                 { assert path("$outputDir/species/sp1/genome/sp1.fa.gz.fai").exists() },

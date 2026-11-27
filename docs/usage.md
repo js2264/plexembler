@@ -202,8 +202,14 @@ species' copy, 85 to 95 % identical.
 - **Polishing:** each species' screened contigs with its own short reads, of
   that second split (`--polish_reads auto`: its WGS pairs, or, in a pool
   without WGS, its Hi-C reads cut at their ligation junctions; `wgs` or `hic`
-  to choose), Polypolish then pypolca, kept only when the QV against
-  `--polish_holdout` (10 %) of the pairs, held out of the polishing, rises. A
+  to choose), Polypolish (on Hi-C pieces, single reads, leaving out those
+  aligned more than once) then pypolca, judged by `--polish_holdout` (10 %) of
+  the pairs, held out of the polishing: where a polishing changed the draft,
+  the draft's k-mers they lack that it removed, against those it made that they
+  lack. The polishing that removed the most more than it made is kept, if one
+  did. Only the changed k-mers count: thin held-out pairs, Hi-C's above all,
+  miss many of a genome's k-mers by chance, which holds their QV far below the
+  genome's and hides a polishing's gain in it. A
   pool whose Hi-C library was made without an enzyme (Micro-C) and that has no
   WGS library is not polished with short reads. `--sr_polisher none` skips the
   step.
@@ -213,7 +219,9 @@ species' copy, 85 to 95 % identical.
 Each species' screened contigs become its genome (milestone 3 of the
 [plan](plan.md); [the parameters](parameters.md#chromosomes)): the pool split
 again on them, each species scaffolded with its own Hi-C pairs (YaHS, told the
-restriction motifs of the library's `enzymes`), the scaffolds named, the
+restriction motifs of the library's `enzymes`, from 1 kb up, then again on its
+own scaffolds from 5 kb up, which joins what the first pass left apart),
+the scaffolds named, the
 chromosomes first ([`plexembler finalize`](cli.md#finalize)), and its Hi-C map
 made on the genome (pairtools, cooler; its finest bin `--map_resolution`,
 1 kb). A Micro-C library (`enzymes` `none`) scaffolds too, without motifs. A
@@ -233,11 +241,15 @@ split between the species first, on their genomes (STAR, then
 evidence. Its repeats are found and masked (`--repeats repeatmodeler`), then
 its genes predicted (`--gene_predictor`):
 
-- **`braker`** (the default): BRAKER3 `--fungus`, trained on the species
-  itself, with its RNA-seq, `--orthodb_proteins` (OrthoDB's proteins of the
-  fungi, `Fungi.fa.gz`, from
+- **`braker`** (the default): BRAKER3, with the species' RNA-seq,
+  `--orthodb_proteins` (OrthoDB's proteins of the fungi, `Fungi.fa.gz`, from
   [their partitions](https://bioinf.uni-greifswald.de/bioinf/partitioned_odb12/)),
-  or both. A species with neither is predicted by AUGUSTUS.
+  or both, as hints to AUGUSTUS's model of `--augustus_species`, without
+  training: a yeast's genome holds too few genes and introns to train a model
+  on (GeneMark-ET fails on a few dozen introns). With `--braker_train`,
+  BRAKER3 trains GeneMark and AUGUSTUS on the species itself, for a species
+  far from any model AUGUSTUS knows and rich in introns. A species with
+  neither RNA-seq nor proteins is predicted by AUGUSTUS.
 - **`augustus`**: AUGUSTUS ab initio, with `--augustus_species`, a species it
   was trained on (`augustus --species=help`), as close to yours as can be:
   `saccharomyces_cerevisiae_S288C` by default. Quick, and right for a species

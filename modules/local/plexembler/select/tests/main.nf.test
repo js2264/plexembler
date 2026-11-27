@@ -38,6 +38,7 @@ nextflow_process {
                     [busco, file('${moduleDir}/../../../../assets/NO_FILE', checkIfExists: true)],
                     [qv_flye, qv_hifiasm],
                     [stats_flye, stats_hifiasm],
+                    [file('${moduleDir}/../../../../assets/NO_FILE', checkIfExists: true), file('${moduleDir}/../../../../assets/NO_FILE', checkIfExists: true)],
                 ]
                 input[1] = 'assembly'
                 """
@@ -58,6 +59,61 @@ nextflow_process {
         }
     }
 
+    test("a draft and two polishings, the k-mers they changed deciding") {
+
+        when {
+            process {
+                """
+                def dir = file("\${launchDir}/polish")
+                dir.mkdirs()
+                def qvs = ['draft': '18.47', 'polypolish': '18.54', 'pypolca': '18.54'].collect { name, qv ->
+                    def path = file("\${dir}/\${name}.qv")
+                    path.text = "\${name}\\t197501\\t1250000\\t\${qv}\\t0.014\\n"
+                    path
+                }
+                def kmers = [['polypolish', 2221, 147], ['pypolca', 2233, 147]].collect { name, fixed, introduced ->
+                    def path = file("\${dir}/\${name}.kmers.tsv")
+                    path.text = "fixed\\tintroduced\\n\${fixed}\\t\${introduced}\\n"
+                    path
+                }
+                def contigs = file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true)
+                def fastas = ['draft', 'polypolish', 'pypolca'].collect { name ->
+                    def path = file("\${dir}/sp1.\${name}.fa")
+                    path.text = contigs.text
+                    path
+                }
+                def none = file('${moduleDir}/../../../../assets/NO_FILE', checkIfExists: true)
+                input[0] = [
+                    [ id: 'sp1' ],
+                    ['draft', 'polypolish', 'pypolca'],
+                    fastas,
+                    [none, none, none],
+                    qvs,
+                    [none, none, none],
+                    [none] + kmers,
+                ]
+                input[1] = 'polish'
+                """
+            }
+        }
+
+        then {
+            def table = path(process.out.selection[0][1]).readLines()
+            def header = table[0].split('\t') as List
+            def pypolca = table[3].split('\t') as List
+            assertAll(
+                { assert process.success },
+                // pypolca fixed the most more than it introduced: kept, its QV
+                // within the old tolerance of the draft's notwithstanding.
+                { assert table[3].startsWith('pypolca\tyes') },
+                { assert pypolca[header.indexOf('kmers_fixed')] == '2233' },
+                { assert pypolca[header.indexOf('kmers_introduced')] == '147' },
+                { assert table[1].split('\t')[header.indexOf('kmers_fixed')] == 'NA' },
+                { assert process.out.fasta[0][1].toString().endsWith('sp1.polish.fa.gz') },
+            )
+        }
+    }
+
     test("one candidate - stub") {
 
         options "-stub"
@@ -69,6 +125,7 @@ nextflow_process {
                     [ id: 'sp1', keep: 'flye' ],
                     ['flye'],
                     [file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true)],
+                    [file('${moduleDir}/../../../../assets/NO_FILE', checkIfExists: true)],
                     [file('${moduleDir}/../../../../assets/NO_FILE', checkIfExists: true)],
                     [file('${moduleDir}/../../../../assets/NO_FILE', checkIfExists: true)],
                     [file('${moduleDir}/../../../../assets/NO_FILE', checkIfExists: true)],
