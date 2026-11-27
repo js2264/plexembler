@@ -121,7 +121,11 @@ follow [semantic versioning](https://semver.org).
 - **`plexembler junctions`**, which scores each join of a species' scaffolds
   by the Hi-C pairs across it against the species' contact decay, from the
   pairs within its contigs: `supported`, `unsupported` (a misjoin, likely) or
-  `thin` (`species/<species>/genome/qc/junctions/`).
+  `thin` (`species/<species>/genome/qc/junctions/`). Both the pairs across a
+  join and those expected are counted on the positions whose mates' coverage
+  is half to twice the genome's mean (`left_seen`, `right_seen`): a repeat at
+  a contig's end, which the pairs see nothing of, or see another copy's
+  contacts in, is left out.
 - **The joins the Hi-C pairs do not support, cut**: each of YaHS's joins is
   scored before the genome is written, from the species' pairs on its contigs,
   each mate placed on its scaffold through YaHS's AGP (`plexembler junctions
@@ -129,8 +133,7 @@ follow [semantic versioning](https://semver.org).
   `unsupported` join is cut, its scaffold's two sides two scaffolds, named as
   any other (`plexembler finalize --cut`; `scaffold_1.1` and `scaffold_1.2` in
   the table of names). A `thin` join is kept. On the benchmark's medium set,
-  Scer's two joins through a collapsed Y' are cut, and its misassemblies go
-  from 2 to 0.
+  YaHS's join of Scer's chrI to its chrVI, at their two Y' ends, is cut.
 - **Each species' Hi-C map** on its genome: its pairs aligned (bwa-mem2),
   parsed, sorted and deduplicated (pairtools), binned at `--map_resolution`
   (1 kb) and zoomed out, balanced (cooler): `species/<species>/hic/<species>.mcool`.

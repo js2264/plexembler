@@ -390,6 +390,15 @@ bases on each side, against those the decay expects there. A join is
 likely: the log warns of each), `thin` when the decay expects too few pairs to
 judge it (`--min-expected`).
 
+Both counts leave out the positions the pairs cannot be trusted on: each side
+of a join is cut into bins of 1 kb, and a bin counts when its mates' coverage
+is half to twice the genome's mean. A contig often ends in a repeat: where its
+copies all assembled, no mate maps there uniquely, and a true join would look
+unsupported; where the assembly collapsed them, or misses a copy, another
+copy's reads map there, and their contacts can make a misjoin look supported,
+which is how a scaffolder makes one. A join with no such bin on a side is
+`thin`.
+
 ```bash
 plexembler junctions Scer.pairs.gz -a Scer.agp -p Scer -o Scer/
 ```
@@ -403,8 +412,9 @@ which scores the scaffolder's joins before the genome is written, so that
 [`finalize --cut`](#finalize) can cut those the pairs do not support. A mate
 on a part of a contig the AGP leaves out is dropped. It writes the table of joins
 (`Scer.junctions.tsv`: `scaffold`, `position`, the last base of the join's left
-contig, `left_contig`, `right_contig`, `observed`, `expected`, `ratio` and
-`verdict`), its MultiQC table and its log.
+contig, `left_contig`, `right_contig`, `observed`, `expected`, `ratio`,
+`verdict`, and `left_seen` and `right_seen`, the share of each side's window
+whose pairs count), its MultiQC table and its log.
 
 | Option | Default | Description |
 |---|---|---|

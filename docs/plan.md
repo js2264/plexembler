@@ -332,9 +332,11 @@ its Hi-C maps.
       written, from the pairs on the contigs placed through its AGP
       (`plexembler junctions --contigs`, `candidates/scaffold/junctions/`),
       and each join they do not support cut, its two sides two scaffolds
-      (`plexembler finalize --cut`); a join too thin to judge kept. On the
-      benchmark's medium set it cuts Scer's two joins through a collapsed Y'
-      and takes its misassemblies from 2 to 0.
+      (`plexembler finalize --cut`); a join too thin to judge kept. Both
+      counts on the positions whose mates' coverage is half to twice the
+      genome's mean, which leaves out the repeats contigs end in. On the
+      benchmark's medium set it cuts YaHS's join of Scer's chrI to its chrVI,
+      at their two Y' ends.
 - [ ] **Telomeres:** `tidk explore` finds the repeat when the samplesheet has
       none, `tidk search` counts the chromosomes with telomeres at both ends
       (nf-core's subworkflow `fasta_explore_search_plot_tidk`).
@@ -575,6 +577,13 @@ pipeline's own steps need a container before the package is anywhere else.
         set): `plexembler junctions` flags the join (6 % of the pairs
         expected across it). Done: the joins it flags are cut before the
         genome is written (M3, "The unsupported joins cut").
+      - A contig that repeats its neighbour's end: Scer's contig 1 (22 kb)
+        holds a poorer copy of 15 kb of chrI that its contig 3 holds too (97 %
+        identity by QUAST, 84 % counting its indels), and 6 kb of chrI's left
+        end that no other contig has. YaHS lays it
+        after contig 3, rightly, and QUAST counts the 15 kb overlap as a
+        misassembly. Trim the overlap at the join, or drop such a contig
+        before scaffolding (and lose chrI's 6 kb).
       - The Hi-C polishing was never kept, its held-out pairs too thin for
         the guard's QV to see a gain; the guard now counts the k-mers a
         polishing changed (M2). Kept, it fixes 42 % of the errors the WGS
