@@ -132,14 +132,6 @@ Every tool a step of the pipeline runs, added with its step ([docs/plan.md](docs
 
   > Seemann T. barrnap: BAsic Rapid Ribosomal RNA Predictor.
 
-- [featureCounts](https://doi.org/10.1093/bioinformatics/btt656)
-
-  > Liao Y, Smyth GK, Shi W. featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics. 2014 Apr 1;30(7):923-30. doi: 10.1093/bioinformatics/btt656.
-
-- [deepTools](https://doi.org/10.1093/nar/gkw257)
-
-  > Ramírez F, Ryan DP, Grüning B, Bhardwaj V, Kilpert F, Richter AS, Heyne S, Dündar F, Manke T. deepTools2: a next generation web server for deep-sequencing data analysis. Nucleic Acids Res. 2016 Jul 8;44(W1):W160-5. doi: 10.1093/nar/gkw257.
-
 - [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
 
 > Andrews, S. (2010). FastQC: A Quality Control Tool for High Throughput Sequence Data [Online].

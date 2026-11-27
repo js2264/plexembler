@@ -244,30 +244,6 @@ CUG is a sense codon in tables 1, 12 and 26 alike, so the gene structures do
 not change, the proteins do. A wrong code shows as proteins with a stop codon
 inside, which the run warns of.
 
-## Expression
-
-Each species' read pairs of each pooled RNA-seq library (milestone 5 of the
-[plan](plan.md); [the parameters](parameters.md#expression-and-tracks)) are
-counted on its genes, and its counts and TPM written, genes by libraries, each
-library named `<condition>_<replicate>` from the libraries' samplesheet. The
-libraries' strandedness is `--rnaseq_strandedness`: `reverse` (dUTP, as
-Illumina's stranded kits make them) by default, `forward`, or `unstranded`.
-The TPM are within each species, from its own pairs alone: a pair the split
-could not give to one species is in neither's. There is no differential
-expression: the tables are made for it.
-
-Each species' tracks go beside them: each library's coverage on each strand,
-and the nanopore reads' depth, as bigWig.
-
-## Reports and the browser
-
-Each species has its report (milestone 6): a page, its numbers as text, and its
-row in MultiQC's General Statistics. The results open in
-[chromosomix](https://chromosomix.app) through the store the run writes at
-their top, `chromosomix.store.json`: connect the results folder in its app, or
-put the results on a bucket and give the run their address
-(`--browser_base https://…/results/`) to open them at chromosomix.app.
-
 ## Profiles
 
 `-profile` takes a container engine (`docker`, `apptainer`, `singularity`,

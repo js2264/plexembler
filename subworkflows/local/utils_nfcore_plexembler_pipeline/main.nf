@@ -302,8 +302,6 @@ def toolCitationText() {
             "AUGUSTUS (Stanke et al. 2008),",
             "tRNAscan-SE (Chan et al. 2021),",
             "barrnap (Seemann),",
-            "featureCounts (Liao et al. 2014),",
-            "deepTools (Ramírez et al. 2016),",
             "FastQC (Andrews 2010),",
             "MultiQC (Ewels et al. 2016)",
             "."
@@ -343,8 +341,6 @@ def toolBibliographyText() {
             "<li>Stanke, M., Diekhans, M., Baertsch, R., & Haussler, D. (2008). Using native and syntenically mapped cDNA alignments to improve de novo gene finding. Bioinformatics, 24(5), 637-644. doi: 10.1093/bioinformatics/btn013</li>",
             "<li>Chan, P. P., Lin, B. Y., Mak, A. J., & Lowe, T. M. (2021). tRNAscan-SE 2.0: improved detection and functional classification of transfer RNA genes. Nucleic Acids Research, 49(16), 9077-9096. doi: 10.1093/nar/gkab688</li>",
             "<li>Seemann, T. barrnap: BAsic Rapid Ribosomal RNA Predictor. URL: https://github.com/tseemann/barrnap</li>",
-            "<li>Liao, Y., Smyth, G. K., & Shi, W. (2014). featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics, 30(7), 923-930. doi: 10.1093/bioinformatics/btt656</li>",
-            "<li>Ramírez, F., et al. (2016). deepTools2: a next generation web server for deep-sequencing data analysis. Nucleic Acids Research, 44(W1), W160-W165. doi: 10.1093/nar/gkw257</li>",
             "<li>Andrews S, (2010) FastQC, URL: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/).</li>",
             "<li>Ewels, P., Magnusson, M., Lundin, S., & Käller, M. (2016). MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics , 32(19), 3047–3048. doi: /10.1093/bioinformatics/btw354</li>"
         ].join(' ').trim()
