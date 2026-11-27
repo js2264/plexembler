@@ -50,6 +50,7 @@ import argparse
 import csv
 import gzip
 import json
+import math
 import re
 import shlex
 import subprocess
@@ -142,6 +143,11 @@ def quast_misassemblies(
     return int(report.get("# misassemblies", "0"))
 
 
+def phred(rate: float) -> float:
+    """An error rate per base as a QV, 60 for none."""
+    return 60.0 if rate <= 0 else min(60.0, -10 * math.log10(rate))
+
+
 def quast_errors(quast: list[str], assembly: Path, reference: Path, out: Path) -> float:
     """An assembly's mismatches and indels per 100 kb of its reference."""
     report = quast_report(quast, assembly, reference, out)
@@ -175,12 +181,31 @@ def milestone_1(
                 "passed": complete >= expected - 1,
             }
         )
-        qv = float(kept["qv"]) if kept["qv"] not in ("NA", "") else 0.0
+        # "QV >= 40 after polishing": the genome the polishing kept, against
+        # its reference. The kept contigs' own QV (their candidates' table,
+        # against the pool's WGS k-mers) is before the short reads' polishing
+        # and the screen: it counts the errors the nanopore reads share, which
+        # the second set plants for that polishing, and the bleed-through
+        # contigs' (Spar's).
+        before = float(kept["qv"]) if kept["qv"] not in ("NA", "") else None
+        polished = results / "species" / species / "polish" / f"{species}.polish.fa.gz"
+        errors = quast_errors(
+            quast,
+            polished if polished.exists() else assembly,
+            reference,
+            workdir / f"quast_polished_{species}",
+        )
+        qv = phred(errors / 100_000)
         checks.append(
             {
                 "species": species,
-                "check": "QV of 40 or more",
-                "value": f"{qv:.1f}",
+                "check": "QV of 40 or more after polishing (against the reference)",
+                "value": f"{qv:.1f}, {errors:.2f} errors per 100 kb"
+                + (
+                    f" (the kept contigs' own QV, before: {before:.1f})"
+                    if before is not None
+                    else ""
+                ),
                 "passed": qv >= 40,
             }
         )

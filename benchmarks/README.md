@@ -79,8 +79,9 @@ and plexembler's own `junctions` (`--busco`, `--quast`, `--minimap2`,
 nothing to judge reads "not judged"). Each milestone's checks are its "Done
 when":
 
-- milestone 1, the kept contigs: BUSCO against the reference's, QV,
-  misassemblies;
+- milestone 1, the kept contigs: BUSCO against the reference's,
+  misassemblies; and the QV after polishing, against the reference (QUAST's
+  mismatches and indels);
 - milestone 2, the two splits (on the contigs, then on the screened contigs)
   and their epsilon, the screened contigs and the polishing: its QV, and its
   errors against the reference, QUAST's (`--hic-results`: a second run,
