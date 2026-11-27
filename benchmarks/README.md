@@ -46,10 +46,15 @@ nextflow run . -profile benchmark,docker --outdir results
 python benchmarks/evaluate.py --results results --milestone 1
 ```
 
-`evaluate.py` runs BUSCO on the references and QUAST against them (`--busco`,
-`--quast`: how to run them, on PATH by default) and writes
-`results/benchmark/m<N>.md`; it exits 1 when a check fails (a check with
-nothing to judge reads "not judged").
+`evaluate.py` runs BUSCO on the references, QUAST and minimap2 against them
+(`--busco`, `--quast`, `--minimap2`: how to run them, on PATH by default) and
+writes `results/benchmark/m<N>.md`; it exits 1 when a check fails (a check with
+nothing to judge reads "not judged"). Each milestone's checks are its "Done
+when": milestone 1, the kept contigs (BUSCO against the reference's, QV,
+misassemblies); milestone 2, the split, epsilon, the screened contigs and the
+polishing (`--hic-results`: a second run, polished with the Hi-C reads,
+`--polish_reads hic`); milestone 3, each genome's chromosomes against the
+reference's (whole, end to end), its misassemblies and its flagged joins.
 
 ## To come
 

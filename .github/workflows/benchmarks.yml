@@ -125,7 +125,7 @@ jobs:
       # Milestone 2 compares polishing with the Hi-C reads, cut at their
       # junctions, to polishing with the WGS pairs: a second run, resumed.
       - name: The pipeline, polished with Hi-C
-        if: env.MILESTONE != '1'
+        if: env.MILESTONE == '2'
         run: |
           nextflow run . -profile benchmark,docker --outdir results-hic \
             --busco_db "$PWD/busco_downloads" --polish_reads hic -resume
@@ -134,7 +134,7 @@ jobs:
         shell: micromamba-shell {0}
         run: |
           hic=""
-          [ "$MILESTONE" != "1" ] && hic="--hic-results results-hic"
+          [ "$MILESTONE" = "2" ] && hic="--hic-results results-hic"
           python benchmarks/evaluate.py --results results --milestone "$MILESTONE" \
             --busco-db busco_downloads $hic
           cat "results/benchmark/m$MILESTONE.md" >> "$GITHUB_STEP_SUMMARY"

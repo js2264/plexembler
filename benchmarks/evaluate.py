@@ -21,7 +21,14 @@ the short-read polishing; and, with ``--hic-results`` (a run with
 ``--polish_reads hic``), the Hi-C reads' polishing gain 80 % of the WGS pairs'
 (not judged when the WGS pairs' polishing was not kept: no gain to compare).
 
-The tools run as ``--busco`` and ``--quast`` say: commands on PATH by default,
+Milestone 3, for each species: 90 % or more of its reference's chromosomes
+each 90 % in one of its genome's chromosomes, and as many end to end (both ends
+of the reference chromosome, within 2 kb, in that chromosome: their telomeres,
+since the references are complete); no misassembly over 10 kb against its
+reference (QUAST); no join flagged by ``plexembler junctions`` (the set plants
+no misjoin yet).
+
+The tools run as ``--busco``, ``--quast`` and ``--minimap2`` say: commands on PATH by default,
 or in a container (``"apptainer exec busco.sif busco"``).
 """
 
@@ -303,6 +310,129 @@ def milestone_2(
     return checks
 
 
+def merged(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    found: list[tuple[int, int]] = []
+    for start, end in sorted(intervals):
+        if found and start <= found[-1][1]:
+            found[-1] = (found[-1][0], max(found[-1][1], end))
+        else:
+            found.append((start, end))
+    return found
+
+
+def chromosome_cover(
+    minimap2: list[str], genome: Path, reference: Path, workdir: Path
+) -> dict[str, tuple[str, float, bool]]:
+    """Each reference chromosome's best genome sequence: its name, the share of
+    the reference chromosome it covers, and whether it holds both its ends."""
+    paf = workdir / f"{genome.name}.vs_reference.paf"
+    with paf.open("w") as sink:
+        subprocess.run(
+            [*minimap2, "-x", "asm5", "--secondary=no", str(reference), str(genome)],
+            check=True,
+            stdout=sink,
+            stderr=subprocess.DEVNULL,
+        )
+    lengths: dict[str, int] = {}
+    covered: dict[tuple[str, str], list[tuple[int, int]]] = {}
+    for line in paf.read_text().splitlines():
+        fields = line.split("\t")
+        target, length = fields[5], int(fields[6])
+        lengths[target] = length
+        covered.setdefault((target, fields[0]), []).append(
+            (int(fields[7]), int(fields[8]))
+        )
+    best: dict[str, tuple[str, float, bool]] = {}
+    for (target, query), intervals in covered.items():
+        pieces = merged(intervals)
+        share = sum(end - start for start, end in pieces) / lengths[target]
+        ends = pieces[0][0] <= 2000 and pieces[-1][1] >= lengths[target] - 2000
+        if target not in best or share > best[target][1]:
+            best[target] = (query, share, ends)
+    return best
+
+
+def milestone_3(
+    results: Path, data: Path, minimap2: list[str], quast: list[str]
+) -> list[dict]:
+    workdir = results / "benchmark"
+    workdir.mkdir(parents=True, exist_ok=True)
+    checks = []
+    for row in species_rows(data):
+        species = row["species"]
+        reference = data / "references" / f"{species}.fa"
+        genome = results / "species" / species / "genome" / f"{species}.fa.gz"
+        names = results / "species" / species / "genome" / f"{species}.names.tsv"
+        with names.open(newline="") as handle:
+            roles = {
+                r["name"]: r["role"] for r in csv.DictReader(handle, delimiter="\t")
+            }
+        cover = {
+            target: found
+            for target, found in chromosome_cover(
+                minimap2, genome, reference, workdir
+            ).items()
+            if not target.endswith("_chrM")
+        }
+        nuclear = [
+            name
+            for name in re.findall(r"^>(\S+)", reference.read_text(), re.MULTILINE)
+            if not name.endswith("_chrM")
+        ]
+        whole = [
+            t
+            for t in nuclear
+            if t in cover
+            and cover[t][1] >= 0.9
+            and roles.get(cover[t][0]) == "chromosome"
+        ]
+        end_to_end = [t for t in whole if cover[t][2]]
+        checks.append(
+            {
+                "species": species,
+                "check": "90 % of its chromosomes each 90 % in one of its genome's",
+                "value": f"{len(whole)} of {len(nuclear)}",
+                "passed": len(whole) >= 0.9 * len(nuclear),
+            }
+        )
+        checks.append(
+            {
+                "species": species,
+                "check": "90 % of its chromosomes end to end",
+                "value": f"{len(end_to_end)} of {len(nuclear)}",
+                "passed": len(end_to_end) >= 0.9 * len(nuclear),
+            }
+        )
+        misassemblies = quast_misassemblies(quast, genome, reference, workdir)
+        checks.append(
+            {
+                "species": species,
+                "check": "no misassembly over 10 kb (QUAST)",
+                "value": str(misassemblies),
+                "passed": misassemblies == 0,
+            }
+        )
+        table = (
+            results / "species" / species / "genome" / "qc" / "junctions"
+            / f"{species}.junctions.tsv"
+        )  # fmt: skip
+        if table.exists():
+            with table.open(newline="") as handle:
+                verdicts = [
+                    r["verdict"] for r in csv.DictReader(handle, delimiter="\t")
+                ]
+            flagged = verdicts.count("unsupported")
+            checks.append(
+                {
+                    "species": species,
+                    "check": "no join flagged (none planted)",
+                    "value": f"{flagged} of {len(verdicts)} joins",
+                    "passed": flagged == 0,
+                }
+            )
+    return checks
+
+
 def write_report(checks: list[dict], results: Path, milestone: int) -> bool:
     out = results / "benchmark"
     out.mkdir(parents=True, exist_ok=True)
@@ -331,7 +461,7 @@ def main() -> int:
     parser.add_argument(
         "--data", type=Path, default=Path(__file__).parent / "data" / "small"
     )
-    parser.add_argument("--milestone", type=int, choices=[1, 2], default=1)
+    parser.add_argument("--milestone", type=int, choices=[1, 2, 3], default=1)
     parser.add_argument("--busco", default="busco", help="how to run BUSCO")
     parser.add_argument("--quast", default="quast.py", help="how to run QUAST")
     parser.add_argument("--minimap2", default="minimap2", help="how to run minimap2")
@@ -352,12 +482,19 @@ def main() -> int:
             shlex.split(arguments.quast),
             arguments.busco_db,
         )
-    else:
+    elif arguments.milestone == 2:
         checks = milestone_2(
             arguments.results,
             arguments.data,
             shlex.split(arguments.minimap2),
             arguments.hic_results,
+        )
+    else:
+        checks = milestone_3(
+            arguments.results,
+            arguments.data,
+            shlex.split(arguments.minimap2),
+            shlex.split(arguments.quast),
         )
     return 0 if write_report(checks, arguments.results, arguments.milestone) else 1
 

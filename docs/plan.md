@@ -260,11 +260,15 @@ alone gains at least 80 % of what WGS gains, species by species.
 **Goal:** each species' genome, scaffolded with its Hi-C pairs and finished, and
 its Hi-C maps.
 
-- [ ] **Pairs per species:** `pairtools parse/sort/dedup/stats` on the species'
-      Hi-C alignments (4DN `.pairs.gz`, with the `#chromsize` lines instaGRAAL
-      reads; pairtools' stats in MultiQC).
+- [x] **Pairs per species:** `pairtools parse/sort/dedup` on the species'
+      Hi-C alignments to its genome (4DN `.pairs.gz`, with the `#chromsize`
+      lines instaGRAAL reads; pairtools' stats in MultiQC). On the contigs, for
+      instaGRAAL, to come with it.
 - [ ] **Scaffolders, as candidates** (`--scaffolders yahs,instagraal,haphic`):
-      - YaHS (nf-core `yahs`), its motifs from the library's `enzymes`;
+      YaHS done, the only one for now (its candidate in
+      `candidates/scaffold/yahs/`); instaGRAAL waits for its CPU image (T4):
+      - YaHS (nf-core `yahs`), its motifs from the library's `enzymes` (none for
+        Micro-C);
       - instaGRAAL, a local module `INSTAGRAAL_ENDTOEND`:
         `instagraal-endtoend contigs.fa pairs.gz -e <enzymes> --mode cpu`, or
         `--instagraal_mode default` (MCMC and refine) on a GPU (`process_gpu`,
@@ -275,10 +279,10 @@ its Hi-C maps.
 - [ ] **Layouts as AGP:** `plexembler agp`: instaGRAAL's `final_info_frags.txt`
       to AGP (until instaGRAAL writes one, T4); AGP to FASTA, checked against the
       contigs.
-- [ ] **Each join scored:** `plexembler junctions`: the contacts across each
-      junction against the species' own contact decay P(s) (cooler), and the
-      joins they do not support; `instagraal-refine`, which scores the joins of
-      a layout, as a second opinion.
+- [x] **Each join scored:** `plexembler junctions`: the pairs across each
+      join against the species' own contact decay P(s), from the pairs within
+      its contigs, and the joins they do not support (`genome/qc/junctions/`).
+      `instagraal-refine` as a second opinion, with instaGRAAL.
 - [ ] **Telomeres:** `tidk explore` finds the repeat when the samplesheet has
       none, `tidk search` counts the chromosomes with telomeres at both ends
       (nf-core's subworkflow `fasta_explore_search_plot_tidk`).
@@ -291,14 +295,20 @@ its Hi-C maps.
 - [ ] **Curation:** a samplesheet column `curated_agp` replaces the kept layout
       with a curated one, checked against the contigs; each candidate's `.pretext`
       and `.hic` with its AGP are written for PretextView and Juicebox.
-- [ ] **Finishing:** `plexembler finalize`: chromosomes named by size
-      (`<species>_chr01`, …), `<species>_chrM`, `<species>_unplaced_01`; gap
-      closing (TGS-GapCloser, local) and telomere extension (teloclip, local)
-      behind `--close_gaps` and `--extend_telomeres`; bgzip, `.fai`, `.gzi`,
-      `chrom.sizes`, AGP. A related reference (`--orient_reference`) can orient
-      the chromosomes (`ragtag`), never reorder them.
+- [x] **Finishing:** `plexembler finalize`: chromosomes named by size
+      (`<species>_chr01`, …, the samplesheet's `n_chromosomes` of them, or every
+      scaffold of `--min_chromosome` or more), `<species>_chrM`,
+      `<species>_unplaced_01`; bgzip, `.fai`, `.gzi`, `chrom.sizes`, the names'
+      table, the AGP in the new names; a species without Hi-C finished from its
+      contigs. To come: gap closing (TGS-GapCloser, local) and telomere
+      extension (teloclip, local) behind `--close_gaps` and
+      `--extend_telomeres`; a related reference (`--orient_reference`) to
+      orient the chromosomes (`ragtag`), never reorder them.
 - [ ] **The pool on the final genomes** (a third `POOL_DECONVOLVE`: WGS, Hi-C).
-- [ ] **Maps:** `cooler cload pairs`, `zoomify --balance` (`.mcool`); `.hic`
+      The second, on the screened contigs, is done: the pairs each species is
+      scaffolded and mapped with.
+- [ ] **Maps:** `cooler cload pairs`, `zoomify --balance` (`.mcool`, done:
+      `species/<species>/hic/`); to come, `.hic`
       (hictk, local); `.pretext` and PNG (`pretextmap`, `pretextsnapshot`); the
       pool's map on the final genomes, a `.metacool` again, where the blocks
       between species show the noise.

@@ -65,6 +65,7 @@ _QUIET = click.option(
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(__version__, "--version", prog_name="plexembler")
 @click.command_panel("Contigs", commands=["rename", "select", "screen"])
+@click.command_panel("Genomes", commands=["finalize", "junctions"])
 @click.command_panel("Reads", commands=["digest"])
 @click.command_panel("Pools", commands=["ani", "split"])
 def cli() -> None:
@@ -691,3 +692,167 @@ def screen_command(
             len(found),
             ", ".join(f"{n} {v}" for v, n in sorted(verdicts.items())),
         )
+
+
+@cli.command(name="finalize", context_settings=CONTEXT_SETTINGS)
+@click.argument("fasta", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option(
+    "-p",
+    "--prefix",
+    required=True,
+    callback=_species,
+    help="The species' ID, which starts every name and names the outputs.",
+)
+@click.option(
+    "-o",
+    "--outdir",
+    required=True,
+    type=click.Path(file_okay=False, path_type=Path),
+    help="The folder of the genome, its sizes, names, AGP and the log.",
+)
+@click.option(
+    "-a",
+    "--agp",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="The scaffolder's AGP, written again with the new names.",
+)
+@click.option(
+    "-n",
+    "--n-chromosomes",
+    type=click.IntRange(1),
+    help="The species' number of nuclear chromosomes: its longest scaffolds, named chromosomes.",
+)
+@click.option(
+    "--min-chromosome",
+    type=click.IntRange(1),
+    default=100_000,
+    show_default=True,
+    help="Without --n-chromosomes, the shortest scaffold named a chromosome, in bases.",
+)
+@_FORCE
+@_VERBOSE
+@_QUIET
+def finalize_command(
+    fasta: Path,
+    prefix: str,
+    outdir: Path,
+    agp: Path | None,
+    n_chromosomes: int | None,
+    min_chromosome: int,
+    force: bool,
+    verbose: bool,
+    quiet: bool,
+) -> None:
+    """Name a species' scaffolds: its chromosomes by size, its organelle, the unplaced."""
+    from .finalize import finalize
+
+    _refuse_existing(
+        [outdir / f"{prefix}.fa.gz", outdir / f"{prefix}.chrom.sizes"], force
+    )
+    parameters = {
+        "fasta": fasta,
+        "prefix": prefix,
+        "outdir": outdir,
+        "agp": agp,
+        "n_chromosomes": n_chromosomes,
+        "min_chromosome": min_chromosome,
+        "force": force,
+    }
+    with run_log(outdir, prefix, parameters, verbose=verbose, quiet=quiet):
+        try:
+            finalize(fasta, prefix, outdir, agp, n_chromosomes, min_chromosome)
+        except ValueError as error:
+            raise click.ClickException(str(error)) from error
+
+
+@cli.command(name="junctions", context_settings=CONTEXT_SETTINGS)
+@click.argument("pairs", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option(
+    "-a",
+    "--agp",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="The genome's AGP, in the names of the pairs' chromosomes.",
+)
+@click.option(
+    "-p",
+    "--prefix",
+    required=True,
+    callback=_species,
+    help="The species' ID, which names the outputs.",
+)
+@click.option(
+    "-o",
+    "--outdir",
+    required=True,
+    type=click.Path(file_okay=False, path_type=Path),
+    help="The folder of the table of joins, its MultiQC table and the log.",
+)
+@click.option(
+    "-w",
+    "--window",
+    type=click.IntRange(1),
+    default=20_000,
+    show_default=True,
+    help="How far from a join, on each side, a pair's mates may lie, in bases.",
+)
+@click.option(
+    "--min-ratio",
+    type=click.FloatRange(0, min_open=True),
+    default=0.2,
+    show_default=True,
+    help="The pairs across a join over those expected, below which it is unsupported.",
+)
+@click.option(
+    "--min-expected",
+    type=click.FloatRange(0),
+    default=10.0,
+    show_default=True,
+    help="The pairs a join is expected to have, below which it is too thin to judge.",
+)
+@_FORCE
+@_VERBOSE
+@_QUIET
+def junctions_command(
+    pairs: Path,
+    agp: Path,
+    prefix: str,
+    outdir: Path,
+    window: int,
+    min_ratio: float,
+    min_expected: float,
+    force: bool,
+    verbose: bool,
+    quiet: bool,
+) -> None:
+    """Score each join of a genome's scaffolds by the Hi-C pairs across it."""
+    from .junctions import score, write_outputs
+
+    _refuse_existing([outdir / f"{prefix}.junctions.tsv"], force)
+    parameters = {
+        "pairs": pairs,
+        "agp": agp,
+        "prefix": prefix,
+        "outdir": outdir,
+        "window": window,
+        "min_ratio": min_ratio,
+        "min_expected": min_expected,
+        "force": force,
+    }
+    with run_log(outdir, prefix, parameters, verbose=verbose, quiet=quiet):
+        try:
+            found = score(agp, pairs, window, min_ratio, min_expected)
+        except (OSError, ValueError) as error:
+            raise click.ClickException(str(error)) from error
+        write_outputs(found, outdir, prefix)
+        for junction in found:
+            if junction.verdict == "unsupported":
+                logger.warning(
+                    "%s: the join of %s and %s at %d: %d pairs across, %.0f expected",
+                    junction.scaffold,
+                    junction.left.name,
+                    junction.right.name,
+                    junction.left.end,
+                    junction.observed,
+                    junction.expected,
+                )

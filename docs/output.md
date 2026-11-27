@@ -11,21 +11,22 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 ├── species/<species>/
 │   ├── assembly/      (now) <species>.assembly.fa.gz: the kept contigs, polished;
 │   │                  the table of candidates
-│   ├── genome/        <species>.fa.gz (+ .fai, .gzi), <species>.softmasked.fa.gz,
-│   │                  <species>.agp, <species>.chrom.sizes, <species>.chrM.fa.gz
+│   ├── genome/        (now) <species>.fa.gz (+ .fai, .gzi), <species>.agp,
+│   │                  <species>.chrom.sizes, <species>.names.tsv, qc/; later
+│   │                  <species>.softmasked.fa.gz, <species>.chrM.fa.gz
 │   ├── annotation/    <species>.gtf.gz, <species>.gff3.gz, <species>.proteins.faa.gz,
 │   │                  <species>.cds.fna.gz, <species>.functions.tsv, repeats, ncRNA, tRNA,
 │   │                  telomeres.bed, centromeres.bed, chrM.gff3
-│   ├── hic/           <species>.mcool, <species>.hic, <species>.pretext, <species>.pairs.gz,
-│   │                  maps (PNG), contact decay
+│   ├── hic/           (now) <species>.mcool, <species>.pairs.gz and their stats;
+│   │                  later <species>.hic, <species>.pretext, maps (PNG), contact decay
 │   ├── expression/    <species>.counts.tsv, <species>.tpm.tsv: genes × RNA-seq libraries
 │   ├── variation/     heterozygous sites, ploidy and per-chromosome depth
 │   ├── tracks/        coverage of the RNA-seq, WGS and nanopore reads (bigWig)
 │   ├── contigs/       (now) <species>.contigs.fa.gz: polished with its short reads,
 │   │                  screened, its organelle named <species>_chrM
 │   ├── polish/        (now) the short-read polishing's choice; the Hi-C reads' digestion
-│   ├── candidates/    assembly/<assembler>/ and polish/ (now): every candidate, its
-│   │                  checks; later every scaffolder's, with its map
+│   ├── candidates/    assembly/<assembler>/, polish/ and scaffold/yahs/ (now): every
+│   │                  candidate, its checks; later every scaffolder's, with its map
 │   ├── estimates/     (now) what the samplesheet left NA: the genome size (LRGE);
 │   │                  the k-mer spectrum's fit (GenomeScope2)
 │   ├── reads/         (now, with --save_ont_reads) the nanopore reads as assembled
@@ -35,7 +36,8 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 ├── pools/<pool>/
 │   ├── qc/            fastqc/ (now): the pooled libraries
 │   ├── ani/           (now) the identity between the pool's species (skani)
-│   ├── deconvolution/ (now) each library split between the species: their shares,
+│   ├── deconvolution/ (now) each library split between the species, on their
+│   │                  contigs/ and on their screened/ contigs: their shares,
 │   │                  ambiguous pairs, pairs between species, epsilon
 │   ├── screen/        (now) each contig's verdict: kept, moved, dropped, organelle
 │   ├── hic/           the pool's map, a .metacool whose genomes are its species
@@ -155,15 +157,58 @@ species, its identity to the other species' contigs and its Hi-C contacts.
   (`keep`, `move`, `drop`, `organelle`), new name and reason.
 - `species/<species>/contigs/<species>.contigs.fa.gz`: the species' contigs
   after the screen, those moved in from another species included, its
-  mitochondrion named `<species>_chrM`: what milestone 3 scaffolds.
+  mitochondrion named `<species>_chrM`: what is scaffolded.
+
+### The genome
+
+The pool is split again, on the screened contigs
+(`pools/<pool>/deconvolution/screened/`, as above), and each species is
+scaffolded with its own Hi-C pairs: aligned to its contigs (bwa-mem2, each
+mate on its own), then [YaHS](https://github.com/c-zhou/yahs), told the
+library's restriction motifs. [`plexembler finalize`](cli.md#finalize) names
+the scaffolds: the chromosomes, longest first, the samplesheet's
+`n_chromosomes` of them, or every scaffold of `--min_chromosome` bases or more;
+the mitochondrion; the unplaced. A species of a pool without Hi-C is finished
+from its contigs, named the same way.
+
+- `species/<species>/genome/`: the genome, `<species>.fa.gz` (bgzipped, with
+  its `.fai` and `.gzi`); its sizes, `<species>.chrom.sizes`; the table of
+  names, `<species>.names.tsv` ([format](formats.md#genome-names)); the AGP,
+  `<species>.agp`, in the new names (scaffolded species); the command's log.
+- `species/<species>/genome/qc/`: gfastats, BUSCO and Merqury, as for each
+  candidate above; and `junctions/`, each join of the scaffolds scored by its
+  Hi-C pairs against the species' contact decay
+  ([`plexembler junctions`](cli.md#junctions): `<species>.junctions.tsv`, a
+  row per join, `supported`, `unsupported` or `thin`).
+- `species/<species>/candidates/scaffold/yahs/`: YaHS's scaffolds and AGP, in
+  its names (`<species>.yahs_scaffolds_final.fa`, `.agp`), and its log.
+
+The genome is what YaHS makes of the contigs, uncurated: a misjoin it makes
+stays, the chromosomes are its longest scaffolds whatever they hold. The
+joins' scores say where to look first, on the map.
+
+### Hi-C maps
+
+Each species' Hi-C pairs, aligned to its genome (bwa-mem2), parsed, sorted
+and deduplicated ([pairtools](https://github.com/open2c/pairtools): each
+mate's unique 5' alignment, MAPQ 30 or more), binned at `--map_resolution`
+and zoomed out, balanced ([cooler](https://github.com/open2c/cooler)).
+
+- `species/<species>/hic/<species>.mcool`: the map, every resolution from
+  `--map_resolution` up, balanced; chromosomix and HiGlass open it.
+- `species/<species>/hic/<species>.pairs.gz`: the unique pairs, in the
+  [4DN pairs format](https://github.com/4dn-dcic/pairix/blob/master/pairs_format_specification.md),
+  and their numbers (`<species>.pairs.stat`); the parse's numbers, duplicates
+  included (`<species>.pairsam.stat`).
 
 ### MultiQC
 
 `multiqc/multiqc_report.html`: the reads' QC, each candidate's BUSCO and
 gfastats numbers, the table of candidates of every species, the identity
-between the species of every pool, each library's split, each species'
-polishing and its Hi-C reads' digestion, the contig screen, and the software
-versions, in one report,
+between the species of every pool, each library's split (the first, on the
+contigs), each species' polishing and its Hi-C reads' digestion, the contig
+screen, each genome's BUSCO and gfastats numbers and its joins' verdicts, each
+map's pairs, and the software versions, in one report,
 with the methods' description and its references.
 
 ### Pipeline information

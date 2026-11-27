@@ -92,6 +92,18 @@ Every tool a step of the pipeline runs, added with its step ([docs/plan.md](docs
 
   > Li H. Minimap2: pairwise alignment for nucleotide sequences. Bioinformatics. 2018 Sep 15;34(18):3094-3100. doi: 10.1093/bioinformatics/bty191.
 
+- [YaHS](https://doi.org/10.1093/bioinformatics/btac808)
+
+  > Zhou C, McCarthy SA, Durbin R. YaHS: yet another Hi-C scaffolding tool. Bioinformatics. 2023 Jan 1;39(1):btac808. doi: 10.1093/bioinformatics/btac808.
+
+- [pairtools](https://doi.org/10.1371/journal.pcbi.1012164)
+
+  > Open2C, Abdennur N, Fudenberg G, Flyamer IM, Galitsyna AA, Goloborodko A, Imakaev M, Venev SV. Pairtools: from sequencing data to chromosome contacts. PLoS Comput Biol. 2024 May;20(5):e1012164. doi: 10.1371/journal.pcbi.1012164.
+
+- [cooler](https://doi.org/10.1093/bioinformatics/btz540)
+
+  > Abdennur N, Mirny LA. Cooler: scalable storage for Hi-C data and other genomically labeled arrays. Bioinformatics. 2020 Jan 1;36(1):311-316. doi: 10.1093/bioinformatics/btz540.
+
 - [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
 
 > Andrews, S. (2010). FastQC: A Quality Control Tool for High Throughput Sequence Data [Online].

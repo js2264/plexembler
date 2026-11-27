@@ -10,6 +10,11 @@ include { CONTIGS                } from '../subworkflows/local/contigs'
 include { POOL_DECONVOLVE        } from '../subworkflows/local/pool_deconvolve'
 include { POLISH_SR              } from '../subworkflows/local/polish_sr'
 include { SCREEN                 } from '../subworkflows/local/screen'
+include { POOL_DECONVOLVE as POOL_DECONVOLVE_SCREENED } from '../subworkflows/local/pool_deconvolve'
+include { SCAFFOLD               } from '../subworkflows/local/scaffold'
+include { GENOME_QC as GENOME_QC_FINAL } from '../subworkflows/local/genome_qc'
+include { MAPS                   } from '../subworkflows/local/maps'
+include { PLEXEMBLER_JUNCTIONS   } from '../modules/local/plexembler/junctions/main'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -103,8 +108,49 @@ workflow PLEXEMBLER {
     ch_multiqc_files = ch_multiqc_files.mix(SCREEN.out.multiqc_files)
 
     //
-    // The steps to come, milestone by milestone (docs/plan.md): Hi-C
-    // scaffolding, maps, annotation, expression and the report of each species.
+    // SUBWORKFLOW: the pool split again, on the screened contigs: the pairs
+    // each species is scaffolded with. Its tables are published, not given to
+    // MultiQC, whose split is the first's (their files share their names).
+    //
+    POOL_DECONVOLVE_SCREENED(SCREEN.out.contigs, ch_libraries, 'screened')
+
+    //
+    // SUBWORKFLOW: each species scaffolded with its own Hi-C pairs, and finished
+    //
+    SCAFFOLD(SCREEN.out.contigs, POOL_DECONVOLVE_SCREENED.out.reads)
+
+    //
+    // SUBWORKFLOW: the final genome's checks
+    //
+    GENOME_QC_FINAL(
+        SCAFFOLD.out.genome.map { meta, fasta -> [meta + [candidate: 'genome'], fasta] },
+        KMERS.out.ont_db,
+        KMERS.out.wgs_db,
+        params.busco_lineage,
+        params.busco_db ? file(params.busco_db, checkIfExists: true) : [],
+    )
+    ch_multiqc_files = ch_multiqc_files.mix(GENOME_QC_FINAL.out.multiqc_files)
+
+    //
+    // SUBWORKFLOW: each species' Hi-C map on its genome
+    //
+    MAPS(SCAFFOLD.out.genome, SCAFFOLD.out.sizes, SCAFFOLD.out.hic, params.map_resolution)
+    ch_multiqc_files = ch_multiqc_files.mix(MAPS.out.multiqc_files)
+
+    //
+    // MODULE: each join of each species' scaffolds, scored by its Hi-C pairs
+    //
+    PLEXEMBLER_JUNCTIONS(
+        MAPS.out.pairs
+            .map { meta, pairs -> [meta.id, meta, pairs] }
+            .join(SCAFFOLD.out.agp.map { meta, agp -> [meta.id, agp] })
+            .map { _id, meta, pairs, agp -> [meta, pairs, agp] }
+    )
+    ch_multiqc_files = ch_multiqc_files.mix(PLEXEMBLER_JUNCTIONS.out.multiqc.map { _meta, table -> table })
+
+    //
+    // The steps to come, milestone by milestone (docs/plan.md): annotation,
+    // expression and the report of each species.
     //
 
     //

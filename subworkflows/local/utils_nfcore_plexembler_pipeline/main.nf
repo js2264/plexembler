@@ -292,6 +292,9 @@ def toolCitationText() {
             "Polypolish (Wick and Holt 2022),",
             "pypolca (Bouras et al. 2024),",
             "minimap2 (Li 2018),",
+            "YaHS (Zhou et al. 2023),",
+            "pairtools (Open2C et al. 2024),",
+            "cooler (Abdennur and Mirny 2020),",
             "FastQC (Andrews 2010),",
             "MultiQC (Ewels et al. 2016)",
             "."
@@ -321,6 +324,9 @@ def toolBibliographyText() {
             "<li>Wick, R. R., & Holt, K. E. (2022). Polypolish: Short-read polishing of long-read bacterial genome assemblies. PLoS Computational Biology, 18(1), e1009802. doi: 10.1371/journal.pcbi.1009802</li>",
             "<li>Bouras, G., et al. (2024). How low can you go? Short-read polishing of Oxford Nanopore bacterial genome assemblies. Microbial Genomics, 10(6), 001254. doi: 10.1099/mgen.0.001254</li>",
             "<li>Li, H. (2018). Minimap2: pairwise alignment for nucleotide sequences. Bioinformatics, 34(18), 3094-3100. doi: 10.1093/bioinformatics/bty191</li>",
+            "<li>Zhou, C., McCarthy, S. A., & Durbin, R. (2023). YaHS: yet another Hi-C scaffolding tool. Bioinformatics, 39(1), btac808. doi: 10.1093/bioinformatics/btac808</li>",
+            "<li>Open2C, Abdennur, N., Fudenberg, G., Flyamer, I. M., Galitsyna, A. A., Goloborodko, A., Imakaev, M., & Venev, S. V. (2024). Pairtools: from sequencing data to chromosome contacts. PLoS Computational Biology, 20(5), e1012164. doi: 10.1371/journal.pcbi.1012164</li>",
+            "<li>Abdennur, N., & Mirny, L. A. (2020). Cooler: scalable storage for Hi-C data and other genomically labeled arrays. Bioinformatics, 36(1), 311-316. doi: 10.1093/bioinformatics/btz540</li>",
             "<li>Andrews S, (2010) FastQC, URL: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/).</li>",
             "<li>Ewels, P., Magnusson, M., Lundin, S., & Käller, M. (2016). MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics , 32(19), 3047–3048. doi: /10.1093/bioinformatics/btw354</li>"
         ].join(' ').trim()

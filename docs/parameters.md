@@ -43,6 +43,15 @@ Each pooled library split between its pool's species, and each species polished 
 | `polish_holdout` | The share of each library's pairs kept apart from the polishing, whose k-mers the QV guard counts against. | `number` | 0.1 |  |  |
 | `save_split_reads` | Save each species' split reads, of each pooled library. | `boolean` |  |  |  |
 
+## Chromosomes
+
+Each species scaffolded with its own Hi-C pairs, its scaffolds named, and its Hi-C map (milestone 3).
+
+| Parameter | Description | Type | Default | Required | Hidden |
+|-----------|-----------|-----------|-----------|-----------|-----------|
+| `min_chromosome` | A species without n_chromosomes: the shortest scaffold named a chromosome, in bases. <details><summary>Help</summary><small>When the samplesheet gives a species' n_chromosomes, its longest scaffolds, that many, are its chromosomes; the others are unplaced (docs/output.md, The genome).</small></details>| `integer` | 100000 |  |  |
+| `map_resolution` | The finest bin of each species' Hi-C map, in bases; the map is zoomed out from it. | `integer` | 1000 |  |  |
+
 ## Institutional config options
 
 Parameters used to describe centralised config profiles. These should not be edited.

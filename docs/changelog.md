@@ -80,3 +80,20 @@ follow [semantic versioning](https://semver.org).
 - **The test data**, version 2: 30× of nanopore reads per species and 10,000
   WGS pairs, so that the test profile assembles; its second species leaves its
   chemistry and genome size to the pipeline.
+- **Each species' genome** (milestone 3): the pool split again on the screened
+  contigs; each species scaffolded with its own Hi-C pairs by YaHS, told its
+  library's restriction motifs; `plexembler finalize`, which names the
+  scaffolds, chromosomes first, longest first (`<species>_chr01`, …, the
+  samplesheet's `n_chromosomes` of them or every scaffold of
+  `--min_chromosome` bases or more), the mitochondrion (`<species>_chrM`) and
+  the unplaced, and writes the genome, its sizes, the table of names and the
+  AGP in the new names; the genome's gfastats, BUSCO and Merqury checks; all
+  in `species/<species>/genome/`. A species of a pool without Hi-C is finished
+  from its contigs.
+- **`plexembler junctions`**, which scores each join of a species' scaffolds
+  by the Hi-C pairs across it against the species' contact decay, from the
+  pairs within its contigs: `supported`, `unsupported` (a misjoin, likely) or
+  `thin` (`species/<species>/genome/qc/junctions/`).
+- **Each species' Hi-C map** on its genome: its pairs aligned (bwa-mem2),
+  parsed, sorted and deduplicated (pairtools), binned at `--map_resolution`
+  (1 kb) and zoomed out, balanced (cooler): `species/<species>/hic/<species>.mcool`.
