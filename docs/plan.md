@@ -468,7 +468,8 @@ pipeline's own steps need a container before the package is anywhere else.
       checkout before nf-test, so that a pull request tests its own code.
 - [x] The local modules that run `plexembler`: `container
       "ghcr.io/js2264/plexembler:${workflow.manifest.version}"`, and for conda
-      an environment that installs the package at the release's tag (M1).
+      an environment that installs the package at the release's tag (M1),
+      which bump-my-version writes and `pipeline.yml`'s lint checks.
 
 ### T2 · Test data and the benchmark pool
 

@@ -9,8 +9,9 @@ runs on Linux, and on macOS for small tests.
 [uv](https://docs.astral.sh/uv/) runs plexembler from PyPI, with its
 dependencies, Nextflow's launcher among them (PyPI's `nextflow`), which
 fetches Nextflow at its first run. With Java, and a container engine for the
-pipeline's tools (Docker, Apptainer, Singularity, Podman), uv is all a machine
-needs:
+pipeline's tools (Docker, Apptainer, Singularity, Podman) or micromamba for
+their conda environments ([without a container
+engine](usage.md#without-a-container-engine)), uv is all a machine needs:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh    # uv itself, once
@@ -41,7 +42,9 @@ run js2264/plexembler -r v<version>`, with every other argument as it is
 You need:
 
 - **Nextflow 26.04.0 or newer**, and Java 17 or newer;
-- **a container engine** (Docker, Apptainer, Singularity, Podman), or conda.
+- **a container engine** (Docker, Apptainer, Singularity, Podman), or conda,
+  mamba or micromamba ([without a container
+  engine](usage.md#without-a-container-engine)).
 
 === "Nextflow's installer"
 

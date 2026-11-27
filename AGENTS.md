@@ -94,11 +94,19 @@ docs/                        the site's pages; docs/plan.md is the implementatio
   launcher, is a dependency whose floor is the pipeline's
   `manifest.nextflowVersion` (`tests/test_run.py` checks); bioconda's recipe
   has bioconda's instead (docs/contributing.md).
+- **The steps that run plexembler take its dependencies from conda-forge**:
+  a dependency of `pyproject.toml` is pinned in
+  `modules/local/plexembler/*/environment.yml` too, at its floor or above
+  (`tests/test_environments.py` checks), and pip adds plexembler alone.
 - **`plexembler run` passes everything else to Nextflow**: no pipeline
   parameter is named after one of its options (`pipeline`, `dry-run`), which
   would hide it (`tests/test_run.py` checks).
 - **Every process has a `stub:` block**, and every local module and
   subworkflow an nf-test with a `-stub` test.
+- **Every step runs with conda too** (`-profile conda`, `mamba`,
+  `micromamba`), or the run refuses it at its start under them
+  (`validateCondaSteps`, `subworkflows/local/utils_nfcore_plexembler_pipeline`),
+  as it refuses BRAKER3 and Dorado.
 - **GPU runs cost money**: ask before starting one.
 
 ## Procedures

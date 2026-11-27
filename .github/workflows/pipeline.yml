@@ -4,8 +4,10 @@ name: Pipeline
 # `nextflow lint` and nf-core's lint, the parameters page and the version
 # checked against their sources, then nf-test with Docker on the oldest
 # Nextflow the pipeline supports (manifest.nextflowVersion) and the newest;
-# and the pipeline run as uvx runs it (docs/installation.md). On pushes to main,
-# every pull request, by hand, every week, and from release.yml on a tag.
+# the pipeline run as uvx runs it (docs/installation.md); and, weekly or by
+# hand, the test profile in conda's environments, without a container engine.
+# On pushes to main, every pull request, by hand, every week, and from
+# release.yml on a tag.
 on:
   push:
     branches: [main]
@@ -53,14 +55,20 @@ jobs:
       - name: nextflow lint
         run: nextflow lint .
 
-      # The version is written twice (pyproject.toml, nextflow.config's
-      # manifest), and bump-my-version changes both: they must agree.
+      # The version is written again in nextflow.config's manifest and in the
+      # conda environments of the steps that run plexembler, and
+      # bump-my-version changes them all: they must agree.
       - name: The pipeline's version is the package's
         run: |
           package=$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)
           pipeline=$(sed -n "s/^    version         = '\(.*\)'$/\1/p" nextflow.config)
           if [ -z "$package" ] || [ "$package" != "$pipeline" ]; then
             echo "::error::nextflow.config's manifest.version ($pipeline) is not pyproject.toml's version ($package)"
+            exit 1
+          fi
+          stale=$(grep -L "plexembler@v$package\"" modules/local/plexembler/*/environment.yml || true)
+          if [ -n "$stale" ]; then
+            echo "::error::conda environments that do not install plexembler at v$package: $stale"
             exit 1
           fi
 
@@ -161,3 +169,50 @@ jobs:
 
       - name: plexembler run, with nothing but uv and Java
         run: uvx --from . plexembler run --pipeline . -profile test -preview --outdir results
+
+  # The pipeline without a container engine (docs/usage.md): the test profile,
+  # every step for real, in conda's environments, which micromamba makes, run
+  # by uvx's plexembler on Java alone. Weekly and by hand: the environments
+  # take a while to make. The steps that run plexembler install the
+  # checkout's, for the release their environment.yml names.
+  conda:
+    name: The test profile, with micromamba
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      # The environments take more room than the runner has free.
+      - name: Room on the runner
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+
+      # micromamba, at the version of the image's base (Dockerfile).
+      - name: micromamba
+        run: |
+          mkdir -p "$RUNNER_TEMP/micromamba"
+          curl -fsSL https://micro.mamba.pm/api/micromamba/linux-64/2.10.0 | tar -xj -C "$RUNNER_TEMP/micromamba" bin/micromamba
+          echo "$RUNNER_TEMP/micromamba/bin" >> "$GITHUB_PATH"
+
+      # split's environment holds every other's, and samtools.
+      - name: The checkout's plexembler, for the steps that run it
+        run: |
+          sed "s|plexembler @ git+https://github.com/js2264/plexembler@v[0-9.]*|plexembler @ file://$GITHUB_WORKSPACE|" \
+            modules/local/plexembler/split/environment.yml > "$RUNNER_TEMP/plexembler.yml"
+          grep -q "plexembler @ file://" "$RUNNER_TEMP/plexembler.yml" ||
+            { echo "::error::split's environment.yml installs no plexembler from its tag"; exit 1; }
+          printf "process {\n    withName: 'PLEXEMBLER_.*' {\n        conda = '%s'\n    }\n}\n" "$RUNNER_TEMP/plexembler.yml" > "$RUNNER_TEMP/conda.config"
+
+      - name: The test profile, with micromamba, run by uvx's plexembler
+        run: uvx --from . plexembler run --pipeline . -profile test,micromamba -c "$RUNNER_TEMP/conda.config" --outdir results

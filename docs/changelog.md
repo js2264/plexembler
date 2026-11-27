@@ -149,3 +149,16 @@ follow [semantic versioning](https://semver.org).
   Nextflow's launcher, which `plexembler run` finds beside its Python and which
   fetches Nextflow at its first run; a machine needs nothing else but a
   container engine.
+- **The pipeline without a container engine**: `-profile micromamba`, beside
+  `conda` and `mamba`, conda's environments made by micromamba, a single
+  executable. With conda's profiles, the run refuses at its start the two
+  steps that have no conda environment: BRAKER3 (`--gene_predictor braker`:
+  choose `augustus`) and `dorado polish` (`--ont_polisher dorado`). The steps
+  that run plexembler install it at the release's tag, which bump-my-version
+  now writes into their environments, and its dependencies from conda-forge:
+  pip took one that `~/.local` held for installed, which the steps, run
+  without it, did not see. Two patches of nf-core's modules:
+  tRNAscan-SE's step keeps the paths of its configuration when its environment
+  is under `/tmp` (the module rewrote every `/tmp` of it, its temporary
+  folder's meant), and `cooler cload`'s environment pins numpy, as `cooler
+  zoomify`'s does, without which micromamba took 14 GB to solve it.

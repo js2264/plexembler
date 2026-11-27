@@ -93,6 +93,9 @@ lint:
     # docker/metadata-action's semver tag pattern, the version in double braces,
     # in the image job of chromokit's template.
     - .github/workflows/release.yml
+    # The bioconda recipe that the contributing page shows: Jinja, as bioconda
+    # writes its recipes.
+    - docs/contributing.md
   # The tests read tests/data/ through the test profile (CONVENTIONS.md § 13),
   # not nf-core/test-datasets: no test-data base paths.
   nf_test_content:
