@@ -289,6 +289,9 @@ RNA_REPLICATE_SD = 0.15
 #: Short reads' substitutions, per base (Hi-C and RNA-seq; InSilicoSeq models
 #: the WGS' own).
 SHORT_READ_ERRORS = 0.002
+#: InSilicoSeq's processes: its reads depend on how many, so they are fixed,
+#: whatever ``--threads`` says (the released sets were made with four).
+ISS_CPUS = 4
 #: The S. cerevisiae gene a note names (N. glabratus's: "similar to
 #: uniprot|P53192 Saccharomyces cerevisiae YGL020c").
 SCER_GENE = re.compile(
@@ -860,9 +863,7 @@ def n50(lengths: list[int]) -> int:
     return 0
 
 
-def wgs_reads(
-    genomes: dict[str, dict[str, str]], threads: int, seed: int, workdir: Path
-):
+def wgs_reads(genomes: dict[str, dict[str, str]], seed: int, workdir: Path):
     """InSilicoSeq's NovaSeq pairs of the pool, each sequence at its species'
     depth (the mitochondrion MITO_COPIES times deeper)."""
     every = workdir / "pool.fa"
@@ -885,7 +886,7 @@ def wgs_reads(
             "--readcount_file", str(counts),
             "--model", "novaseq",
             "--seed", str(seed),
-            "--cpus", str(threads),
+            "--cpus", str(ISS_CPUS),
             "--output", str(prefix),
             "--quiet",
         ],
@@ -1244,7 +1245,7 @@ def make_set(
             )
         del reads
 
-        r1, r2 = wgs_reads(genomes, threads, 2000, work)
+        r1, r2 = wgs_reads(genomes, 2000, work)
         for read, name in ((r1, "R1"), (r2, "R2")):
             with read.open() as handle:
                 write_gzip(root / "pool" / f"wgs_{name}.fastq.gz", handle)
