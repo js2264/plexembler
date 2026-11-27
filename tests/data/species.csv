@@ -1,3 +1,3 @@
-species,pool,ont,genome_size,ploidy,n_chromosomes,genetic_code,telomere_repeat
-sp1,pool,sp1.ont.fastq.gz,40k,1,2,1,TGTGGG
-sp2,pool,sp2.ont.fastq.gz,30k,1,1,1,TTAGGG
+species,pool,ont,chemistry,genome_size,ploidy,n_chromosomes,genetic_code,telomere_repeat
+sp1,pool,sp1.ont.fastq.gz,r10,40k,1,2,1,TGTGGG
+sp2,pool,sp2.ont.fastq.gz,NA,NA,1,1,1,TTAGGG

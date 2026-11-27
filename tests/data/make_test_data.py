@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 #: Raised when what this script writes changes, so that tests can name it.
-VERSION = 1
+VERSION = 3
 HERE = Path(__file__).resolve().parent
 COMPLEMENT = str.maketrans("ACGT", "TGCA")
 
@@ -42,9 +42,13 @@ class Species:
 
 SPECIES = (
     Species(
-        "sp1", {"chr1": 24_000, "chr2": 16_000}, gc=0.38, telomere="TGTGGG", ont_depth=8
+        "sp1",
+        {"chr1": 24_000, "chr2": 16_000},
+        gc=0.38,
+        telomere="TGTGGG",
+        ont_depth=30,
     ),
-    Species("sp2", {"chr1": 30_000}, gc=0.45, telomere="TTAGGG", ont_depth=8),
+    Species("sp2", {"chr1": 30_000}, gc=0.45, telomere="TTAGGG", ont_depth=30),
 )
 
 
@@ -81,6 +85,12 @@ def quality(length: int, rng: random.Random, low: int, high: int) -> str:
     return "".join(chr(33 + rng.randint(low, high)) for _ in range(length))
 
 
+def short_read(label: str, read: str, rng: random.Random) -> tuple[str, str, str]:
+    """A short read's record: mutated, and its quality as long as it is."""
+    read = mutate(read, rng, 0.005)
+    return label, read, quality(len(read), rng, 30, 40)
+
+
 def write_fastq(path: Path, records: list[tuple[str, str, str]]) -> None:
     """A gzipped FASTQ, without a timestamp in its header: the same bytes each time."""
     text = "".join(f"@{name}\n{seq}\n+\n{qual}\n" for name, seq, qual in records)
@@ -112,7 +122,7 @@ def ont_reads(species: Species, chromosomes, rng):
         start = rng.randint(0, len(chromosome) - length)
         strand = rng.choice("+-")
         read = chromosome[start : start + length]
-        read = mutate(read if strand == "+" else revcomp(read), rng, rate=0.03)
+        read = mutate(read if strand == "+" else revcomp(read), rng, rate=0.02)
         records.append(
             (
                 f"ont_{len(records):05d} {species.name}:{name}:{start}:{strand}",
@@ -129,7 +139,7 @@ def pair(fragment: str, read_length: int) -> tuple[str, str]:
     return fragment[:read_length], revcomp(fragment)[:read_length]
 
 
-def wgs_pairs(genomes, rng, n=1_000, read_length=100):
+def wgs_pairs(genomes, rng, n=10_000, read_length=100):
     r1, r2 = [], []
     for index in range(n):
         species, name, length = pick_position(genomes, rng)
@@ -138,8 +148,8 @@ def wgs_pairs(genomes, rng, n=1_000, read_length=100):
         fragment = genomes[species][name][start : start + size]
         a, b = pair(fragment, read_length)
         label = f"wgs_{index:05d} {species}:{name}:{start}:+"
-        r1.append((label, mutate(a, rng, 0.005), quality(len(a), rng, 30, 40)))
-        r2.append((label, mutate(b, rng, 0.005), quality(len(b), rng, 30, 40)))
+        r1.append(short_read(label, a, rng))
+        r2.append(short_read(label, b, rng))
     return r1, r2
 
 
@@ -165,8 +175,8 @@ def hic_pairs(genomes, rng, n=1_000, read_length=100, noise=0.05):
         a = genomes[species][name][pos1 : pos1 + read_length]
         b = revcomp(genomes[species2][name2][pos2 : pos2 + read_length])
         label = f"hic_{index:05d} {species}:{name}:{pos1}:+ {species2}:{name2}:{pos2}:-"
-        r1.append((label, mutate(a, rng, 0.005), quality(len(a), rng, 30, 40)))
-        r2.append((label, mutate(b, rng, 0.005), quality(len(b), rng, 30, 40)))
+        r1.append(short_read(label, a, rng))
+        r2.append(short_read(label, b, rng))
     return r1, r2
 
 
@@ -193,8 +203,8 @@ def rnaseq_pairs(genomes, rng, n=1_000, read_length=100):
         # dUTP: the first read is the transcript's reverse complement.
         b, a = pair(fragment, read_length)
         label = f"rna_{index:05d} {species}:{name}:{start}:{strand}"
-        r1.append((label, mutate(a, rng, 0.005), quality(len(a), rng, 30, 40)))
-        r2.append((label, mutate(b, rng, 0.005), quality(len(b), rng, 30, 40)))
+        r1.append(short_read(label, a, rng))
+        r2.append(short_read(label, b, rng))
     return r1, r2
 
 
@@ -223,13 +233,12 @@ def main(outdir: Path) -> None:
         write_fastq(outdir / f"pool_{library}_R1.fastq.gz", r1)
         write_fastq(outdir / f"pool_{library}_R2.fastq.gz", r2)
 
+    # sp1 says what it is; sp2 leaves its chemistry and genome size to the
+    # pipeline, which tells them from its reads.
     (outdir / "species.csv").write_text(
-        "species,pool,ont,genome_size,ploidy,n_chromosomes,genetic_code,telomere_repeat\n"
-        + "".join(
-            f"{s.name},pool,{s.name}.ont.fastq.gz,{sum(s.chromosomes.values()) // 1000}k,"
-            f"1,{len(s.chromosomes)},1,{s.telomere}\n"
-            for s in SPECIES
-        )
+        "species,pool,ont,chemistry,genome_size,ploidy,n_chromosomes,genetic_code,telomere_repeat\n"
+        "sp1,pool,sp1.ont.fastq.gz,r10,40k,1,2,1,TGTGGG\n"
+        "sp2,pool,sp2.ont.fastq.gz,NA,NA,1,1,1,TTAGGG\n"
     )
     (outdir / "libraries.csv").write_text(
         "library,pool,type,fastq_1,fastq_2,condition,replicate,enzymes\n"

@@ -13,15 +13,31 @@ nextflow_pipeline {
         }
 
         then {
+            def selection = path("$outputDir/species/sp1/assembly/sp1.assembly.selection.tsv").readLines()
             assertAll(
                 { assert workflow.success },
-                // The nanopore reads' QC, per species.
+                // The nanopore reads' QC, per species; the pooled libraries', both reads of each of the three.
                 { assert path("$outputDir/species/sp1/qc/nanoplot/sp1_NanoStats.txt").exists() },
                 { assert path("$outputDir/species/sp2/qc/nanoplot/sp2_NanoStats.txt").exists() },
-                // The pooled libraries' QC: both reads of each of the three libraries.
                 { assert file("$outputDir/pools/pool/qc/fastqc").listFiles().findAll { it.name.endsWith('_fastqc.html') }.size() == 6 },
+                { assert path("$outputDir/species/sp1/qc/filtlong/sp1.log").exists() },
+                // sp2 left its genome size to the pipeline: LRGE's estimate.
+                { assert path("$outputDir/species/sp2/estimates/sp2.lrge.txt").exists() },
+                { assert !path("$outputDir/species/sp1/estimates/sp1.lrge.txt").exists() },
+                // Each species' contigs: the kept ones, its candidate's files and checks.
+                { assert path("$outputDir/species/sp1/assembly/sp1.assembly.fa.gz").exists() },
+                { assert path("$outputDir/species/sp2/assembly/sp2.assembly.fa.gz").exists() },
+                { assert selection[1].startsWith('flye\tyes') },
+                { assert path("$outputDir/species/sp1/candidates/assembly/flye/sp1.flye.contigs.fa").readLines().findAll { it.startsWith('>') }.every { it.startsWith('>sp1_') } },
+                { assert path("$outputDir/species/sp1/candidates/assembly/flye/sp1.flye.polished.fa.gz").exists() },
+                { assert path("$outputDir/species/sp1/candidates/assembly/flye/sp1.flye.assembly_graph.gfa.gz").exists() },
+                { assert path("$outputDir/species/sp1/candidates/assembly/flye/qc/merqury/sp1.flye.wgs.qv").exists() },
+                { assert path("$outputDir/species/sp1/candidates/assembly/flye/qc/merqury/sp1.flye.ont.completeness.stats").exists() },
+                { assert path("$outputDir/species/sp1/candidates/assembly/flye/qc/gfastats/sp1.flye.assembly_summary").exists() },
+                // The pool's two species, and their identity.
+                { assert path("$outputDir/pools/pool/ani/pool.ani.tsv").readLines()[0] == 'species\tsp1\tsp2' },
                 { assert path("$outputDir/multiqc/multiqc_report.html").exists() },
-                { assert path("$outputDir/pipeline_info/plexembler_software_mqc_versions.yml").text.contains('NanoPlot') },
+                { assert path("$outputDir/pipeline_info/plexembler_software_mqc_versions.yml").text.contains('flye') },
             )
         }
     }
@@ -39,6 +55,8 @@ nextflow_pipeline {
         then {
             assertAll(
                 { assert workflow.success },
+                { assert path("$outputDir/species/sp1/assembly/sp1.assembly.fa.gz").exists() },
+                { assert path("$outputDir/pools/pool/ani/pool.ani.tsv").exists() },
                 { assert path("$outputDir/multiqc/multiqc_report.html").exists() },
             )
         }

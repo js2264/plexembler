@@ -106,7 +106,7 @@ The repository, and what every later step relies on. Not released.
 - [x] Unknown values (`NA`) in the species samplesheet, and its `chemistry`
       column.
 - [ ] GitHub's settings (T5).
-- [ ] The benchmark pool's small set, `test-data-v1` (T2).
+- [ ] The benchmark pool's small set, `benchmark-data-v1` (T2): its generator is written; the release is made by `benchmarks.yml` once `main` has it.
 - [x] The package's container, which M1's local modules need (T1).
 
 ## M1 · Contigs, per species · v0.1.0
@@ -114,40 +114,47 @@ The repository, and what every later step relies on. Not released.
 **Goal:** for each species, its nanopore contigs, polished, with their checks;
 usable as a draft genome on its own.
 
-- [ ] **Nanopore input.** FASTQ or Dorado's unaligned BAM (`samtools fastq -T '*'`,
-      keeping its tags); filtered by length and quality (`chopper`); capped at
-      `--ont_max_depth` (100×) of the longest reads (`filtlong --target_bases`,
-      or `rasusa`). The samplesheet's `ont` takes `.bam`. The species'
+- [x] **Nanopore input.** FASTQ or Dorado's unaligned BAM (`samtools fastq -T '*'`,
+      keeping its tags), a species' runs as one FASTQ; filtered by length and
+      quality (`chopper`, the quality by chemistry); capped at
+      `--ont_max_depth` (100×) of the longest and best reads (`filtlong
+      --target_bases`). The samplesheet's `ont` takes `.bam`. The species'
       `chemistry` sets Flye's mode (`--nano-hq` for `r10`, `--nano-raw` for
       `r9`) and Medaka's model; `NA` is told from the reads' median quality
-      (Q15 and above: `r10`).
-- [ ] **What the samplesheet leaves unknown** (`NA`): the genome size, from the
-      nanopore reads (LRGE), before the depth cap needs it; the ploidy, from the
-      k-mer spectrum of the species' nanopore reads (GenomeScope2, Smudgeplot),
-      then of its own WGS reads once M2 has split them, the species treated as
-      haploid until then. Each estimate is reported as one, beside what the
-      samplesheet gave when it gave something.
-- [ ] **Assemblers, as candidates** (`--assemblers flye`, by default): Flye,
-      `--genome-size` from the samplesheet or its estimate; hifiasm `--ont`
-      opt-in (`--assemblers flye,hifiasm`), for R10 reads, its haplotypes kept
-      as candidates for a heterozygous species (nf-core: `flye`, `hifiasm`).
-- [ ] **Contigs named after their species:** `plexembler rename`, in a local
-      module `PLEXEMBLER_RENAME`.
-- [ ] **Nanopore polishing** (`--ont_polisher medaka|dorado|none`): Medaka
+      (NanoPlot; Q15 and above: `r10`).
+- [x] **What the samplesheet leaves unknown** (`NA`): the genome size, from the
+      nanopore reads (LRGE), before the depth cap needs it; the k-mer spectrum
+      of the species' nanopore reads fitted by GenomeScope2 as a diploid's,
+      reported (nanopore errors inflate its heterozygosity: a hint, not an
+      answer), the species treated as haploid. Its own WGS reads, once M2 has
+      split them, are fitted again, with Smudgeplot. Each estimate is reported
+      as one, beside what the samplesheet gave when it gave something.
+- [x] **Assemblers, as candidates** (`--assemblers flye`, by default): Flye,
+      `--no-alt-contigs` for a haploid species; hifiasm `--ont` opt-in
+      (`--assemblers flye,hifiasm`), for R10 reads, `-l0` for a haploid species
+      (nf-core: `flye`, `hifiasm`, `gfatools/gfa2fa`).
+- [x] **Contigs named after their species:** `plexembler rename`, in a local
+      module `PLEXEMBLER_RENAME` (plain FASTA: Medaka indexes it).
+- [x] **Nanopore polishing** (`--ont_polisher medaka|dorado|none`): Medaka
       (nf-core `medaka`); `dorado polish` (local, `process_gpu`, experimental
       until tested on a GPU) for Dorado's BAMs.
-- [ ] **The genome checks**, a subworkflow `GENOME_QC` that every later stage
-      reuses: `gfastats` (contiguity); BUSCO in genome mode, or compleasm, with
-      the samplesheet's lineage or BUSCO's choice; Merqury's QV against the
-      pool's WGS k-mers (valid per species: an assembly k-mer missing from the
-      pool is an error) and its completeness against the species' own nanopore
-      k-mers (the pool's short reads mix the species); the assembly graph (GFA).
-- [ ] **One candidate kept:** `plexembler select --step assembly`: BUSCO
-      complete minus duplicated, then QV, then contig N50; a samplesheet column
-      `assembler` names one instead. Every candidate stays under
-      `species/<species>/candidates/assembly/`.
-- [ ] **Identity between the species of a pool:** `skani` → a matrix; a warning
-      above 95 % ANI, where the pool's short reads stop telling two species apart.
+- [x] **The genome checks**, a subworkflow `GENOME_QC` that every later stage
+      reuses: `gfastats` (contiguity); BUSCO in genome mode, with the
+      samplesheet's lineage or `--busco_lineage` (BUSCO's choice by default),
+      offline with `--busco_db`; Merqury's QV against the pool's WGS k-mers
+      (valid per species: an assembly k-mer missing from the pool is an error)
+      or, for a pool without WGS, the species' own nanopore k-mers; its
+      completeness against the species' own nanopore k-mers (the pool's short
+      reads mix the species) (subworkflow `KMERS`); the assembly graph (GFA).
+      compleasm's summary is read by `plexembler select`, for a later option.
+- [x] **One candidate kept:** `plexembler select --step assembly`: BUSCO
+      complete minus duplicated, then QV, then contig N50, each with a
+      tolerance; a samplesheet column `assembler` names one instead. Every
+      candidate stays under `species/<species>/candidates/assembly/`.
+- [x] **Identity between the species of a pool:** `skani triangle`, then
+      `plexembler ani` → a matrix and each pair's verdict; a warning above 95 %
+      ANI, where the pool's short reads stop telling two species apart, and a
+      pair of the same genus named as one from 85 %.
 
 **Done when**, on the benchmark pool (T2): each species' BUSCO is within 1 point
 of its reference's; QV ≥ 40 after polishing; QUAST against the T2T references
@@ -407,7 +414,7 @@ pipeline's own steps need a container before the package is anywhere else.
       publisher is set up), so that a release does not fail before.
 - [x] `pipeline.yml` builds `ghcr.io/js2264/plexembler:<version>` from the
       checkout before nf-test, so that a pull request tests its own code.
-- [ ] The local modules that run `plexembler`: `container
+- [x] The local modules that run `plexembler`: `container
       "ghcr.io/js2264/plexembler:${workflow.manifest.version}"`, and for conda
       an environment that installs the package at the release's tag (M1).
 
@@ -415,12 +422,19 @@ pipeline's own steps need a container before the package is anywhere else.
 
 - [x] `tests/data/`: two species of a few dozen kilobases and their pool, for
       the plumbing (`make_test_data.py`).
-- [ ] **`test-data-v1`**, a release asset (CONVENTIONS.md § 13, § 20), and its
-      generator beside it: two or three chromosomes each of three yeasts with T2T
-      references, nanopore reads by Badread (R10 error model), a pooled Hi-C by
-      sim3C (its abundance profile, and noise between species), a pooled WGS by
-      InSilicoSeq, RNA-seq by polyester, and planted bleed-through and misjoins;
-      some tens of megabytes. The nf-test of M1 onwards run on it.
+- [x] **`benchmark-data-v1`**, a release asset (CONVENTIONS.md § 13, § 20),
+      and its generator beside it (`benchmarks/make_benchmark_data.py`): two or
+      three chromosomes and the mitochondrion each of three yeasts with complete
+      references, two of a genus (*S. cerevisiae*, *S. paradoxus*) and one far
+      (*N. glabratus*); nanopore reads by Badread (R10 error model) with
+      planted bleed-through; a pooled WGS by InSilicoSeq; a pooled Arima Hi-C
+      simulated by the generator itself (ligation junctions in the reads,
+      contacts decaying with distance, noise between species, PCR duplicates).
+      `-profile benchmark`; `benchmarks/evaluate.py` checks a milestone's "Done
+      when"; `.github/workflows/benchmarks.yml` fetches the release, or makes
+      and publishes it, and runs both.
+- [ ] **`benchmark-data-v2`**: RNA-seq of each species' genes (polyester), and
+      misjoins planted in a draft, for M3 to M5.
 - [ ] **`test_full`**: an in-silico pool of public data (nanopore, Hi-C, Illumina,
       RNA-seq) of five to ten yeasts with T2T references, subsampled and mixed,
       on Zenodo; run by hand on a cluster before each release, its numbers on

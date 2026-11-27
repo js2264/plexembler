@@ -26,8 +26,8 @@
             },
             "ont": {
                 "type": "string",
-                "pattern": "^\\S+\\.f(ast)?q(\\.gz)?$",
-                "errorMessage": "The species' nanopore reads: a FASTQ file (.fastq, .fq, gzipped or not), without spaces in its path"
+                "pattern": "^\\S+\\.(f(ast)?q(\\.gz)?|bam)$",
+                "errorMessage": "The species' nanopore reads: a FASTQ file (.fastq, .fq, gzipped or not), or Dorado's unaligned BAM (.bam), without spaces in its path"
             },
             "chemistry": {
                 "type": "string",
@@ -131,6 +131,18 @@
                 "errorMessage": "The telomeric repeat unit, in bases (TGTGGG); NA, or empty, to find it from the reads",
                 "meta": [
                     "telomere_repeat"
+                ]
+            },
+            "assembler": {
+                "type": "string",
+                "enum": [
+                    "flye",
+                    "hifiasm",
+                    "NA"
+                ],
+                "errorMessage": "The assembler whose contigs to keep, whatever the checks say: flye or hifiasm, one of --assemblers; NA, or empty, to keep the best by the checks",
+                "meta": [
+                    "assembler"
                 ]
             }
         },

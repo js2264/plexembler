@@ -1,0 +1,104 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "contigs"
+description: Each species' contigs - every assembler's a candidate, named after the species, polished with its nanopore reads, checked (genome_qc), one kept by the checks or the samplesheet - and the identity between the species of each pool
+keywords:
+  - assembly
+  - nanopore
+  - polishing
+  - selection
+components:
+  - flye
+  - hifiasm
+  - gfatools/gfa2fa
+  - plexembler/rename
+  - medaka
+  - dorado/polish
+  - genome_qc
+  - plexembler/select
+  - skani/triangle
+  - plexembler/ani
+input:
+  - ch_reads:
+      type: file
+      description: |
+        Each species' nanopore reads, meta with its chemistry (ont_reads)
+        Structure: [ val(meta), path(fastq) ]
+      pattern: "*.fastq.gz"
+  - ch_bams:
+      type: file
+      description: |
+        The species whose reads are Dorado's BAMs, for dorado polish
+        Structure: [ val(meta), [ path(bam) ] ]
+      pattern: "*.bam"
+  - ch_ont_db:
+      type: directory
+      description: |
+        Each species' nanopore k-mers (kmers)
+        Structure: [ val(meta), path(meryl) ]
+  - ch_wgs_db:
+      type: directory
+      description: |
+        Each pool's WGS k-mers (kmers)
+        Structure: [ val(meta), path(meryl) ]
+  - assemblers:
+      type: list
+      description: The assemblers that run, each a candidate (flye, hifiasm)
+  - polisher:
+      type: string
+      description: medaka, dorado or none
+  - busco_lineage:
+      type: string
+      description: The BUSCO lineage of a species without one
+  - busco_db:
+      type: directory
+      description: BUSCO's lineages downloaded beforehand, or []
+output:
+  - contigs:
+      type: file
+      description: |
+        Each species' kept contigs, polished; meta as it came
+        Structure: [ val(meta), path(fasta) ]
+      pattern: "*.assembly.fa.gz"
+  - candidates:
+      type: file
+      description: |
+        Every candidate, polished; meta.candidate its name
+        Structure: [ val(meta), path(fasta) ]
+      pattern: "*.fa.gz"
+  - graphs:
+      type: file
+      description: |
+        The assemblers' graphs
+        Structure: [ val(meta), path(gfa) ]
+      pattern: "*.gfa{,.gz}"
+  - selection:
+      type: file
+      description: |
+        Each species' table of candidates
+        Structure: [ val(meta), path(tsv) ]
+      pattern: "*.selection.tsv"
+  - busco:
+      type: file
+      description: |
+        Each candidate's BUSCO short summary
+        Structure: [ val(meta), path(txt) ]
+  - qv:
+      type: file
+      description: |
+        Each candidate's Merqury QV, and its k-mers
+        Structure: [ val(meta), path(qv), val(kmers) ]
+  - ani:
+      type: file
+      description: |
+        Each pool's pairs of species, their identity and verdict
+        Structure: [ val(meta), path(tsv) ]
+      pattern: "*.ani_pairs.tsv"
+  - multiqc_files:
+      type: file
+      description: |
+        The files MultiQC reads
+        Structure: [ path(file) ]
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

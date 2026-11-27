@@ -1,0 +1,71 @@
+name: "plexembler_rename"
+description: Names every contig after its species, <species>_<contig>
+keywords:
+  - contigs
+  - rename
+  - fasta
+tools:
+  - "plexembler":
+      description: "The commands of plexembler's pipeline"
+      homepage: "https://github.com/js2264/plexembler"
+      documentation: "https://js2264.github.io/plexembler/cli/#rename"
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: The species' meta map; its id starts every new name
+    - fasta:
+        type: file
+        description: The contigs, FASTA, gzipped or not
+        pattern: "*.{fa,fasta,fna}{,.gz}"
+output:
+  fasta:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${prefix}.fa:
+          type: file
+          description: The renamed contigs, plain FASTA (Medaka indexes it)
+          pattern: "*.fa"
+  names:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${prefix}.names.tsv:
+          type: file
+          description: Each contig's new and original names, and its length
+          pattern: "*.names.tsv"
+  log:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - "*.log":
+          type: file
+          description: The command's log
+          pattern: "*.log"
+  versions_plexembler:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

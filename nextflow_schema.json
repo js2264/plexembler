@@ -24,7 +24,7 @@
                     "mimetype": "text/csv",
                     "pattern": "^\\S+\\.csv$",
                     "description": "The species samplesheet: one row per nanopore run of a species.",
-                    "help_text": "A CSV file with a header: species, pool, ont, and optionally genome_size, ploidy, n_chromosomes, busco_lineage, genetic_code and telomere_repeat. A relative path in it is read from the samplesheet's folder. See the [usage page](https://js2264.github.io/plexembler/usage/#species).",
+                    "help_text": "A CSV file with a header: species, pool, ont (FASTQ, or Dorado's unaligned BAM), and optionally chemistry, genome_size, ploidy, n_chromosomes, busco_lineage, genetic_code, telomere_repeat and assembler. A relative path in it is read from the samplesheet's folder. See the [usage page](https://js2264.github.io/plexembler/usage/#species).",
                     "fa_icon": "fas fa-file-csv"
                 },
                 "libraries": {
@@ -48,6 +48,87 @@
                     "type": "string",
                     "description": "MultiQC report title. Printed as page header, used for filename if not otherwise specified.",
                     "fa_icon": "fas fa-file-signature"
+                }
+            }
+        },
+        "contigs_options": {
+            "title": "Contigs",
+            "type": "object",
+            "fa_icon": "fas fa-dna",
+            "description": "Each species' nanopore reads, its assemblies as candidates, their polishing and checks, and the one kept (milestone 1).",
+            "properties": {
+                "ont_min_length": {
+                    "type": "integer",
+                    "default": 1000,
+                    "minimum": 0,
+                    "description": "The shortest nanopore read kept, in bases.",
+                    "fa_icon": "fas fa-ruler-horizontal"
+                },
+                "ont_min_quality": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "The lowest mean quality of a nanopore read kept; by default 10 for R10 reads, 7 for R9.",
+                    "fa_icon": "fas fa-filter"
+                },
+                "ont_max_depth": {
+                    "type": "integer",
+                    "default": 100,
+                    "minimum": 0,
+                    "description": "The depth the nanopore reads are capped at, from the genome size; the longest and best reads are kept. 0 for no cap.",
+                    "help_text": "Filtlong keeps `ont_max_depth` times the genome size, in bases: the samplesheet's `genome_size`, or LRGE's estimate when it is NA.",
+                    "fa_icon": "fas fa-layer-group"
+                },
+                "save_ont_reads": {
+                    "type": "boolean",
+                    "description": "Save each species' nanopore reads as they were assembled: filtered and capped.",
+                    "fa_icon": "fas fa-save"
+                },
+                "assemblers": {
+                    "type": "string",
+                    "default": "flye",
+                    "pattern": "^(flye|hifiasm)(,(flye|hifiasm))*$",
+                    "description": "The assemblers that run, comma-separated: each one's contigs are a candidate (flye, hifiasm).",
+                    "help_text": "Every candidate is renamed, polished and checked; `plexembler select` keeps one, by BUSCO's single-copy genes, then the QV, then the contig N50, unless the samplesheet's `assembler` names one. hifiasm runs in its `--ont` mode, for R10 reads.",
+                    "fa_icon": "fas fa-puzzle-piece"
+                },
+                "ont_polisher": {
+                    "type": "string",
+                    "default": "medaka",
+                    "enum": [
+                        "medaka",
+                        "dorado",
+                        "none"
+                    ],
+                    "description": "How the candidates are polished with their species' nanopore reads: medaka, dorado (experimental: a GPU, and Dorado's BAMs), or none.",
+                    "help_text": "`dorado` runs `dorado polish` for the species whose `ont` is Dorado's unaligned BAM, and Medaka for the others. It is experimental until it has been tested on a GPU (docs/plan.md).",
+                    "fa_icon": "fas fa-magic"
+                },
+                "medaka_model": {
+                    "type": "string",
+                    "description": "Medaka's model; by default r1041_e82_400bps_sup_v5.2.0 for R10 reads, r941_min_sup_g507 for R9.",
+                    "fa_icon": "fas fa-brain"
+                },
+                "busco_lineage": {
+                    "type": "string",
+                    "default": "auto_euk",
+                    "pattern": "^([a-z0-9_.]+)$",
+                    "description": "The BUSCO lineage of a species whose samplesheet's busco_lineage is NA: auto_euk to let BUSCO choose.",
+                    "fa_icon": "fas fa-sitemap"
+                },
+                "busco_db": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "exists": true,
+                    "description": "A folder of BUSCO's lineages, downloaded beforehand (`busco --download`), for runs without network.",
+                    "fa_icon": "fas fa-database"
+                },
+                "kmer_size": {
+                    "type": "integer",
+                    "default": 21,
+                    "minimum": 15,
+                    "maximum": 31,
+                    "description": "The k-mers' length, for Merqury's QV and completeness and GenomeScope2.",
+                    "fa_icon": "fas fa-ruler"
                 }
             }
         },
@@ -194,6 +275,9 @@
     "allOf": [
         {
             "$ref": "#/$defs/input_output_options"
+        },
+        {
+            "$ref": "#/$defs/contigs_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"

@@ -1,0 +1,70 @@
+nextflow_workflow {
+
+    name "Test subworkflow KMERS"
+    script "../main.nf"
+    workflow "KMERS"
+
+    tag "subworkflows"
+    tag "subworkflows_local"
+    tag "kmers"
+
+    test("a species' nanopore k-mers and its pool's WGS k-mers") {
+
+        when {
+            workflow {
+                """
+                input[0] = channel.of([
+                    [ id: 'sp1', pool: 'pool', single_end: true ],
+                    file('${moduleDir}/../../../tests/data/sp1.ont.fastq.gz', checkIfExists: true),
+                ])
+                input[1] = channel.of([
+                    [ id: 'pool' ],
+                    [
+                        file('${moduleDir}/../../../tests/data/pool_wgs_R1.fastq.gz', checkIfExists: true),
+                        file('${moduleDir}/../../../tests/data/pool_wgs_R2.fastq.gz', checkIfExists: true),
+                    ],
+                ])
+                input[2] = 21
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.out.ont_db.size() == 1 },
+                // The pool's two files' k-mers, as one database.
+                { assert workflow.out.wgs_db.size() == 1 },
+                { assert workflow.out.wgs_db[0][1].toString().endsWith('pool.wgs.unionsum.meryl') },
+                { assert workflow.out.histogram.size() == 1 },
+            )
+        }
+    }
+
+    test("a pool without WGS - stub") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                input[0] = channel.of([
+                    [ id: 'sp1', pool: 'pool', single_end: true ],
+                    file('${moduleDir}/../../../tests/data/sp1.ont.fastq.gz', checkIfExists: true),
+                ])
+                input[1] = channel.empty()
+                input[2] = 21
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.out.ont_db.size() == 1 },
+                { assert workflow.out.wgs_db.size() == 0 },
+                { assert workflow.out.genomescope.size() == 1 },
+            )
+        }
+    }
+}

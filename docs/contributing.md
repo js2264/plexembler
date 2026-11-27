@@ -53,7 +53,7 @@ uv run ty check src                             # types
 ```bash
 nextflow lint .                                       # the scripts and configs (strict syntax)
 nf-test test --profile +docker                        # every test: pipeline, subworkflows, modules
-nf-test test --profile +docker --tag reads_qc         # one subworkflow's
+nf-test test --profile +docker --tag ont_reads        # one subworkflow's
 nextflow run . -profile test,docker --outdir results  # the test profile, by hand
 nextflow run . -profile test -stub --outdir results   # the plumbing alone, without tools
 nf-core pipelines lint                                # nf-core's checks (.nf-core.yml lists the exceptions)

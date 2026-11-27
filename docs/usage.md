@@ -17,9 +17,12 @@ page; the results are on the [outputs](output.md) page.
 
     The pipeline is being built milestone by milestone
     ([implementation plan](plan.md)). Today, it reads and checks both
-    samplesheets and checks the reads (NanoPlot, FastQC, MultiQC). The columns
-    below are read and checked already; the steps that use them come with their
-    milestones.
+    samplesheets, checks the reads (NanoPlot, FastQC, MultiQC), and makes each
+    species' contigs (milestone 1): its nanopore reads filtered and capped,
+    every assembler's contigs as candidates, polished and checked (BUSCO,
+    Merqury, gfastats), one kept, and the identity between the species of each
+    pool. The columns below are read and checked already; the steps that use the
+    others come with their milestones.
 
 ## Paths in the samplesheets
 
@@ -42,6 +45,7 @@ One row per nanopore run of a species; the rows of a species are its runs, and
 share its values. The [schema](https://github.com/js2264/plexembler/blob/main/assets/schema_input.json)
 checks each column. What you do not know about a species' genome is `NA`, or an
 empty cell: the step that needs it estimates it, and the report says so.
+A species' runs may mix FASTQ files and Dorado's BAMs.
 
 ```csv title="species.csv"
 species,pool,ont,genome_size,ploidy,n_chromosomes,genetic_code
@@ -55,14 +59,15 @@ Huva,poolA,ont/Huva.fastq.gz,NA,NA,NA,NA
 |---|---|---|---|
 | `species` | yes | The species' ID: a letter, then letters, digits and hyphens. It starts the name of every contig of the species, `<species>_<contig>`, and names its results. | |
 | `pool` | no (`pool`) | The pool the species is in: the pooled libraries of the same pool are split between its species. | |
-| `ont` | yes | The species' nanopore reads: FASTQ, gzipped or not. | |
-| `chemistry` | no | The nanopore chemistry: `r10` (R10.4.1, Dorado SUP or HAC) or `r9` (R9.4.1 and older). It sets the assembler's mode and the polisher's model. | told from the reads' median quality (Q15 and above: `r10`); `r10` until then (milestone 1) |
-| `genome_size` | no | The expected genome size, in bases, with an optional `k`, `m` or `g` (`12m`). | estimated from the nanopore reads (milestone 1) |
-| `ploidy` | no | The expected ploidy. | estimated from k-mers and allele balance; haploid until then (milestones 1 and 6) |
+| `ont` | yes | The species' nanopore reads: FASTQ, gzipped or not, or Dorado's unaligned BAM (`.bam`), whose tags are kept. | |
+| `chemistry` | no | The nanopore chemistry: `r10` (R10.4.1, Dorado SUP or HAC) or `r9` (R9.4.1 and older). It sets Flye's mode (`--nano-hq`, `--nano-raw`), Medaka's model and chopper's lowest quality. | told from the reads' median quality, NanoPlot's: Q15 and above is `r10` |
+| `genome_size` | no | The expected genome size, in bases, with an optional `k`, `m` or `g` (`12m`). The nanopore reads are capped at `--ont_max_depth` times it. | estimated from the nanopore reads by LRGE (`species/<species>/estimates/`) |
+| `ploidy` | no | The expected ploidy. A haploid species' assemblies keep no other haplotype's contigs (Flye's `--no-alt-contigs`, hifiasm's `-l0`). | haploid; GenomeScope2's fit of the nanopore k-mers hints at heterozygosity (nanopore errors inflate it), the species' own short reads tell it (milestone 2), and allele balance (milestone 6) |
 | `n_chromosomes` | no | The expected number of nuclear chromosomes: a check of the scaffolds, and HapHiC's input. | scaffolds judged without it; HapHiC skipped (milestone 3) |
-| `busco_lineage` | no | A BUSCO lineage (`busco --list-datasets`). | BUSCO picks one (milestone 1) |
+| `busco_lineage` | no | A BUSCO lineage (`busco --list-datasets`), such as `saccharomycetes_odb12`. | `--busco_lineage`: `auto_euk` by default, BUSCO's choice |
 | `genetic_code` | no | The NCBI translation table of the nuclear genes: `1`, `12` for the CUG-Ser clade, `26` for the CUG-Ala clade. | inferred from the genome; `1` until then (milestone 4) |
 | `telomere_repeat` | no | The telomeric repeat unit (`TGTGGG`). | found from the reads (milestone 3) |
+| `assembler` | no | The assembler whose contigs to keep (`flye`, `hifiasm`), whatever the checks say: one of `--assemblers`. | the candidate the checks prefer ([`plexembler select`](cli.md#select)) |
 
 ## Pooled libraries
 
@@ -146,6 +151,33 @@ A pool whose Hi-C library was made with a restriction enzyme can do without a
 WGS library: its Hi-C reads, cut at their ligation junctions, polish its
 species instead ([plan](plan.md), milestone 2). A Micro-C library has no
 junction to cut at, which is why `poolC` stays with nanopore polishing.
+
+## Contigs
+
+Each species' contigs (milestone 1 of the [plan](plan.md)) are made from its
+nanopore reads alone; [the parameters](parameters.md#contigs) set each step.
+
+- **The reads:** filtered by length (`--ont_min_length`, 1 kb) and mean quality
+  (`--ont_min_quality`: 10 for R10 reads, 7 for R9), then capped at
+  `--ont_max_depth` (100×) times the genome size, the longest and best kept.
+- **The candidates:** each assembler of `--assemblers` (`flye`; `flye,hifiasm`
+  adds hifiasm in its `--ont` mode, for R10 reads) makes one; each is polished
+  (`--ont_polisher medaka`; `dorado`, experimental, for the species whose
+  reads are Dorado's BAMs, on a GPU; or `none`) and checked.
+- **The one kept:** the most single-copy complete BUSCOs, then the highest QV,
+  then the longest contig N50; the samplesheet's `assembler` names one instead.
+- **The checks:** BUSCO with the species' lineage; Merqury's QV against the
+  pool's WGS k-mers (an assembly k-mer missing from the whole pool is an
+  error) or, without a WGS library, the species' nanopore k-mers, a rougher
+  QV; Merqury's completeness against the species' nanopore k-mers; gfastats.
+- **The pool:** skani's identity between each pair of its species. A pair
+  above 95 % is too close for the pool's short reads to be split between them
+  well, and the run warns about it; a pair from 85 % is of the same genus,
+  which milestone 2 splits with an identity threshold as well.
+
+BUSCO downloads its lineages when it runs; on a cluster whose nodes have no
+network, download them beforehand (`busco --download saccharomycetes_odb12`)
+and give their folder to `--busco_db`.
 
 ## Profiles
 

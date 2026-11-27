@@ -1,0 +1,59 @@
+name: "dorado_polish"
+description: Polishes a draft assembly with Dorado's polishing models (experimental, GPU)
+keywords:
+  - polishing
+  - nanopore
+  - gpu
+tools:
+  - "dorado":
+      description: "Oxford Nanopore's basecaller, aligner and polisher"
+      homepage: "https://github.com/nanoporetech/dorado"
+      documentation: "https://software-docs.nanoporetech.com/dorado/latest/"
+      licence: ["Oxford Nanopore Technologies PLC. Public License Version 1.0"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: The candidate's meta map
+    - reads:
+        type: file
+        description: The species' unaligned BAMs from Dorado, which name the basecalling model
+        pattern: "*.bam"
+    - draft:
+        type: file
+        description: The draft contigs, FASTA, gzipped or not
+        pattern: "*.{fa,fasta}{,.gz}"
+output:
+  fasta:
+    - - meta:
+          type: map
+          description: The candidate's meta map
+      - ${prefix}.fa.gz:
+          type: file
+          description: The polished contigs
+          pattern: "*.fa.gz"
+  versions_dorado:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - dorado:
+          type: string
+          description: The tool
+      - "dorado --version 2>&1 | head -n 1 | sed 's/^.*dorado //; s/+.*//'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - dorado:
+          type: string
+          description: The tool
+      - "dorado --version 2>&1 | head -n 1 | sed 's/^.*dorado //; s/+.*//'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"
