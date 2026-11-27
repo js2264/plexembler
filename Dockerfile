@@ -5,8 +5,9 @@ ARG BASE=ghcr.io/mamba-org/micromamba:2.10.0
 FROM ${BASE}
 
 # samtools: the pipeline's steps stream alignments into plexembler's commands
-# (`samtools view | plexembler split -`, docs/plan.md, T1).
-RUN micromamba install -y -n base -c conda-forge -c bioconda python=3.14 pip samtools=1.22.1 \
+# (`samtools view | plexembler split -`, docs/plan.md, T1). procps: ps, which
+# Nextflow runs in every step's container to measure it.
+RUN micromamba install -y -n base -c conda-forge -c bioconda python=3.14 pip procps-ng samtools=1.22.1 \
     && micromamba clean --all --yes
 
 COPY --chown=$MAMBA_USER:$MAMBA_USER dist/*.whl /tmp/dist/
