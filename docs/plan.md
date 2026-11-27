@@ -18,7 +18,7 @@ flowchart LR
   T2[T2 Test data, benchmark pool] -.-> M1
   T1[T1 The package's container] -.-> M1
   T7[T7 chromosomix, metacooler] -.-> M2
-  T8[T8 plexembler run, pixi] -.-> C
+  T8[T8 plexembler run, uv] -.-> C
 ```
 
 ## Versions: 0.x, for good
@@ -561,24 +561,22 @@ from M2 on.
       ([Versions](#versions-0x-for-good)), and nf-core's layout would replace some
       of the conventions' choices (`CHANGELOG.md`, the docs' site).
 
-### T8 · plexembler run, and pixi
+### T8 · plexembler run, and uv
 
-The pipeline, run by a machine that has pixi and a container engine, nothing
-else: the package runs the pipeline of its own version, and pixi's script
-brings it from PyPI, with Nextflow and Java.
+The pipeline, run by a machine that has uv, Java and a container engine,
+nothing else: the package runs the pipeline of its own version, and brings
+Nextflow's launcher with it.
 
 - [x] **`plexembler run`**: `nextflow run js2264/plexembler -r v<version>`,
       every other argument going to Nextflow as it is
       ([command line](cli.md#run)).
-- [x] **pixi's script**, `docs/run.py`, which the site serves: plexembler's
-      release from PyPI and Nextflow from bioconda, in PEP 723's metadata,
-      `pixi run --script https://js2264.github.io/plexembler/run.py -- …`
-      ([installation](installation.md#with-pixi)). `pipeline.yml`'s `pixi`
-      job runs it, with the checkout's plexembler, on the test profile in
-      preview.
+- [x] **PyPI's `nextflow`**, Nextflow's launcher, a dependency of the package:
+      `uvx plexembler run …` ([installation](installation.md#with-uv)), with
+      Java. `pipeline.yml`'s `uv` job runs it, from the checkout, on the test
+      profile in preview, with Java 17 and 25.
 - [ ] **PyPI's publishing turned on** (T1): PyPI's trusted publisher for
-      `release.yml`, then the repository variable `PUBLISH_PYPI`. The script
-      runs from the first release published.
+      `release.yml`, then the repository variable `PUBLISH_PYPI`. `uvx
+      plexembler` runs from the first release published.
 - [ ] **bioconda's recipe**, optional (docs/contributing.md, CONVENTIONS.md
       § 0), from PyPI's sdist: `conda install plexembler`, its BioContainers
       image, and `pixi exec` or `pixi global install` of the package; then

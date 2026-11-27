@@ -1058,6 +1058,12 @@ wheels = [
 ]
 
 [[package]]
+name = "nextflow"
+version = "26.10.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/4c/39/69e6400d98493c5cf4640149bbcb8bf19b7044d7c0ab8b0b368693033557/nextflow-26.10.5.tar.gz", hash = "sha256:5adfa15a1c8181518aa2db38a5044d24b42cb0c959cec64f3685dcf8d0b6ce44", size = 7800, upload-time = "2026-11-03T05:23:55.294Z" }
+
+[[package]]
 name = "nodeenv"
 version = "1.12.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1117,6 +1123,7 @@ source = { editable = "." }
 dependencies = [
     { name = "click" },
     { name = "jinja2" },
+    { name = "nextflow" },
     { name = "pyyaml" },
     { name = "rich-click" },
 ]
@@ -1144,6 +1151,7 @@ docs = [
 requires-dist = [
     { name = "click", specifier = ">=8.1" },
     { name = "jinja2", specifier = ">=3.1" },
+    { name = "nextflow", specifier = ">=26.4" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rich-click", specifier = ">=1.9" },
 ]

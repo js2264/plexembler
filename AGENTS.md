@@ -34,12 +34,11 @@ nf-core pipelines lint                                  # nf-core's checks (.nf-
 nf-core pipelines schema docs nextflow_schema.json --output docs/parameters.md --force
 ```
 
-pixi's script, with the checkout's plexembler for PyPI's (pixi ≥ 0.80.0;
+The pipeline as uv runs it, with PyPI's Nextflow launcher (Java ≥ 17;
 docs/contributing.md):
 
 ```bash
-sed "s|\"plexembler==[^\"]*\"|\"plexembler @ file://$PWD\"|" docs/run.py > /tmp/run.py
-pixi run --script /tmp/run.py -- --pipeline . -profile test -preview --outdir results
+uvx --from . plexembler run --pipeline . -profile test -preview --outdir results
 ```
 
 ## Layout
@@ -57,8 +56,7 @@ src/plexembler/_report/      chromokit's report kit: never edited (chromokit syn
 tests/                       pytest (test_*.py) and the pipeline's nf-test (default.nf.test)
 tests/data/                  the test data, and make_test_data.py, which writes them
 benchmarks/                  the benchmark pool's generator and checks (benchmarks/README.md)
-docs/                        the site's pages; docs/plan.md is the implementation plan,
-                             docs/run.py pixi's script, which the site serves
+docs/                        the site's pages; docs/plan.md is the implementation plan
 ```
 
 ## Rules
@@ -92,10 +90,10 @@ docs/                        the site's pages; docs/plan.md is the implementatio
   (docs/concepts.md). A species' ID has no underscore.
 - **The version is the package's** (`pyproject.toml`), written again as the
   pipeline's `manifest.version`; bump-my-version changes both.
-- **pixi's script runs the release** (`docs/run.py`): its plexembler is the
-  version's, which bump-my-version writes, and its Nextflow the pipeline's
-  (`tests/test_run.py` checks); a conda package added beside Nextflow brings
-  back the conda-to-PyPI mapping (docs/contributing.md).
+- **Nextflow comes with the package**: PyPI's `nextflow`, Nextflow's
+  launcher, is a dependency whose floor is the pipeline's
+  `manifest.nextflowVersion` (`tests/test_run.py` checks); bioconda's recipe
+  has bioconda's instead (docs/contributing.md).
 - **`plexembler run` passes everything else to Nextflow**: no pipeline
   parameter is named after one of its options (`pipeline`, `dry-run`), which
   would hide it (`tests/test_run.py` checks).

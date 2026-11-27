@@ -82,8 +82,9 @@ def cli() -> None:
 #: What `plexembler run` says when it finds no Nextflow to run.
 NO_NEXTFLOW = (
     "Nextflow was not found, beside plexembler or on PATH: install plexembler "
-    "with pixi, which brings Nextflow and Java, or install Nextflow 26.04.0 or "
-    "newer (https://js2264.github.io/plexembler/installation/)"
+    "with its dependencies (uvx plexembler run …, or uv tool install plexembler), "
+    "which bring Nextflow's launcher, or install Nextflow 26.04.0 or newer "
+    "(https://js2264.github.io/plexembler/installation/)"
 )
 
 

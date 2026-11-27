@@ -4,42 +4,37 @@ plexembler is a [Nextflow](https://www.nextflow.io) pipeline: Nextflow fetches
 it, and every tool it runs comes in a container or a conda environment. It
 runs on Linux, and on macOS for small tests.
 
-## With pixi
+## With uv
 
-[pixi](https://pixi.sh) runs the pipeline from a script of a few lines,
-[`run.py`](run.py), that names what it needs: plexembler, from PyPI, and
-Nextflow, from bioconda, which brings Java. pixi makes their environment the
-first time and keeps it: with a container engine for the pipeline's tools
-(Docker, Apptainer, Singularity, Podman), pixi is all a machine needs.
+[uv](https://docs.astral.sh/uv/) runs plexembler from PyPI, with its
+dependencies, Nextflow's launcher among them (PyPI's `nextflow`), which
+fetches Nextflow at its first run. With Java, and a container engine for the
+pipeline's tools (Docker, Apptainer, Singularity, Podman), uv is all a machine
+needs:
 
 ```bash
-curl -fsSL https://pixi.sh/install.sh | sh         # pixi itself, once
-pixi run --script https://js2264.github.io/plexembler/run.py -- \
-    -profile test,docker --outdir results
+curl -LsSf https://astral.sh/uv/install.sh | sh    # uv itself, once
+uvx plexembler run -profile test,docker --outdir results
 ```
 
-Every argument after `--` is `plexembler run`'s ([command line](cli.md#run)),
-which runs the pipeline of the latest release: `nextflow run js2264/plexembler
--r v<version>`, with its arguments. The `--` is needed: pixi would read
-`-profile` as an option of its own.
+`plexembler run` runs the pipeline of the release that uv installed, `nextflow
+run js2264/plexembler -r v<version>`, with every other argument as it is
+([command line](cli.md#run)).
 
-- **A release:** the script of its tag runs that release.
-
-    ```bash
-    pixi run --script https://raw.githubusercontent.com/js2264/plexembler/v0.1.0/docs/run.py -- \
-        -profile docker --input species.csv --libraries libraries.csv --outdir results
-    ```
-
-- **pixi 0.80.0 or newer** runs it: a PEP 723 script, with conda packages.
-- **pixi fetches the script at each run**, and keeps its environment. Where
-  the network is not to be relied on, as on a cluster's nodes, download it
-  once and run the file: `curl -O https://js2264.github.io/plexembler/run.py`,
-  then `pixi run --script run.py -- …`.
+- **A release:** `uvx plexembler@0.1.0 run …` runs that release.
+- **Installed for good:** `uv tool install plexembler`, then `plexembler run
+  …`; `uv tool upgrade plexembler` takes the latest release.
+- **Java 17 or newer** is the machine's: `java` on `PATH`, or `JAVA_HOME`
+  (`NXF_JAVA_HOME` to choose another). On a cluster, often `module load java`;
+  elsewhere, the system's OpenJDK package, Homebrew's `openjdk`, or
+  [SDKMAN!](https://sdkman.io).
+- **Nextflow is fetched once**, into `~/.nextflow`, from nextflow.io: the
+  version of the launcher, PyPI's `nextflow`, which uv took with plexembler.
 
 !!! note "To come"
 
-    The script takes plexembler from PyPI, where it is published from its
-    first release on ([the plan](plan.md#t8-plexembler-run-and-pixi)).
+    uvx takes plexembler from PyPI, where it is published from its first
+    release on ([the plan](plan.md#t8-plexembler-run-and-uv)).
 
 ## The pipeline
 
@@ -77,8 +72,8 @@ The commands the pipeline's steps run (`plexembler <command>`, the
 [command line](cli.md)) are a Python package, which the pipeline's containers
 hold, and which runs the pipeline itself (`plexembler run`). You need it
 yourself only to work on plexembler ([contributing](contributing.md)), to run
-a command by hand, or to run the pipeline with `plexembler run` and a Nextflow
-of your own on `PATH` (pixi installs both, above):
+a command by hand, or to run the pipeline with `plexembler run`, which brings
+Nextflow's launcher with it (above):
 
 === "uv"
 

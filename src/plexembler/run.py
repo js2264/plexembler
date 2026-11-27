@@ -2,9 +2,10 @@
 
 ``plexembler run ARGS…`` runs ``nextflow run js2264/plexembler -r v<version>
 ARGS…``: the pipeline of the package's own version, every argument but
-plexembler's own options going to Nextflow as it is (docs/cli.md). With
-Nextflow beside it, as pixi's script installs both (docs/run.py), the package
-is all a machine needs to run the pipeline, but a container engine.
+plexembler's own options going to Nextflow as it is (docs/cli.md). The package
+depends on PyPI's ``nextflow``, Nextflow's launcher, which pip and uv install
+beside it and which fetches Nextflow at its first run: with Java, plexembler is
+all a machine needs to run the pipeline, but a container engine.
 
 plexembler then hands its process over to Nextflow (``exec``): Nextflow's exit
 status, signals and logs are the run's, as when Nextflow is launched by hand.
@@ -173,9 +174,10 @@ def pipeline_to_run(
 def find_nextflow() -> str | None:
     """Nextflow's executable: beside plexembler's Python, else on PATH.
 
-    pixi and conda install Nextflow in plexembler's own environment, whose
-    folder of executables need not be on PATH (an environment that is not
-    activated).
+    pip and uv install Nextflow's launcher, PyPI's ``nextflow``, in
+    plexembler's own environment (conda, its Nextflow), whose folder of
+    executables need not be on PATH: ``uv tool install`` exposes plexembler's
+    command alone, and an environment need not be activated.
 
     Returns
     -------

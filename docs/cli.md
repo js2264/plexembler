@@ -17,25 +17,27 @@ Runs the pipeline with Nextflow, at plexembler's own version: `plexembler run
 ARGS…` runs `nextflow run js2264/plexembler -r v<version> ARGS…`, and every
 argument but its own options goes to Nextflow as it is: Nextflow's options
 (`-profile`, `-resume`, `-c`, `-r`) and the pipeline's
-[parameters](parameters.md) (`--input`, `--libraries`, `--outdir`). Run by
-pixi's script, which brings Nextflow and Java with it
-([installation](installation.md#with-pixi)), plexembler is all a machine
-needs to run the pipeline, but a container engine.
+[parameters](parameters.md) (`--input`, `--libraries`, `--outdir`).
+plexembler brings Nextflow's launcher with it, PyPI's `nextflow`, which
+fetches Nextflow at its first run ([installation](installation.md#with-uv)):
+with Java, plexembler is all a machine needs to run the pipeline, but a
+container engine.
 
 ```bash
 plexembler run -profile docker \
     --input species.csv --libraries libraries.csv --outdir results
 ```
 
-- **The pipeline, and its revision.** A release of plexembler (PyPI, as pixi's
-  script takes it) runs `js2264/plexembler` at its tag, `v<version>`: the
-  package's version is the pipeline's. Installed from a folder that holds the
+- **The pipeline, and its revision.** A release of plexembler (PyPI's, as
+  `uvx plexembler` takes it) runs `js2264/plexembler` at its tag,
+  `v<version>`: the package's version is the pipeline's. Installed from a folder that holds the
   pipeline (a clone, by `uv sync` or `pip install -e .`), it runs that folder
   as it is; installed from the git repository by pip or uv, that repository at
   the commit installed. `-r` runs another revision of the repository,
   `--pipeline` another pipeline.
-- **Nextflow** is the one beside plexembler's Python, which pixi and conda
-  install with it, else the one on `PATH`: 26.04.0 or newer. plexembler hands
+- **Nextflow** is the one beside plexembler's Python, the launcher that uv
+  and pip install with it (conda, its Nextflow), else the one on `PATH`:
+  26.04.0 or newer, which needs Java 17 or newer. plexembler hands
   its process over to it, so that Nextflow's exit status and logs are the
   run's (`.nextflow.log` where it runs, `<outdir>/pipeline_info/`), and Ctrl-C
   stops Nextflow as it would without plexembler.

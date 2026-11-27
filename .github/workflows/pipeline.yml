@@ -4,7 +4,7 @@ name: Pipeline
 # `nextflow lint` and nf-core's lint, the parameters page and the version
 # checked against their sources, then nf-test with Docker on the oldest
 # Nextflow the pipeline supports (manifest.nextflowVersion) and the newest;
-# and the pipeline run by pixi's script (docs/run.py). On pushes to main,
+# and the pipeline run as uvx runs it (docs/installation.md). On pushes to main,
 # every pull request, by hand, every week, and from release.yml on a tag.
 on:
   push:
@@ -132,40 +132,32 @@ jobs:
           SHARD: ${{ matrix.shard }}
         run: nf-test test --ci --verbose --profile +docker --shard "$SHARD/4"
 
-  # The pipeline as pixi runs it from its script (docs/run.py,
-  # docs/installation.md): plexembler, with Nextflow from bioconda and Java
-  # from conda-forge, in an environment pixi makes, on a runner with none of
-  # them set up. The script takes the release from PyPI: here, the checkout's
-  # plexembler stands for it. `plexembler run` hands over to that Nextflow,
-  # which runs the checkout's pipeline on the test profile in preview: the
-  # workflow and its samplesheets, without its tasks' containers.
-  pixi:
-    name: plexembler run, through pixi's script, pixi ${{ matrix.pixi }}
+  # The pipeline as uv runs it (docs/installation.md): plexembler, with PyPI's
+  # nextflow, Nextflow's launcher, on a runner with Java alone, the oldest and
+  # the newest long-term Java that Nextflow takes. The launcher fetches
+  # Nextflow at its first run; `plexembler run` hands over to it, and it runs
+  # the checkout's pipeline on the test profile in preview: the workflow and
+  # its samplesheets, without its tasks' containers. The checkout stands for
+  # the release that uvx takes from PyPI.
+  uv:
+    name: plexembler run, through uvx, Java ${{ matrix.java }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        # The oldest pixi the docs name (docs/installation.md): the first to
-        # take a script's conda-pypi-map. And the newest.
-        pixi: ["v0.80.0", "latest"]
+        java: ["17", "25"]
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      # pixi alone: the repository has no pixi workspace to install.
-      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
+      - uses: actions/setup-java@v6
         with:
-          pixi-version: ${{ matrix.pixi }}
-          run-install: false
-          cache: false
+          distribution: temurin
+          java-version: ${{ matrix.java }}
 
-      - name: The script, with the checkout's plexembler for PyPI's
-        run: |
-          sed "s|\"plexembler==[^\"]*\"|\"plexembler @ file://$GITHUB_WORKSPACE\"|" docs/run.py > "$RUNNER_TEMP/run.py"
-          grep -q "plexembler @ file://" "$RUNNER_TEMP/run.py" ||
-            { echo "::error::docs/run.py names no plexembler==<version>"; exit 1; }
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
 
-      - name: plexembler run, with nothing but pixi
-        run: pixi run --script "$RUNNER_TEMP/run.py" -- --pipeline . -profile test -preview --outdir results
+      - name: plexembler run, with nothing but uv and Java
+        run: uvx --from . plexembler run --pipeline . -profile test -preview --outdir results

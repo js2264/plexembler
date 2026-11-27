@@ -7,10 +7,10 @@ that call, and check the command and the environment it would run.
 import json
 import os
 import re
-import runpy
+import shutil
 import stat
-import sys
 import sysconfig
+from importlib.metadata import requires
 from pathlib import Path
 
 import click
@@ -179,7 +179,7 @@ def test_without_nextflow_it_fails_and_says_how_to_get_it(
     assert result.exit_code == 1
     assert not launched
     assert "Nextflow was not found" in plain(result.output)
-    assert "pixi" in plain(result.output)
+    assert "uv tool install plexembler" in plain(result.output)
     # A dry run prints the command all the same, with a warning.
     result = invoke("--dry-run", "-profile", "docker")
     assert result.exit_code == 0
@@ -384,60 +384,37 @@ def test_no_option_of_plexembler_run_hides_a_parameter_of_the_pipeline():
     assert not hidden, f"plexembler run's options hide the pipeline's {hidden}"
 
 
-# pixi's script, docs/run.py: plexembler from PyPI, Nextflow from bioconda
-
-SCRIPT = ROOT / "docs" / "run.py"
-#: A PEP 723 block, as the specification's reference implementation finds it.
-_BLOCK = re.compile(
-    r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$"
-)
+# Nextflow, which comes with the package: PyPI's nextflow, Nextflow's launcher
 
 
-def _script_metadata(text: str) -> dict:
-    """A script's PEP 723 metadata, its TOML read."""
-    tomllib = pytest.importorskip("tomllib")
-    blocks = [block for block in _BLOCK.finditer(text) if block["type"] == "script"]
-    assert len(blocks) == 1
-    content = "".join(
-        line[2:] if line.startswith("# ") else line[1:]
-        for line in blocks[0]["content"].splitlines(keepends=True)
-    )
-    return tomllib.loads(content)
+def _numbers(version: str) -> tuple[int, ...]:
+    """A version's numbers, as PEP 440 compares them: 26.04.0 is 26.4."""
+    numbers = [int(part) for part in version.split(".")]
+    while numbers and numbers[-1] == 0:
+        numbers.pop()
+    return tuple(numbers)
 
 
-def test_pixi_script_takes_this_release_and_the_pipelines_nextflow():
-    if not SCRIPT.exists():
-        pytest.skip("docs/run.py is not here")
-    metadata = _script_metadata(SCRIPT.read_text(encoding="utf-8"))
-    tomllib = pytest.importorskip("tomllib")
-    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    # bump-my-version writes the release (pyproject.toml).
-    assert metadata["dependencies"] == [f"plexembler=={project['project']['version']}"]
-    assert metadata["requires-python"] == project["project"]["requires-python"]
-    pixi = metadata["tool"]["pixi"]
-    assert pixi["workspace"]["channels"] == ["conda-forge", "bioconda"]
-    assert pixi["workspace"]["conda-pypi-map"] is False
-    nextflow = pixi["dependencies"].pop("nextflow")
-    assert not pixi["dependencies"], "a conda package beside Nextflow needs the mapping"
+def test_nextflow_comes_with_the_package_at_the_pipelines_floor():
+    floors = {}
+    for requirement in requires("plexembler") or []:
+        found = re.fullmatch(r"([A-Za-z0-9._-]+)>=([0-9.]+)", requirement)
+        if found:
+            floors[found[1]] = found[2]
+    assert "nextflow" in floors, "PyPI's nextflow is a dependency of plexembler"
     config = ROOT / "nextflow.config"
-    if config.exists():
-        manifest = re.search(
-            r"nextflowVersion\s*=\s*'!?(.+?)'", config.read_text(encoding="utf-8")
-        )
-        assert manifest is not None
-        assert nextflow == manifest.group(1)
+    if not config.exists():
+        pytest.skip("the pipeline is not in the sdist")
+    manifest = re.search(
+        r"nextflowVersion\s*=\s*'!?>=(.+?)'", config.read_text(encoding="utf-8")
+    )
+    assert manifest is not None
+    assert _numbers(floors["nextflow"]) == _numbers(manifest[1])
 
 
-@pytest.mark.usefixtures("released")
-def test_pixi_script_is_plexembler_run(
-    nextflow: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
-):
-    if not SCRIPT.exists():
-        pytest.skip("docs/run.py is not here")
-    # The arguments after pixi's `--`.
-    monkeypatch.setattr(sys, "argv", [str(SCRIPT), "--dry-run", "-profile", "docker"])
-    with pytest.raises(SystemExit) as exited:
-        runpy.run_path(str(SCRIPT), run_name="__main__")
-    assert exited.value.code == 0
-    out = capsys.readouterr().out
-    assert out == f"{nextflow} run {REPOSITORY} -r {RELEASE} -profile docker\n"
+def test_this_installation_has_nextflow_beside_python():
+    # Installed with its dependencies, plexembler has Nextflow's launcher
+    # beside its Python, which it runs before any Nextflow on PATH.
+    beside = shutil.which("nextflow", path=sysconfig.get_path("scripts"))
+    assert beside is not None
+    assert find_nextflow() == beside
