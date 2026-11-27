@@ -141,7 +141,7 @@ def test_models_off_the_genome(genome, tmp_path: Path):
         annotate(genome, models, "Scer", tmp_path / "out")
 
 
-def test_the_command(genome, tmp_path: Path):
+def test_the_command(genome, tmp_path: Path, plain):
     models = tmp_path / "braker.gtf"
     models.write_text(GTF)
     outdir = tmp_path / "out"
@@ -156,4 +156,4 @@ def test_the_command(genome, tmp_path: Path):
     models.write_text(GTF.replace("Scer_chr01", "Scer_chr09"))
     bad = CliRunner().invoke(cli, [*arguments, "--force"])
     assert bad.exit_code == 1
-    assert "not in the genome" in bad.output
+    assert "not in the genome" in plain(bad.output)
