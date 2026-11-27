@@ -38,4 +38,37 @@ nextflow_workflow {
             )
         }
     }
+
+    test("BRAKER, with neither RNA-seq nor proteins: AUGUSTUS - stub") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                input[0] = channel.of(
+                    [ [ id: 'sp1', pool: 'pool', genetic_code: 1 ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ],
+                    [ [ id: 'sp2', pool: 'pool', genetic_code: 12 ], file('${moduleDir}/../../../tests/data/truth/sp2.fa', checkIfExists: true) ],
+                )
+                input[1] = channel.empty()
+                input[2] = 'none'
+                input[3] = 'braker'
+                input[4] = 'saccharomyces_cerevisiae_S288C'
+                input[5] = []
+                input[6] = 'eukaryota_odb12'
+                input[7] = []
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.out.gff3.size() == 2 },
+                // Neither species has evidence for BRAKER: both go to AUGUSTUS.
+                { assert workflow.trace.tasks().count { it.name.contains('BRAKER3') } == 0 },
+                { assert workflow.trace.tasks().count { it.name.contains('AUGUSTUS') } == 2 },
+            )
+        }
+    }
 }
