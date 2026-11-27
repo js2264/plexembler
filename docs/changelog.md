@@ -52,15 +52,15 @@ follow [semantic versioning](https://semver.org).
   and writes why; **`plexembler ani`**, the identity between the species of a
   pool (skani), with a warning above 95 %.
 - **The benchmark pool** (`-profile benchmark`, each task within 4 CPUs and
-  14 GB, GitHub's runner): three yeasts, two of a genus,
-  their nanopore reads and their pool's WGS, Arima Hi-C and RNA-seq simulated
-  from their references and annotations by `benchmarks/make_benchmark_data.py`,
-  published as the release `benchmark-data-v2` with each file's checksum: a
-  repeat planted in each chromosome and nanopore reads under 7 kb, so that the
-  assemblies break and the scaffolding has joins to make; errors the nanopore
-  reads share, for the polishing to fix; RNA-seq at known levels.
-  `benchmarks/evaluate.py` checks milestones 1 to 5's "Done when" on its
-  results, all of them for every release (`benchmarks.yml`).
+  14 GB, GitHub's runner): three yeasts, two of a genus, their nanopore reads
+  and their pool's WGS, Arima Hi-C and RNA-seq simulated from their references
+  and annotations by `benchmarks/make_benchmark_data.py`, published as the
+  release `benchmark-data-v2` with each file's checksum: a repeat planted in
+  each chromosome and nanopore reads under 7 kb, so that the assemblies break
+  and the scaffolding has joins to make; errors the nanopore reads share, for
+  the polishing to fix; RNA-seq at known levels. `benchmarks/evaluate.py`
+  checks milestones 1 to 5's "Done when" on its results, all of them for every
+  release (`benchmarks.yml`). ([#8](https://github.com/js2264/plexembler/pull/8))
 - **The pool, split** (milestone 2): each pooled WGS and Hi-C library aligned
   to every species' contigs of its pool at once (bwa-mem2) and split between
   them by `plexembler split`: a pair to a species when both mates are unique
@@ -92,13 +92,12 @@ follow [semantic versioning](https://semver.org).
   scaffolds from 5 kb up, which joins what the first left apart (YaHS's own
   choice of resolutions joins nothing below a contig N50 of 100 kb);
   `plexembler finalize`, which names the scaffolds, chromosomes first, longest
-  first (`<species>_chr01`, …, the
-  samplesheet's `n_chromosomes` of them or every scaffold of
-  `--min_chromosome` bases or more), the mitochondrion (`<species>_chrM`) and
-  the unplaced, and writes the genome, its sizes, the table of names and the
-  AGP in the new names; the genome's gfastats, BUSCO and Merqury checks; all
-  in `species/<species>/genome/`. A species of a pool without Hi-C is finished
-  from its contigs.
+  first (`<species>_chr01`, …, the samplesheet's `n_chromosomes` of them or
+  every scaffold of `--min_chromosome` bases or more), the mitochondrion
+  (`<species>_chrM`) and the unplaced, and writes the genome, its sizes, the
+  table of names and the AGP in the new names; the genome's gfastats, BUSCO and
+  Merqury checks; all in `species/<species>/genome/`. A species of a pool
+  without Hi-C is finished from its contigs.
 - **`plexembler junctions`**, which scores each join of a species' scaffolds
   by the Hi-C pairs across it against the species' contact decay, from the
   pairs within its contigs: `supported`, `unsupported` (a misjoin, likely) or
