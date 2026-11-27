@@ -97,7 +97,7 @@ def test_digest_writes_every_piece_once(tmp_path: Path):
     )
 
 
-def test_digest_checks(tmp_path: Path):
+def test_digest_checks(tmp_path: Path, plain):
     r1 = fastq(tmp_path / "r1.fq.gz", [("a", LEFT)])
     outdir = tmp_path / "out"
     arguments = ["digest", str(r1), "-e", "DpnII", "-p", "Scer", "-o", str(outdir)]
@@ -109,11 +109,20 @@ def test_digest_checks(tmp_path: Path):
         ["digest", str(r1), "-e", "none", "-p", "Scer", "-o", str(outdir), "--force"],
     )
     assert none.exit_code == 2
-    plain = tmp_path / "bad.fq"
-    plain.write_text("not a fastq\nACGT\n-\nIIII\n", encoding="ascii")
+    not_fastq = tmp_path / "bad.fq"
+    not_fastq.write_text("not a fastq\nACGT\n-\nIIII\n", encoding="ascii")
     bad = CliRunner().invoke(
         cli,
-        ["digest", str(plain), "-e", "DpnII", "-p", "Scer", "-o", str(tmp_path / "b")],
+        [
+            "digest",
+            str(not_fastq),
+            "-e",
+            "DpnII",
+            "-p",
+            "Scer",
+            "-o",
+            str(tmp_path / "b"),
+        ],
     )
     assert bad.exit_code == 1
-    assert "not a FASTQ record" in bad.output
+    assert "not a FASTQ record" in plain(bad.output)

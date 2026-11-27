@@ -26,16 +26,6 @@ def run(*arguments: str):
     return CliRunner().invoke(cli, ["rename", *arguments])
 
 
-#: A terminal's colour codes, which rich-click writes where it sees a terminal (CI).
-ANSI = re.compile(r"\x1b\[[0-9;]*m")
-
-
-def plain(output: str) -> str:
-    """The output without rich-click's panel: its colours, borders and wrapping."""
-    text = ANSI.sub("", output)
-    return " ".join(text.translate(str.maketrans("", "", "│╭╮╰╯─")).split())
-
-
 def test_every_contig_starts_with_its_species(fasta: Path, tmp_path: Path):
     output = tmp_path / "out" / "sp1.fa"
     result = run(str(fasta), "-p", "sp1", "-o", str(output))
@@ -79,7 +69,7 @@ def test_gzipped_in_and_out(fasta: Path, tmp_path: Path):
     assert names.exists()
 
 
-def test_outputs_are_not_overwritten_without_force(fasta: Path, tmp_path: Path):
+def test_outputs_are_not_overwritten_without_force(fasta: Path, tmp_path: Path, plain):
     output = tmp_path / "sp1.fa"
     assert run(str(fasta), "-p", "sp1", "-o", str(output)).exit_code == 0
     again = run(str(fasta), "-p", "sp1", "-o", str(output))
@@ -104,7 +94,7 @@ def test_a_species_id_is_checked(fasta: Path, tmp_path: Path, species: str):
         (">ctg1\nAC\n>sp1_ctg1\nGT\n", "two contigs would be named"),
     ],
 )
-def test_malformed_contigs_fail(tmp_path: Path, text: str, message: str):
+def test_malformed_contigs_fail(tmp_path: Path, text: str, message: str, plain):
     path = tmp_path / "bad.fa"
     path.write_text(text, encoding="utf-8")
     result = run(str(path), "-p", "sp1", "-o", str(tmp_path / "out.fa"))

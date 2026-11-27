@@ -252,7 +252,7 @@ def test_a_moved_contig_keeps_its_name(pool, tmp_path: Path):
     assert found["Scer_c3"].new_name == "Cgla_Scer_c3"
 
 
-def test_the_command(pool, tmp_path: Path):
+def test_the_command(pool, tmp_path: Path, plain):
     outdir = tmp_path / "out"
     arguments = [
         "screen",
@@ -278,7 +278,7 @@ def test_the_command(pool, tmp_path: Path):
     assert CliRunner().invoke(cli, arguments).exit_code == 1
     bad = CliRunner().invoke(cli, [*arguments[:3], "Scer", *arguments[4:], "--force"])
     assert bad.exit_code == 2
-    assert "not SPECIES=PAF" in bad.output
+    assert "not SPECIES=PAF" in plain(bad.output)
     missing = CliRunner().invoke(
         cli, [*arguments[:3], "Scer=nowhere.paf", *arguments[4:], "--force"]
     )

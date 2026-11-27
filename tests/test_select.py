@@ -196,7 +196,7 @@ def test_select_writes_the_kept_sequence_and_the_table(tmp_path: Path):
     assert "Kept flye for Scer" in log.read_text()
 
 
-def test_keep_and_force(tmp_path: Path):
+def test_keep_and_force(tmp_path: Path, plain):
     rows = [candidate_row(tmp_path, "flye"), candidate_row(tmp_path, "hifiasm", s=50)]
     candidates = table(tmp_path, rows)
     outdir = tmp_path / "out"
@@ -206,12 +206,12 @@ def test_keep_and_force(tmp_path: Path):
         assert ">Scer_hifiasm_1" in handle.read()
     again = run(str(candidates), "-p", "Scer", "-o", str(outdir))
     assert again.exit_code == 1
-    assert "--force" in again.output
+    assert "--force" in plain(again.output)
     missing = run(
         str(candidates), "-p", "Scer", "-o", str(outdir), "-k", "x", "--force"
     )
     assert missing.exit_code == 1
-    assert "no candidate 'x'" in missing.output
+    assert "no candidate 'x'" in plain(missing.output)
 
 
 @pytest.mark.parametrize(
@@ -223,14 +223,14 @@ def test_keep_and_force(tmp_path: Path):
         ("candidate\tfasta\nflye\tNA\n", "has no sequence"),
     ],
 )
-def test_malformed_tables_fail(tmp_path: Path, text: str, message: str):
+def test_malformed_tables_fail(tmp_path: Path, text: str, message: str, plain):
     path = tmp_path / "candidates.tsv"
     path.write_text(text, encoding="utf-8")
     with pytest.raises(ValueError, match=message):
         read_candidates(path)
     result = run(str(path), "-p", "Scer", "-o", str(tmp_path / "out"))
     assert result.exit_code == 1
-    assert message in result.output
+    assert message in plain(result.output)
 
 
 def test_missing_checks_are_empty_cells(tmp_path: Path):
