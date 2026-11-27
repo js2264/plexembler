@@ -56,11 +56,12 @@ follow [semantic versioning](https://semver.org).
   12 GB, GitHub's runner): three yeasts, two of a genus, their nanopore reads
   and their pool's WGS, Arima Hi-C and RNA-seq simulated from their references
   and annotations by `benchmarks/make_benchmark_data.py`, in three sets from
-  the easiest to the hardest, published as the release `benchmark-data-v3`
+  the easiest to the hardest, published as the release `benchmark-data-v4`
   with each file's checksum: each plants more of the repeats yeast genomes
   hold, S288C's own (Ty1 upstream of tRNA genes, Y' arrays inside the
   telomeres, an rDNA array), and gives R10 reads and Hi-C less able to resolve
-  them; errors the nanopore reads share, for the polishing to fix; RNA-seq at
+  them (the easy set's reads without Badread's junk, random or chimeric
+  reads); errors the nanopore reads share, for the polishing to fix; RNA-seq at
   known levels; each gene characterized or not. `benchmarks/evaluate.py` checks
   milestones 1 to 5's "Done when" on a set's results, all of them on every set
   for every release (`benchmarks.yml`; the easy set gating, the others

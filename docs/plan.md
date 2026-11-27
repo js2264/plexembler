@@ -107,7 +107,7 @@ The repository, and what every later step relies on. Not released.
 - [x] Unknown values (`NA`) in the species samplesheet, and its `chemistry`
       column.
 - [ ] GitHub's settings (T5).
-- [x] The benchmark pool (T2): its three sets, `benchmark-data-v3`, released by `benchmarks.yml` (v1 never was; v2 was, by the workflow's first run).
+- [x] The benchmark pool (T2): its three sets, `benchmark-data-v4`, released by `benchmarks.yml` (v1 never was; v2 was, by the workflow's first run).
 - [x] The package's container, which M1's local modules need (T1).
 
 ## M1 · Contigs, per species · v0.1.0
@@ -519,6 +519,18 @@ pipeline's own steps need a container before the package is anywhere else.
       milestone 4 counting the characterized ones; milestone 3 leaving out the
       tandem arrays no read crosses. `benchmarks.yml` runs the three, the easy
       set gating, the medium and hard ones reported.
+- [x] **`benchmark-data-v4`**: the easy set's nanopore reads without
+      Badread's artifacts (junk, random and chimeric reads, glitches), its
+      recipe for good reads. Its junk reads, a short motif repeated over the
+      whole read (up to 37 kb), stalled Flye for hours on `Scer`: two of them
+      share millions of k-mer matches, which its overlapper chains in
+      quadratic time. The
+      medium and hard sets keep Badread's defaults, their reads v3's (the
+      seed kept).
+- [ ] **Long junk nanopore reads** (js2264/plexembler#8): a short motif
+      repeated over tens of kb, which real runs have too, stalls Flye as
+      above. Drop such reads before assembling (a read mostly one
+      short-period repeat), then give the easy set Badread's junk reads back.
 - [ ] **What the medium set found** (js2264/plexembler#8), the next pull
       requests; the medium set gates the benchmarks once they pass it:
       - YaHS joins two chromosomes' ends through a subtelomeric Y' the

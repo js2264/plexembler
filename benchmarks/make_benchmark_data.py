@@ -71,7 +71,10 @@ from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 #: Raised when what this script writes changes: it names the data's release.
-GENERATOR_VERSION = 3
+GENERATOR_VERSION = 4
+#: The random streams' seed: version 3's, which later versions keep, so that a
+#: version changing one set leaves the others' reads as they were.
+SEED = "plexembler-benchmark-v3"
 NCBI = "https://ftp.ncbi.nlm.nih.gov/genomes/all"
 COMPLEMENT = str.maketrans("ACGTNacgtn", "TGCANtgcan")
 
@@ -163,6 +166,13 @@ class Level:
     ont_length: tuple[int, int]
     ont_identity: tuple[float, float, float]
     ont_error_spacing: int
+    #: Badread's artifacts: the share (%) of its reads that are junk (a short
+    #: motif, repeated), random sequence, or two fragments joined (chimeras),
+    #: and its glitches (rate, size, skip).
+    ont_junk: float
+    ont_random: float
+    ont_chimeras: float
+    ont_glitches: tuple[int, int, int]
     #: Hi-C: its pairs, and how they fall: between chromosomes of a species,
     #: random ligations (a partner from anywhere in the pool, by abundance:
     #: epsilon), molecules without a junction, PCR duplicates.
@@ -185,6 +195,10 @@ LEVELS = (
         ont_length=(18_000, 14_000),
         ont_identity=(99.5, 99.9, 0.3),
         ont_error_spacing=50_000,
+        ont_junk=0,
+        ont_random=0,
+        ont_chimeras=0,
+        ont_glitches=(0, 0, 0),
         hic_pairs=1_000_000,
         hic_trans=0.10,
         hic_random_ligation=0.01,
@@ -202,6 +216,10 @@ LEVELS = (
         ont_length=(8_000, 6_000),
         ont_identity=(98.0, 99.5, 1.0),
         ont_error_spacing=20_000,
+        ont_junk=1,
+        ont_random=1,
+        ont_chimeras=1,
+        ont_glitches=(10_000, 25, 25),
         hic_pairs=400_000,
         hic_trans=0.12,
         hic_random_ligation=0.03,
@@ -219,6 +237,10 @@ LEVELS = (
         ont_length=(4_500, 3_000),
         ont_identity=(96.0, 98.5, 2.0),
         ont_error_spacing=10_000,
+        ont_junk=1,
+        ont_random=1,
+        ont_chimeras=1,
+        ont_glitches=(10_000, 25, 25),
         hic_pairs=150_000,
         hic_trans=0.15,
         hic_random_ligation=0.06,
@@ -832,7 +854,7 @@ def nanopore_reads(
     species: Species, level: Level, ref: Path, seed: int, workdir: Path
 ) -> list[str]:
     """Badread's reads of a species, R10.4.1's error and quality models, the
-    level's identity and lengths, as FASTQ records."""
+    level's identity, lengths and artifacts, as FASTQ records."""
     out = workdir / f"{species.name}.badread.fastq"
     with out.open("w") as sink:
         subprocess.run(
@@ -844,6 +866,10 @@ def nanopore_reads(
                 "--qscore_model", "nanopore2023",
                 "--identity", ",".join(f"{x:g}" for x in level.ont_identity),
                 "--length", ",".join(str(x) for x in level.ont_length),
+                "--junk_reads", f"{level.ont_junk:g}",
+                "--random_reads", f"{level.ont_random:g}",
+                "--chimeras", f"{level.ont_chimeras:g}",
+                "--glitches", ",".join(str(x) for x in level.ont_glitches),
                 "--seed", str(seed),
             ],
             check=True, stdout=sink, stderr=subprocess.DEVNULL,
@@ -1147,7 +1173,7 @@ def make_set(
         shutil.rmtree(root)
     for sub in ("ont", "pool", "references", "truth"):
         (root / sub).mkdir(parents=True, exist_ok=True)
-    rng = random.Random(f"plexembler-benchmark-v{GENERATOR_VERSION}-{level.name}")
+    rng = random.Random(f"{SEED}-{level.name}")
 
     genomes: dict[str, dict[str, str]] = {}
     genes: dict[str, list[Gene]] = {}
@@ -1354,6 +1380,10 @@ def make_set(
             "identity": list(level.ont_identity),
             "error_spacing": level.ont_error_spacing,
             "homopolymer_share": ONT_HOMOPOLYMER_SHARE,
+            "junk": level.ont_junk,
+            "random": level.ont_random,
+            "chimeras": level.ont_chimeras,
+            "glitches": list(level.ont_glitches),
         },
         "hic": {
             "pairs": level.hic_pairs,
@@ -1391,9 +1421,7 @@ def main(outdir: Path, threads: int, levels: list[str]) -> None:
         for s in SPECIES
     }
     # Each species' repeat families, the same in every set.
-    families = repeat_families(
-        records["Scer"], random.Random(f"plexembler-benchmark-v{GENERATOR_VERSION}")
-    )
+    families = repeat_families(records["Scer"], random.Random(SEED))
     del records
     for level in LEVELS:
         if level.name in levels:

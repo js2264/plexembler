@@ -43,12 +43,13 @@ by 8 %, `Cgla`'s by 25 %), each copy diverged a little more from its family's
 | rDNA | none | none | twelve units in tandem on each species' longest chromosome |
 | Nanopore reads (R10's models) | 99.5 % identity, N50 about 25 kb, 50× | 98 %, about 11 kb, 40× | 96 %, about 6 kb, 30× |
 | Their shared errors | one every 50 kb | one every 20 kb | one every 10 kb |
+| Badread's junk, random and chimeric reads, its glitches | none (its recipe for good reads) | 1 % each, a glitch every 10 kb (its defaults) | the same |
 | Hi-C pairs, random ligations | 1,000,000, 1 % | 400,000, 3 % | 150,000, 6 % |
 | Hi-C between chromosomes, unligated, duplicates | 10 %, 3 %, 3 % | 12 %, 5 %, 5 % | 15 %, 8 %, 10 % |
 
 | Reads | How | Truth in the read's name |
 |---|---|---|
-| Nanopore, per species (`ont/<species>.fastq.gz`) | Badread 0.4.1, R10.4.1's error and quality models (`nanopore2023`), at the set's identity, length and depth; from the genome with its shared errors (70 % of them a homopolymer a base too long or too short, the others substitutions, outside the planted repeats), as a nanopore consensus keeps them, for the short reads' polishing to fix; bleed-through: 15 % of `Spar`'s reads are `Cgla`'s (enough to assemble some), 1 % of the others' another species' | the sequence, strand and position |
+| Nanopore, per species (`ont/<species>.fastq.gz`) | Badread 0.4.1, R10.4.1's error and quality models (`nanopore2023`), at the set's identity, length, depth and artifacts; from the genome with its shared errors (70 % of them a homopolymer a base too long or too short, the others substitutions, outside the planted repeats), as a nanopore consensus keeps them, for the short reads' polishing to fix; bleed-through: 15 % of `Spar`'s reads are `Cgla`'s (enough to assemble some), 1 % of the others' another species' | the sequence, strand and position |
 | WGS, pooled (`pool/wgs_R{1,2}.fastq.gz`) | InSilicoSeq 2.0.1, NovaSeq's errors, 100× of each species: its held-out pairs (10 %) see a genome's QV past 40 | the sequence |
 | Hi-C, pooled (`pool/hic_R{1,2}.fastq.gz`) | here: Arima's DpnII and HinfI, the set's pairs; each pair two restriction fragments' ends ligated, a read through the junction when the molecule is short; contacts decaying as 1/s; random ligations a partner from anywhere in the pool, by abundance (ε) | both ends, their sites and enzymes |
 | RNA-seq, pooled (`pool/rna-<condition>-<replicate>_R{1,2}.fastq.gz`) | here: two conditions (YPD, heat) of two replicates, 500,000 pairs of 100 bp each, reverse-stranded (dUTP); 40, 35 and 25 % of the pairs `Scer`'s, `Spar`'s and `Cgla`'s; each gene's fragments (250 bp on average) drawn by its level and its length, its level log-normal, 15 % of the genes changed in heat (a log2 fold from N(0, 1.5)), each replicate's noise 15 % | the species and the gene |
@@ -65,7 +66,9 @@ characterized or not), `truth/<species>.tpm.tsv` (each gene's true TPM in each
 RNA-seq library) and `truth/<species>.ont_errors.tsv` (the nanopore reads'
 shared errors).
 
-The sets are deterministic: the same `GENERATOR_VERSION` writes the same reads.
+The sets are deterministic: the same `GENERATOR_VERSION` writes the same reads,
+and a version keeps the seed of the one before (`SEED`), so that changing one
+set leaves the others' reads as they were.
 They are published, with that version, as the release `benchmark-data-v<N>`
 (`<set>.tar`, and `<set>.sha256`, each file's checksum), which
 [the benchmarks' workflow](../.github/workflows/benchmarks.yml) downloads, or
@@ -73,7 +76,7 @@ makes and publishes when it does not exist.
 
 ```bash
 # A set, without the simulators
-gh release download benchmark-data-v3 --repo js2264/plexembler --dir benchmarks/data --pattern 'medium.*'
+gh release download benchmark-data-v4 --repo js2264/plexembler --dir benchmarks/data --pattern 'medium.*'
 tar -xf benchmarks/data/medium.tar -C benchmarks/data
 (cd benchmarks/data && sha256sum -c medium.sha256)
 ```
@@ -140,4 +143,6 @@ nf-tests instead (`pipeline.yml`).
 `test_full` is real data: public reads of five to ten yeasts with complete
 references, mixed in silico (docs/plan.md, T2). The sets' next versions:
 misjoins the scaffolder itself makes (planted ones are laid out where they are
-scored), and a species of R9.4.1 reads, for the chemistries' mix.
+scored), a species of R9.4.1 reads, for the chemistries' mix, and Badread's
+junk reads in the easy set too, once the pipeline drops them before assembling
+(docs/plan.md, T2).
