@@ -108,7 +108,7 @@ def test_the_genome_and_its_files(tmp_path: Path):
     assert again.exit_code == 1
 
 
-def test_an_agp_that_names_another_scaffold(tmp_path: Path):
+def test_an_agp_that_names_another_scaffold(tmp_path: Path, plain):
     fasta, agp = files(tmp_path)
     agp.write_text(
         AGP + "scaffold_9\t1\t10\t1\tW\tScer_contig_9\t1\t10\t+\n", encoding="ascii"
@@ -127,4 +127,4 @@ def test_an_agp_that_names_another_scaffold(tmp_path: Path):
         ],
     )
     assert result.exit_code == 1
-    assert "not in the scaffolds" in result.output
+    assert "not in the scaffolds" in plain(result.output)

@@ -47,7 +47,7 @@ def test_bad_tables(tmp_path: Path, counts):
         read_featurecounts(counts, "Scer", {"rna-ypd-1": "x", "rna-gal-1": "x"})
 
 
-def test_the_command(counts, tmp_path: Path):
+def test_the_command(counts, tmp_path: Path, plain):
     outdir = tmp_path / "out"
     arguments = ["expression", str(counts), "-p", "Scer", "-o", str(outdir), "-l", "rna-ypd-1=YPD_1", "-l", "rna-gal-1=GAL_1"]  # fmt: skip
     result = CliRunner().invoke(cli, arguments)
@@ -65,7 +65,7 @@ def test_the_command(counts, tmp_path: Path):
     assert CliRunner().invoke(cli, arguments).exit_code == 1
     bad = CliRunner().invoke(cli, [*arguments[:-1], "nolabel", "--force"])
     assert bad.exit_code == 2
-    assert "LIBRARY=LABEL" in bad.output
+    assert "LIBRARY=LABEL" in plain(bad.output)
     empty = tmp_path / "empty.tsv"
     empty.write_text("")
     failed = CliRunner().invoke(

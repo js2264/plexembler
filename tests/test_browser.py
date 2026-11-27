@@ -52,7 +52,7 @@ def test_bad_files():
         gather({"Scer": "poolA"}, [("Scer", "species/Scer/Scer.report.html")])
 
 
-def test_the_command(tmp_path: Path):
+def test_the_command(tmp_path: Path, plain):
     arguments = ["browser", "-s", "Scer=poolA", "-s", "Cgla=poolA", "-o", str(tmp_path)]
     arguments += [
         item for species, path in FILES for item in ("-f", f"{species}={path}")
@@ -67,7 +67,7 @@ def test_the_command(tmp_path: Path):
         cli, ["browser", "-s", "Scer", "-o", str(tmp_path), "--force"]
     )
     assert bad.exit_code == 2
-    assert "SPECIES=POOL" in bad.output
+    assert "SPECIES=POOL" in plain(bad.output)
     unknown = CliRunner().invoke(cli, [*arguments, "-f", "Spar=x.mcool", "--force"])
     assert unknown.exit_code == 1
     url = CliRunner().invoke(cli, [*arguments, "--base", "s3://bucket", "--force"])
