@@ -213,7 +213,8 @@ species' copy, 85 to 95 % identical.
 Each species' screened contigs become its genome (milestone 3 of the
 [plan](plan.md); [the parameters](parameters.md#chromosomes)): the pool split
 again on them, each species scaffolded with its own Hi-C pairs (YaHS, told the
-restriction motifs of the library's `enzymes`), the scaffolds named, the
+restriction motifs of the library's `enzymes`, its resolutions from 5 kb up),
+the scaffolds named, the
 chromosomes first ([`plexembler finalize`](cli.md#finalize)), and its Hi-C map
 made on the genome (pairtools, cooler; its finest bin `--map_resolution`,
 1 kb). A Micro-C library (`enzymes` `none`) scaffolds too, without motifs. A
