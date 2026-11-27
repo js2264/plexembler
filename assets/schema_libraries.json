@@ -8,23 +8,37 @@
         "type": "object",
         "properties": {
             "library": {
-                "type": "string",
+                "type": [
+                    "string",
+                    "integer"
+                ],
                 "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
                 "errorMessage": "A library's ID: letters, digits, _, . and -, starting with a letter or a digit",
-                "meta": ["id"]
+                "meta": [
+                    "id"
+                ],
+                "description": "A number-like ID (1) is read as the text it is."
             },
             "pool": {
                 "type": "string",
                 "pattern": "^[A-Za-z][A-Za-z0-9-]*$",
                 "default": "pool",
                 "errorMessage": "A pool's ID: a letter, then letters, digits and hyphens; a pool of the species samplesheet",
-                "meta": ["pool"]
+                "meta": [
+                    "pool"
+                ]
             },
             "type": {
                 "type": "string",
-                "enum": ["hic", "wgs", "rnaseq"],
+                "enum": [
+                    "hic",
+                    "wgs",
+                    "rnaseq"
+                ],
                 "errorMessage": "A library's type: hic, wgs or rnaseq",
-                "meta": ["type"]
+                "meta": [
+                    "type"
+                ]
             },
             "fastq_1": {
                 "type": "string",
@@ -37,30 +51,50 @@
                 "errorMessage": "The second reads of the pairs: a gzipped FASTQ file (.fastq.gz, .fq.gz), without spaces in its path"
             },
             "condition": {
-                "type": "string",
+                "type": [
+                    "string",
+                    "integer"
+                ],
                 "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
                 "errorMessage": "An RNA-seq library's condition: letters, digits, _, . and -",
-                "meta": ["condition"]
+                "meta": [
+                    "condition"
+                ]
             },
             "replicate": {
                 "type": "integer",
                 "minimum": 1,
                 "errorMessage": "An RNA-seq library's replicate: a whole number, 1 or more",
-                "meta": ["replicate"]
+                "meta": [
+                    "replicate"
+                ]
             },
             "enzymes": {
                 "type": "string",
                 "pattern": "^[A-Za-z0-9]+(,[A-Za-z0-9]+)*$",
                 "errorMessage": "A Hi-C library's restriction enzymes, comma-separated, as Biopython names them (DpnII,HinfI); none for a library made without one (Micro-C)",
-                "meta": ["enzymes"]
+                "meta": [
+                    "enzymes"
+                ]
             }
         },
-        "required": ["library", "type", "fastq_1", "fastq_2"],
+        "required": [
+            "library",
+            "type",
+            "fastq_1",
+            "fastq_2"
+        ],
         "if": {
-            "properties": { "type": { "const": "hic" } }
+            "properties": {
+                "type": {
+                    "const": "hic"
+                }
+            }
         },
         "then": {
-            "required": ["enzymes"]
+            "required": [
+                "enzymes"
+            ]
         }
     }
 }

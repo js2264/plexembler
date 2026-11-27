@@ -1,5 +1,5 @@
 # Changes here are overwritten by `uvx copier update`: answer again there.
-_commit: v0.2.0-1-g2728934
+_commit: v0.2.1
 _src_path: gh:js2264/chromokit
 authors:
 -   name: Jacques Serizay
@@ -18,7 +18,12 @@ doi: ''
 entry_point: plexembler.cli:cli
 formats_page: formats.md
 gpu: false
-image: false
+image: true
+image_arm64: true
+image_base: ghcr.io/mamba-org/micromamba:2.10.0
+image_env: ''
+image_v_tags: false
+image_variants: []
 install_run: ''
 install_source_builds: {}
 keywords:
@@ -43,7 +48,7 @@ python_dev: '3.14'
 python_max: '3.14'
 released: '2026-11-26'
 repository: plexembler
-ruff_version: 0.17.4
+ruff_version: 0.17.6
 sdist_test_data: true
 src_layout: true
 status: 3 - Alpha

@@ -14,6 +14,15 @@ follow [semantic versioning](https://semver.org).
 - **Two samplesheets**: the species and their nanopore runs (`--input`), and the
   pooled Hi-C, WGS and RNA-seq libraries (`--libraries`), checked against each
   other. A relative path in them is read from the samplesheet's folder.
+- **The species' nanopore chemistry**, a `chemistry` column: `r10`, `r9`, or
+  `NA` to tell it from the reads. ([#1](https://github.com/js2264/plexembler/pull/1))
+- **Unknown values**: `NA`, or an empty cell, in a species' `genome_size`,
+  `ploidy`, `n_chromosomes`, `busco_lineage`, `genetic_code` and
+  `telomere_repeat`; the step that needs one estimates it. A library's ID or
+  condition that looks like a number (`37`) is read as text. ([#1](https://github.com/js2264/plexembler/pull/1))
+- **The package's image**, `ghcr.io/js2264/plexembler`, published at each
+  release, which the pipeline's own steps run in; PyPI's publishing is opt-in.
+  ([#1](https://github.com/js2264/plexembler/pull/1))
 - **The reads' QC**: NanoPlot for each species' nanopore reads, FastQC for each
   pooled library, and MultiQC.
 - **`plexembler rename`**, which names each contig after its species

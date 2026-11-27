@@ -12,12 +12,57 @@ flowchart LR
   M2 --> M3[M3 Chromosomes<br>v0.3.0]
   M3 --> M4[M4 Annotation<br>v0.4.0]
   M4 --> M5[M5 Expression<br>v0.5.0]
-  M3 --> M6[M6 Reports and extras<br>v0.6.0 to v1.0.0]
+  M3 --> M6[M6 Reports and extras<br>v0.6.0]
   M5 --> M6
+  M6 --> C[The complete workflow<br>a 0.x release]
   T2[T2 Test data, benchmark pool] -.-> M1
   T1[T1 The package's container] -.-> M1
   T7[T7 chromosomix, metacooler] -.-> M2
 ```
+
+## Versions: 0.x, for good
+
+plexembler stays at 0.x, the complete workflow included: there is no 1.0.0 in
+this plan. CONVENTIONS.md § 18 allows a minor release before 1.0 to break the
+interface, and that is the freedom kept.
+
+- **A milestone is a minor release** (v0.1.0 for M1, … v0.6.0 for M6), and so
+  is every feature after them: the minor number has no ceiling (v0.10.0 follows
+  v0.9.0). `uv run bump-my-version bump minor` or `bump patch`, never `bump
+  major`.
+- **The complete workflow** is the first release in which every box of M1 to M6
+  is ticked and `test_full` is green: a 0.x release like the others, named so
+  in its changelog section and in the README.
+- **A patch release only fixes**, and never breaks a run.
+- **A minor release may break**, said where it does: a *Breaking changes*
+  section in its changelog, and `docs/upgrading.md`, a page on moving a run to
+  it (CONVENTIONS.md § 9). What can be renamed is first deprecated, with a
+  warning, for one minor release (§ 18): a parameter, a samplesheet column, an
+  output path, a key of the report.
+- **Runs pin their release** (`nextflow run js2264/plexembler -r v0.7.2`):
+  [usage](usage.md) says so, and every report names the release it was made
+  with.
+- **nf-core releases a pipeline from 1.0.0**, so plexembler stays
+  nf-core-compatible rather than becoming an nf-core pipeline (T6).
+
+## Decisions
+
+Taken on 2026-11-26, from the maintainer's answers; each is written again where
+it applies.
+
+| Topic | Decision |
+|---|---|
+| Nanopore data | Mixed or unknown chemistries: a samplesheet column `chemistry` (`r10`, `r9`, or `NA`, told from the reads' median quality), R10.4.1 assumed until then |
+| Strains | Haploid or homozygous: one collapsed assembly per species. hifiasm, purge_dups and HapHiC are opt-in |
+| Hi-C | Arima's kit (DpnII and HinfI): its four junctions are the default; YaHS and instaGRAAL, in its `cpu` mode, are the scaffolders |
+| Compute | Workstations with and without a GPU, SLURM clusters with and without GPU nodes: every GPU step is opt-in (`-profile gpu`) and has a CPU path |
+| GPU steps | Not tested yet: `dorado polish`, instaGRAAL's MCMC and Helixer are marked experimental, in the docs and in their parameters' help, until their tests (nf-test's tag `gpu`) have been run on a GPU workstation. CI tests the CPU paths |
+| The species of a pool | Of the same genus at most, some pairs at 85 to 95 % ANI: a read goes to a species only when its alignment is unique (`--deconvolve_mapq`) and near-identical (`--deconvolve_min_identity`), and the ambiguous share of each pair of species is reported (M2). Above 95 %, the pair is warned about (M1) |
+| RNA-seq | Counts and TPM per species and library; no differential expression (M5) |
+| Delivery | A pull request per milestone into `main`, squash-merged by the maintainer: each milestone on its own branch, its pull request stacked on the previous milestone's until that one is merged, then rebased onto `main` |
+| Benchmark | Public data of yeasts with T2T references, mixed in silico (T2) |
+| Upstream | hicstuff, instaGRAAL, chromosomix and metacooler are attached: their changes are prepared there (T4, T7), and worked around here until they are released |
+| The package's container | An image on GHCR per release, `ghcr.io/js2264/plexembler:X.Y.Z`, built from the released wheel; PyPI later (T1) |
 
 ## How a step is built
 
@@ -58,9 +103,11 @@ The repository, and what every later step relies on. Not released.
 - [x] CI: the package (`ci.yml`), the pipeline (`pipeline.yml`: lint, nf-core
       lint, nf-test on Nextflow 26.04.0 and the newest), the docs, the
       changelog check, the release, Dependabot.
+- [x] Unknown values (`NA`) in the species samplesheet, and its `chemistry`
+      column.
 - [ ] GitHub's settings (T5).
 - [ ] The benchmark pool's small set, `test-data-v1` (T2).
-- [ ] The package's container, which M1's local modules need (T1).
+- [x] The package's container, which M1's local modules need (T1).
 
 ## M1 · Contigs, per species · v0.1.0
 
@@ -70,16 +117,25 @@ usable as a draft genome on its own.
 - [ ] **Nanopore input.** FASTQ or Dorado's unaligned BAM (`samtools fastq -T '*'`,
       keeping its tags); filtered by length and quality (`chopper`); capped at
       `--ont_max_depth` (100×) of the longest reads (`filtlong --target_bases`,
-      or `rasusa`). The samplesheet's `ont` takes `.bam`.
-- [ ] **Assemblers, as candidates** (`--assemblers flye,hifiasm`): Flye
-      `--nano-hq` by default, `--genome-size` from the samplesheet; hifiasm
-      `--ont` for heterozygous species, its haplotypes kept as candidates
-      (nf-core: `flye`, `hifiasm`).
+      or `rasusa`). The samplesheet's `ont` takes `.bam`. The species'
+      `chemistry` sets Flye's mode (`--nano-hq` for `r10`, `--nano-raw` for
+      `r9`) and Medaka's model; `NA` is told from the reads' median quality
+      (Q15 and above: `r10`).
+- [ ] **What the samplesheet leaves unknown** (`NA`): the genome size, from the
+      nanopore reads (LRGE), before the depth cap needs it; the ploidy, from the
+      k-mer spectrum of the species' nanopore reads (GenomeScope2, Smudgeplot),
+      then of its own WGS reads once M2 has split them, the species treated as
+      haploid until then. Each estimate is reported as one, beside what the
+      samplesheet gave when it gave something.
+- [ ] **Assemblers, as candidates** (`--assemblers flye`, by default): Flye,
+      `--genome-size` from the samplesheet or its estimate; hifiasm `--ont`
+      opt-in (`--assemblers flye,hifiasm`), for R10 reads, its haplotypes kept
+      as candidates for a heterozygous species (nf-core: `flye`, `hifiasm`).
 - [ ] **Contigs named after their species:** `plexembler rename`, in a local
       module `PLEXEMBLER_RENAME`.
 - [ ] **Nanopore polishing** (`--ont_polisher medaka|dorado|none`): Medaka
-      (nf-core `medaka`); `dorado polish` (local, `process_gpu`) for Dorado's
-      BAMs.
+      (nf-core `medaka`); `dorado polish` (local, `process_gpu`, experimental
+      until tested on a GPU) for Dorado's BAMs.
 - [ ] **The genome checks**, a subworkflow `GENOME_QC` that every later stage
       reuses: `gfastats` (contiguity); BUSCO in genome mode, or compleasm, with
       the samplesheet's lineage or BUSCO's choice; Merqury's QV against the
@@ -100,7 +156,8 @@ finds no misassembly over 10 kb in the kept candidate.
 ## M2 · The pool, split · v0.2.0
 
 **Goal:** the pooled libraries split between the species; the contigs polished
-with their own species' WGS reads, and screened.
+with their own species' short reads (WGS, or Hi-C cut at its junctions), and
+screened.
 
 - [ ] **`POOL_DECONVOLVE`**, the pool-level subworkflow
       ([concepts](concepts.md#deconvolution)): the contigs of every species of a
@@ -108,16 +165,47 @@ with their own species' WGS reads, and screened.
       `plexembler split` (pysam, in a local module) gives each pair to the species
       of its best unique alignments: WGS proper pairs, Hi-C pairs whose mates
       both land in one species (pairs between species counted, not kept), at
-      `--deconvolve_mapq` (20). It writes each species' BAM (and FASTQ where a
+      `--deconvolve_mapq` (20) and an identity of at least
+      `--deconvolve_min_identity` (98 %): a read of a region missing from its
+      own species' contigs would otherwise go, unique, to a sister species'
+      copy, 85 to 95 % identical (Decisions). It writes each species' BAM (and FASTQ where a
       tool wants reads) and the pool's numbers: each species' share of each
       library, the ambiguous fraction of each pair of species, the pairs between
       species and the random-ligation rate ε. The pool's channels are grouped
       with `groupKey(pool, n_species)`, so that a pool starts as soon as its own
       species are ready.
+- [ ] **The polishing reads** (`--polish_reads auto|wgs|hic|both`, `auto` by
+      default): a species' WGS pairs when its pool has a WGS library; when it has
+      none, or for a species whose WGS depth is under `--min_polish_depth`
+      (30×), its **Hi-C reads, cut at their ligation junctions**. A Hi-C read is
+      chimeric at a junction, but the pieces between junctions are genome, read
+      with the same chemistry as WGS. `plexembler digest` cuts each read with
+      hicstuff's rule (`cutsite_read`: 4 bases into the junction, so that each
+      piece keeps its half of the site), from the junctions of the library's
+      `enzymes` (DpnII's `GATCGATC`; Arima's four); drops the pieces under
+      `--min_piece` (40 bp); and writes every piece once, as single-end reads:
+      a Hi-C pair is two loci, not a fragment, and its pairing would mislead a
+      polisher. Before cutting, duplicate pairs go (Hi-C libraries carry more
+      PCR duplicates than WGS: `pairtools dedup` on the pool's Hi-C alignments),
+      and a piece takes the species its pair was given. The reads with 0, 1 and
+      2 or more junctions are counted: a ligation-efficiency figure for the
+      report. (hicstuff's own `cutsite` pairs the pieces again; a mode of it
+      that writes them once, unpaired, would replace `plexembler digest`, T4.)
 - [ ] **Short-read polishing** (`--sr_polisher polypolish,pypolca|none`):
-      Polypolish (on `bwa mem -a` alignments of the species' reads), then
-      pypolca; Merqury's QV before and after, and the polished version kept only
-      if it is better (`plexembler select --step polish`).
+      Polypolish on `bwa mem -a` alignments of the species' reads, single-end for
+      Hi-C pieces (its insert-size filter needs true pairs), alignments with
+      more than 5 clipped bases dropped (a junction the cutting missed); then
+      pypolca. Hi-C's coverage is uneven, highest near restriction sites: a base
+      it does not cover is left as it was, not changed. The guard: Merqury's QV
+      before and after on k-mers of 10 % of the pairs, held out of the polishing
+      (the polishing reads' own k-mers would flatter it, and Hi-C's uneven
+      coverage makes a QV from its k-mers pessimistic); the polished version is
+      kept only if it is better (`plexembler select --step polish`).
+- [ ] **Micro-C** (`enzymes` is `none`) has no junction sequence to cut at:
+      such a pool's species stay polished with nanopore reads alone, by default.
+      Polishing with the clipped local alignments of its reads (primary and
+      supplementary segments, the clipped bases left out) is tried on the
+      benchmark first, and offered only if it helps.
 - [ ] **The pool's Hi-C map, species as genomes:** every Hi-C pair of the
       pool, those between species included, binned on the pool's contigs as a
       `.metacool` whose genomes are the species (`metacooler create pairs`, the
@@ -147,7 +235,8 @@ with their own species' WGS reads, and screened.
 **Done when**, on the benchmark pool: ≥ 99.5 % of the assigned pairs go to their
 true species (the reads' names carry it) for pairs of species below 90 % ANI;
 ε within 10 % of the simulated rate; every planted bleed-through contig moved
-or dropped; no species' QV lower after polishing.
+or dropped; no species' QV lower after polishing; polishing with digested Hi-C
+alone gains at least 80 % of what WGS gains, species by species.
 
 ## M3 · Chromosomes · v0.3.0
 
@@ -161,10 +250,11 @@ its Hi-C maps.
       - YaHS (nf-core `yahs`), its motifs from the library's `enzymes`;
       - instaGRAAL, a local module `INSTAGRAAL_ENDTOEND`:
         `instagraal-endtoend contigs.fa pairs.gz -e <enzymes> --mode cpu`, or
-        `--instagraal_mode default` (MCMC and refine) on a GPU (`process_gpu`);
+        `--instagraal_mode default` (MCMC and refine) on a GPU (`process_gpu`,
+        experimental until tested on a GPU);
         not for a library made without an enzyme;
-      - HapHiC (local), for species with a `ploidy` of 2 or more and an
-        `n_chromosomes`.
+      - HapHiC (local), opt-in, for species with a `ploidy` of 2 or more and
+        an `n_chromosomes`.
 - [ ] **Layouts as AGP:** `plexembler agp`: instaGRAAL's `final_info_frags.txt`
       to AGP (until instaGRAAL writes one, T4); AGP to FASTA, checked against the
       contigs.
@@ -177,8 +267,10 @@ its Hi-C maps.
       (nf-core's subworkflow `fasta_explore_search_plot_tidk`).
 - [ ] **One candidate kept:** `plexembler select --step scaffold`: no unsupported
       join (unless every candidate has some), then the most T2T chromosomes,
-      then the number of scaffolds nearest `n_chromosomes`, then N50; a
-      samplesheet column `scaffolder` names one instead.
+      then the number of scaffolds nearest `n_chromosomes` (a term left out when
+      it is `NA`, and HapHiC, which needs it, skipped), then N50; a samplesheet
+      column `scaffolder` names one instead. The karyotype found, T2T
+      chromosomes first, is reported against the one given.
 - [ ] **Curation:** a samplesheet column `curated_agp` replaces the kept layout
       with a curated one, checked against the contigs; each candidate's `.pretext`
       and `.hic` with its AGP are written for PretextView and Juicebox.
@@ -219,12 +311,15 @@ mitochondrial genes.
       alignments and OrthoDB's fungal proteins (`--orthodb_proteins`, downloaded
       to the cache when absent). Without RNA-seq: BRAKER on proteins alone, or
       GALBA (local), whichever does better on the benchmark. Helixer (local,
-      GPU) as a second candidate (`--gene_predictors braker,helixer`), scored by
+      GPU, experimental until tested on one) as a second candidate (`--gene_predictors braker,helixer`), scored by
       BUSCO's proteins and OMArk.
 - [ ] **Formats:** AGAT (`agat/convertspgff2gtf`, `agat/spextractsequences`,
       `agat/spstatistics`): GTF and GFF3, locus tags `<species>_000010`, proteins
       translated with the species' `genetic_code` (CUG is a sense codon in tables
       1, 12 and 26 alike: gene structures do not change, proteins do), CDS.
+- [ ] **The genetic code, checked:** Codetta (Shulgina and Eddy 2021) infers each
+      species' nuclear code from its genome: it is the code used when the
+      samplesheet says `NA`, and a warning when it differs from the one given.
 - [ ] **Non-coding RNAs:** tRNAscan-SE (`-E`), barrnap (`--kingdom euk`: the rDNA
       locus), Infernal with Rfam.
 - [ ] **Functions:** eggNOG-mapper (orthologue names, GO, KEGG, EC, Pfam) →
@@ -241,7 +336,8 @@ BUSCO's genome.
 
 ## M5 · Expression and tracks · v0.5.0
 
-**Goal:** each species' expression table, and its coverage tracks.
+**Goal:** each species' expression tables, counts and TPM, and its coverage
+tracks. Differential expression is out of scope (Decisions).
 
 - [ ] **Counts:** featureCounts on each RNA-seq library's per-species
       alignments, its strandedness from Salmon's library type.
@@ -257,7 +353,7 @@ BUSCO's genome.
 **Done when**, on the benchmark pool's simulated RNA-seq (known TPMs):
 Spearman's ρ ≥ 0.9 for every species.
 
-## M6 · Reports and extras · v0.6.0 to v1.0.0
+## M6 · Reports and extras · v0.6.0
 
 - [ ] **`plexembler report`**, on chromokit's report kit (CONVENTIONS.md § 12):
       per species, `report.txt`, its MultiQC row and its page: the summary;
@@ -288,21 +384,32 @@ Spearman's ρ ≥ 0.9 for every species.
       connected, or chromosomix.app with `?store=<url>` once the folder is on a
       bucket; the species' report embeds its view (`?embed=1`) where the results
       are served. Checked with chromosomix's own `scripts/make_store.py check`.
-- [ ] **v1.0.0:** `test_full` green on the benchmark, every page written, a metro
-      map (`manifest.diagram`), the benchmarks page (CONVENTIONS.md § 20).
+- [ ] **The complete workflow** (a 0.x release, see [Versions](#versions-0x-for-good)):
+      `test_full` green on the benchmark, every page written, a metro map
+      (`manifest.diagram`), the benchmarks page (CONVENTIONS.md § 20).
 
 ## Tracks
 
 ### T1 · The package's container
 
-The local modules that run `plexembler <command>` need it in a container.
+The local modules that run `plexembler <command>` need it in a container: an
+image on GHCR per release (Decisions), a deviation from CONVENTIONS.md § 15,
+which publishes images only for what pip cannot install. Its reason: the
+pipeline's own steps need a container before the package is anywhere else.
 
-- [ ] PyPI's trusted publisher for `plexembler` (`release.yml`, environment
-      `pypi`), then v0.1.0 on PyPI; its bioconda recipe (CONVENTIONS.md § 0), whose
-      BioContainers image the modules use. Until bioconda has it, the Seqera
-      Containers image of the PyPI release.
-- [ ] Until v0.1.0 is out, CI builds an image of the checkout and the tests use
-      it (`pipeline.yml`), so that a pull request tests its own code.
+- [x] `Dockerfile` and `.dockerignore` (the released wheel, on a pinned
+      micromamba base; chromokit's template with `image: true`), and
+      `release.yml`'s image job: `ghcr.io/js2264/plexembler:X.Y.Z` and
+      `latest`, linux/amd64 and linux/arm64, `docker run … plexembler --version`
+      before it is pushed.
+- [x] PyPI's publishing, opt-in: `release.yml` publishes to PyPI only once the
+      repository variable `PUBLISH_PYPI` is `true` (after PyPI's trusted
+      publisher is set up), so that a release does not fail before.
+- [x] `pipeline.yml` builds `ghcr.io/js2264/plexembler:<version>` from the
+      checkout before nf-test, so that a pull request tests its own code.
+- [ ] The local modules that run `plexembler`: `container
+      "ghcr.io/js2264/plexembler:${workflow.manifest.version}"`, and for conda
+      an environment that installs the package at the release's tag (M1).
 
 ### T2 · Test data and the benchmark pool
 
@@ -332,13 +439,15 @@ The local modules that run `plexembler <command>` need it in a container.
       `nf-core pipelines sync` brings the template's changes, `uvx copier update`
       chromokit's.
 
-### T4 · instaGRAAL, upstream
+### T4 · instaGRAAL and hicstuff, upstream
 
 - [ ] An AGP beside `final_genome.fa` (then `plexembler agp` loses that job).
 - [ ] A seed for the MCMC, for reproducible runs and tests.
 - [ ] Versioned image tags, a CPU-only image for `--mode cpu`, and a bioconda
       recipe (then Seqera Containers and BioContainers for free).
 - [ ] nf-core modules for `instagraal-endtoend` and `hicstuff pipeline`.
+- [ ] hicstuff: a `cutsite` mode that writes each piece once, unpaired, for
+      polishing (M2), so that `plexembler digest` can go.
 
 ### T7 · chromosomix and metacooler
 
@@ -372,24 +481,24 @@ from M2 on.
 - [ ] Each local module that is useful beyond plexembler, contributed to
       nf-core/modules once stable (instaGRAAL, hicstuff, metacooler, chromosomix,
       HapHiC, hictk, `dorado polish`, OMArk, Helixer).
-- [ ] At v1.0.0, whether to propose plexembler to nf-core: its scope (pools of
-      species) overlaps no nf-core pipeline, but nf-core's layout would replace
-      some of the conventions' choices (`CHANGELOG.md`, the docs' site).
+- [ ] plexembler itself stays here, nf-core-compatible: nf-core releases a
+      pipeline from 1.0.0, which plexembler does not plan
+      ([Versions](#versions-0x-for-good)), and nf-core's layout would replace some
+      of the conventions' choices (`CHANGELOG.md`, the docs' site).
 
 ## Questions that change defaults
 
-1. **The nanopore chemistry and basecalling** (R10.4.1 and Dorado SUP? BAMs with
-   move tables?): the assembler, `dorado polish`, Merqury on nanopore k-mers.
-2. **The strains** (haploid lab strains, wild diploids, hybrids): purge_dups,
-   hifiasm's haplotypes, HapHiC.
-3. **The Hi-C protocol of each pool** (Arima, DpnII, Micro-C): which scaffolders
-   run.
-4. **How close the species of a pool are** (any pair above 95 % ANI?): pool
-   design, `--deconvolve_mapq`.
-5. **The RNA-seq design** (stranded? how many conditions?): whether differential
-   expression comes in scope.
-6. **Where it runs** (the workstation's size, the cluster and its profile): the
-   labels' defaults in `conf/base.config`.
+All answered ([Decisions](#decisions)):
+
+1. ~~**The nanopore chemistry and basecalling**~~: mixed or unknown, a
+   `chemistry` column.
+2. ~~**The strains**~~: haploid or homozygous.
+3. ~~**The Hi-C protocol of each pool**~~: Arima.
+4. ~~**Where it runs**~~: all four of workstation and cluster, with and without
+   GPUs.
+5. ~~**How close the species of a pool are**~~: of the same genus at most, some
+   pairs at 85 to 95 % ANI.
+6. ~~**The RNA-seq design**~~: counts and TPM; no differential expression.
 
 ## Risks
 

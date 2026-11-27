@@ -148,18 +148,31 @@ def disagreements(metas) {
 }
 
 //
-// A species' meta map, every key present: what the samplesheet left empty is null
+// A value a samplesheet may leave unknown: NA, or an empty cell, is null
+//
+def known(value) {
+    return (value == null || value == [] || value == '' || value == 'NA') ? null : value
+}
+
+//
+// A species' meta map, every key present: what the samplesheet left unknown (NA,
+// or empty) is null, and the steps that need it estimate it (docs/usage.md). The
+// schema checks the values: a genetic code is an NCBI translation table.
 //
 def speciesMeta(meta) {
+    def genetic_code = known(meta.genetic_code)
+    def genome_size = known(meta.genome_size)
+    def telomere_repeat = known(meta.telomere_repeat)
     return [
         id              : meta.id,
-        pool            : meta.pool ?: 'pool',
-        genome_size     : meta.genome_size ?: null,
-        ploidy          : meta.ploidy ?: null,
-        n_chromosomes   : meta.n_chromosomes ?: null,
-        busco_lineage   : meta.busco_lineage ?: null,
-        genetic_code    : meta.genetic_code ?: 1,
-        telomere_repeat : meta.telomere_repeat ? meta.telomere_repeat.toUpperCase() : null,
+        pool            : known(meta.pool) ?: 'pool',
+        chemistry       : known(meta.chemistry),
+        genome_size     : genome_size?.toString(),
+        ploidy          : known(meta.ploidy)?.toInteger(),
+        n_chromosomes   : known(meta.n_chromosomes)?.toInteger(),
+        busco_lineage   : known(meta.busco_lineage),
+        genetic_code    : genetic_code?.toInteger(),
+        telomere_repeat : telomere_repeat ? telomere_repeat.toUpperCase() : null,
     ]
 }
 
@@ -169,10 +182,10 @@ def speciesMeta(meta) {
 def libraryMeta(meta) {
     def type = meta.type
     return [
-        id         : meta.id,
+        id         : meta.id.toString(),
         pool       : meta.pool ?: 'pool',
         type       : type,
-        condition  : type == 'rnaseq' ? (meta.condition ?: meta.id) : null,
+        condition  : type == 'rnaseq' ? (meta.condition ?: meta.id).toString() : null,
         replicate  : type == 'rnaseq' ? (meta.replicate ?: 1) : null,
         enzymes    : type == 'hic' ? meta.enzymes : null,
         single_end : false,
