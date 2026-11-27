@@ -377,8 +377,9 @@ mitochondrial genes.
       RNA-seq reads in genes comes with M5's counts.
 
 **Done when**, on the benchmark species with reference annotations: ≥ 90 % of
-the reference genes found (gffcompare); BUSCO's proteins within 2 points of
-BUSCO's genome.
+the reference genes found (a predicted CDS over 80 % of each reference CDS,
+at 95 % identity: the genome's coordinates are not the reference's, which
+gffcompare would need); BUSCO's proteins within 2 points of BUSCO's genome.
 
 ## M5 · Expression and tracks · v0.5.0
 
