@@ -92,10 +92,12 @@ workflow PLEXEMBLER {
 
     //
     // SUBWORKFLOW: each pooled library split between its pool's species, on
-    // their contigs: the Hi-C contacts the screen weighs
+    // their contigs: the Hi-C contacts the screen weighs. Its tables are
+    // published, not reported: a species whose DNA another species' contigs
+    // hold (bleed-through, assembled) loses those pairs there, ambiguous
+    // between the two.
     //
     POOL_DECONVOLVE(CONTIGS.out.contigs, ch_libraries, 'contigs')
-    ch_multiqc_files = ch_multiqc_files.mix(POOL_DECONVOLVE.out.multiqc_files)
 
     //
     // SUBWORKFLOW: each contig kept, moved to another species of its pool, or
@@ -108,10 +110,11 @@ workflow PLEXEMBLER {
     // SUBWORKFLOW: the pool split again, on the screened contigs: the pairs
     // each species is polished and scaffolded with, none of them lost to
     // another species' copy of its DNA (the first split's ambiguous pairs).
-    // Its tables are published, not given to MultiQC, whose split is the
-    // first's (their files share their names).
+    // Its tables, each species' share of each library, are the ones MultiQC
+    // and the species' reports give.
     //
     POOL_DECONVOLVE_SCREENED(SCREEN.out.contigs, ch_libraries, 'screened')
+    ch_multiqc_files = ch_multiqc_files.mix(POOL_DECONVOLVE_SCREENED.out.multiqc_files)
 
     //
     // SUBWORKFLOW: each species polished with its own short reads, when that raises its QV
@@ -229,7 +232,7 @@ workflow PLEXEMBLER {
         .mix(ANNOTATION.out.proteins_busco.map { meta, summary -> [meta.id, summary] })
         .mix(EXPRESSION.out.counts.map { meta, table -> [meta.id, table] })
         .mix(ch_closest_files.map { meta, file -> [meta.id, file] })
-    def ch_pool_files = POOL_DECONVOLVE.out.table.map { meta, table -> [meta.pool, table] }
+    def ch_pool_files = POOL_DECONVOLVE_SCREENED.out.table.map { meta, table -> [meta.pool, table] }
         .mix(RNASEQ.out.table.map { meta, table -> [meta.pool, table] })
         .mix(SCREEN.out.table.map { meta, table -> [meta.pool ?: meta.id, table] })
     def ch_report = ch_species_files

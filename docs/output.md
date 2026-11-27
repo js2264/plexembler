@@ -138,6 +138,15 @@ rate epsilon; `<pool>.<library>.contacts.tsv` (Hi-C), the unique pairs between
 contigs; and the command's log. The split reads are not kept: each step that
 needs them makes them again from the alignments.
 
+The pool is split again once its contigs are screened, in
+`pools/<pool>/deconvolution/screened/`, with the same files: the pairs each
+species is polished and scaffolded with. Each species' share of each library,
+in its report and in MultiQC, is that second split's. In the first, a species
+whose DNA another species' contigs hold (bleed-through, assembled) loses those
+pairs, ambiguous between the two: on the benchmark's easy set, *N. glabratus*
+had 4,794 of the WGS library's pairs in the first split, and 326,616 in the
+second.
+
 ### Short-read polishing
 
 Each species' screened contigs (below), polished with its own short reads, of
@@ -303,9 +312,10 @@ one's sequence downloaded from NCBI, and the species' genome drawn against it.
 species ([format](formats.md#the-report-of-a-species)).
 
 - `species/<species>/<species>.report.html`: its page: the assembly's
-  candidates and choice, the polishing, its share of each pooled library, the
-  screen, its chromosomes, BUSCO and QV, its joins, genes and expression, and
-  its closest known genome, with the dotplot against it.
+  candidates and choice, the polishing, its share of each pooled library (the
+  pool's split on the screened contigs), the screen, its chromosomes, BUSCO
+  and QV, its joins, genes and expression, and its closest known genome, with
+  the dotplot against it.
 - `species/<species>/<species>.report.txt`: every number of it, for scripts.
 - `species/<species>/<species>.report_mqc.yaml`: its row of MultiQC's General
   Statistics table.
@@ -324,10 +334,10 @@ run's `--browser_base` its address.
 
 `multiqc/multiqc_report.html`: the reads' QC, each candidate's BUSCO and
 gfastats numbers, the table of candidates of every species, the identity
-between the species of every pool, each library's split (the first, on the
-contigs), each species' polishing and its Hi-C reads' digestion, the contig
-screen, each genome's BUSCO and gfastats numbers and its joins' verdicts, each
-map's pairs, each RNA-seq library's split and STAR's report, each species'
+between the species of every pool, each library's split (the second, on the
+screened contigs), each species' polishing and its Hi-C reads' digestion, the
+contig screen, each genome's BUSCO and gfastats numbers and its joins'
+verdicts, each map's pairs, each RNA-seq library's split and STAR's report, each species'
 genes and BUSCO on its proteins, featureCounts' assignments and each
 library's pairs on genes, each species' closest known genome, each species'
 row of the General Statistics (its report), and the software versions, in one
