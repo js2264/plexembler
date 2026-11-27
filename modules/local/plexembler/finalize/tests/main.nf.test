@@ -18,6 +18,7 @@ nextflow_process {
                     [ id: 'sp1', n_chromosomes: 2 ],
                     file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true),
                     [],
+                    [],
                 ]
                 """
             }
@@ -32,6 +33,32 @@ nextflow_process {
         }
     }
 
+    test("a species' scaffolds, a join its pairs do not support cut") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: 'sp1', n_chromosomes: 2 ],
+                    file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true),
+                    file('${moduleDir}/../../../../tests/data/scaffold/sp1.agp', checkIfExists: true),
+                    file('${moduleDir}/../../../../tests/data/scaffold/sp1.junctions.tsv', checkIfExists: true),
+                ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                // chr1's two sides, two scaffolds: the longer a chromosome, the other unplaced.
+                { assert path(process.out.sizes[0][1]).readLines() == ['sp1_chr01\t16000', 'sp1_chr02\t12000', 'sp1_unplaced_01\t11900'] },
+                { assert path(process.out.names[0][1]).readLines()[2] == 'sp1_chr02\tchr1.1\t12000\tchromosome' },
+                { assert path(process.out.agp[0][1]).readLines().last() == 'sp1_unplaced_01\t1\t11900\t1\tW\tsp1_contig_2\t1\t11900\t+' },
+            )
+        }
+    }
+
     test("a species' scaffolds - stub") {
 
         options "-stub"
@@ -42,6 +69,7 @@ nextflow_process {
                 input[0] = [
                     [ id: 'sp1', n_chromosomes: null ],
                     file('${moduleDir}/../../../../tests/data/truth/sp1.fa', checkIfExists: true),
+                    [],
                     [],
                 ]
                 """

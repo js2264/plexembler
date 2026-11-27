@@ -1,0 +1,2 @@
+scaffold	position	left_contig	right_contig	observed	expected	ratio	verdict
+chr1	12000	sp1_contig_1	sp1_contig_2	2	120.0	0.017	unsupported

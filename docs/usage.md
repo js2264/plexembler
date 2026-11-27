@@ -221,15 +221,19 @@ Each species' screened contigs become its genome (milestone 3 of the
 again on them, each species scaffolded with its own Hi-C pairs (YaHS, told the
 restriction motifs of the library's `enzymes`, from 1 kb up, then again on its
 own scaffolds from 5 kb up, which joins what the first pass left apart),
-the scaffolds named, the
+each of YaHS's joins that its Hi-C pairs do not support cut
+([`plexembler junctions --contigs`](cli.md#junctions)), the scaffolds named, the
 chromosomes first ([`plexembler finalize`](cli.md#finalize)), and its Hi-C map
 made on the genome (pairtools, cooler; its finest bin `--map_resolution`,
 1 kb). A Micro-C library (`enzymes` `none`) scaffolds too, without motifs. A
 species whose pool has no Hi-C library is not scaffolded: its genome is its
 contigs, named the same way.
 
-The scaffolds are YaHS's, uncurated. The steps that check and correct them
-(the junctions' support on the map, the telomeres, a second scaffolder) are to
+The scaffolds are YaHS's, less the joins their pairs do not support: such a
+join, a misjoin likely (two chromosomes joined through a repeat the assembly
+collapsed), is cut, and its two sides are named as any other scaffold. A join
+too thin to judge, where the pairs are too few to tell, is kept. The other
+steps that check and correct them (the telomeres, a second scaffolder) are to
 come; until then, look at each species' map before trusting its chromosomes.
 
 ## Annotation

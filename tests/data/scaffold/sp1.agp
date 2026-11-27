@@ -1,0 +1,4 @@
+chr1	1	12000	1	W	sp1_contig_1	1	12000	+
+chr1	12001	12100	2	U	100	scaffold	yes	proximity_ligation
+chr1	12101	24000	3	W	sp1_contig_2	1	11900	+
+chr2	1	16000	1	W	sp1_contig_3	1	16000	+

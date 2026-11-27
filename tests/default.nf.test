@@ -47,6 +47,7 @@ nextflow_pipeline {
                 // Each species' genome, its joins and its map (M3): sp1's two chromosomes.
                 { assert path("$outputDir/species/sp1/genome/sp1.names.tsv").readLines().count { it.endsWith('\tchromosome') } == 2 },
                 { assert path("$outputDir/species/sp1/genome/sp1.fa.gz.fai").exists() },
+                { assert path("$outputDir/species/sp1/candidates/scaffold/junctions/sp1.junctions.tsv").readLines()[0].endsWith('\tverdict') },
                 { assert path("$outputDir/species/sp1/genome/qc/junctions/sp1.junctions.tsv").exists() },
                 { assert path("$outputDir/species/sp1/hic/sp1.mcool").exists() },
                 // Its RNA-seq, split, and its genes: the test data plants six in each (M4).

@@ -10,6 +10,7 @@ from click.testing import CliRunner
 from plexembler.cli import cli
 from plexembler.junctions import (
     Decay,
+    Lift,
     bin_edges,
     bin_of,
     expected_across,
@@ -72,6 +73,35 @@ def pairs_file(path: Path, seed: int = 1, n: int = 30_000) -> Path:
     return path
 
 
+def on_contigs(pairs: Path, agp: Path, path: Path) -> Path:
+    """The pairs of ``pairs_file``, each mate on its contig: where an aligner
+    would have put it on the contigs the AGP lays out."""
+    layout = read_agp(agp)
+
+    def where(scaffold, position):
+        for c in layout.components.get(scaffold, []):
+            if c.start < position <= c.end:
+                offset = position - 1 - c.start
+                if c.orientation == "-":
+                    return c.name, c.contig_end - offset
+                return c.name, c.contig_start + offset + 1
+        return None
+
+    lines = []
+    for line in pairs.read_text().splitlines():
+        if line.startswith("#"):
+            lines.append(line)
+            continue
+        fields = line.split("\t")
+        one, two = where(fields[1], int(fields[2])), where(fields[3], int(fields[4]))
+        if one and two:
+            fields[1], fields[2] = one[0], str(one[1])
+            fields[3], fields[4] = two[0], str(two[1])
+            lines.append("\t".join(fields))
+    path.write_text("\n".join(lines) + "\n", encoding="ascii")
+    return path
+
+
 @pytest.fixture
 def agp(tmp_path: Path) -> Path:
     path = tmp_path / "Scer.agp"
@@ -120,6 +150,49 @@ def test_a_join_and_a_misjoin(agp, tmp_path: Path):
     assert misjoin.verdict == "unsupported"
 
 
+def test_the_lift(tmp_path: Path):
+    """A contig's position on its scaffold: either way round, and on each piece
+    of a contig the scaffolder broke in two."""
+    path = tmp_path / "broken.agp"
+    rows = [
+        ("scaffold_1", 1, 100, 1, "W", "ctg1", 1, 100, "+"),
+        ("scaffold_1", 101, 200, 2, "U", 100, "scaffold", "yes", "proximity_ligation"),
+        ("scaffold_1", 201, 250, 3, "W", "ctg2", 51, 100, "-"),
+        ("scaffold_2", 1, 50, 1, "W", "ctg2", 1, 50, "+"),
+    ]  # fmt: skip
+    path.write_text("\n".join("\t".join(map(str, r)) for r in rows) + "\n")
+    lift = Lift(read_agp(path))
+    assert lift("ctg1", 0) == ("scaffold_1", 0)
+    assert lift("ctg1", 99) == ("scaffold_1", 99)
+    assert lift("ctg1", 100) is None  # past the contig's part
+    assert lift("ctg2", 0) == ("scaffold_2", 0)
+    assert lift("ctg2", 49) == ("scaffold_2", 49)
+    assert lift("ctg2", 50) == (
+        "scaffold_1",
+        249,
+    )  # reversed: its part's first base last
+    assert lift("ctg2", 99) == ("scaffold_1", 200)
+    assert lift("ctg3", 10) is None
+
+
+def test_the_joins_scored_from_pairs_on_the_contigs(agp, tmp_path: Path):
+    """The pairs on the contigs, placed through the AGP, score the joins as
+    the same pairs on the scaffolds do."""
+    pairs = pairs_file(tmp_path / "Scer.pairs")
+    contigs = on_contigs(pairs, agp, tmp_path / "Scer.contigs.pairs")
+    assert "Scer_c\t" in contigs.read_text()
+    on_scaffolds = score(agp, pairs, window=10_000)
+    lifted = score(agp, contigs, window=10_000, on_contigs=True)
+    assert [(j.observed, j.verdict) for j in lifted] == [
+        (j.observed, j.verdict) for j in on_scaffolds
+    ]
+    assert [j.expected for j in lifted] == pytest.approx(
+        [j.expected for j in on_scaffolds]
+    )
+    # Pairs on the scaffolds are not on the contigs: none is placed.
+    assert {j.verdict for j in score(agp, pairs, on_contigs=True)} == {"thin"}
+
+
 def test_too_few_pairs_to_judge(agp, tmp_path: Path):
     found = score(agp, pairs_file(tmp_path / "Scer.pairs", n=20), window=1_000)
     assert {j.verdict for j in found} == {"thin"}
@@ -162,3 +235,9 @@ def test_the_command(agp, tmp_path: Path, plain):
     )
     assert bad.exit_code == 1
     assert "columns" in plain(bad.output)
+    contigs = on_contigs(pairs, agp, tmp_path / "Scer.contigs.pairs")
+    lifted = CliRunner().invoke(
+        cli, [arguments[0], str(contigs), *arguments[2:], "--contigs", "--force"]
+    )
+    assert lifted.exit_code == 0, lifted.output
+    assert (outdir / "Scer.junctions.tsv").read_text().splitlines() == table

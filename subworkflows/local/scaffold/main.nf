@@ -3,8 +3,11 @@
 // (docs/plan.md, M3): its screened contigs; its Hi-C reads from the pool's
 // split of the same contigs, aligned to them (bwa-mem2 -5SP); YaHS, its motifs
 // from the library's enzymes (none for Micro-C), then YaHS again on its own
-// scaffolds (-a), which joins what its first pass left apart; the scaffolds
-// named, chromosomes first (plexembler finalize).
+// scaffolds (-a), which joins what its first pass left apart; YaHS's joins
+// scored by the same pairs, parsed and deduplicated on the contigs and placed
+// on the scaffolds through YaHS's AGP (plexembler junctions --contigs); the
+// scaffolds named, chromosomes first, once the joins the pairs do not support
+// are cut (plexembler finalize --cut).
 //
 
 include { CAT_FASTQ as CAT_FASTQ_HIC              } from '../../../modules/nf-core/cat/fastq/main'
@@ -13,6 +16,10 @@ include { BWAMEM2_MEM as BWAMEM2_MEM_SPECIES      } from '../../../modules/nf-co
 include { SAMTOOLS_FAIDX as SAMTOOLS_FAIDX_CONTIGS } from '../../../modules/nf-core/samtools/faidx/main'
 include { YAHS                                    } from '../../../modules/nf-core/yahs/main'
 include { YAHS as YAHS_RESCAFFOLD                 } from '../../../modules/nf-core/yahs/main'
+include { PAIRTOOLS_PARSE as PAIRTOOLS_PARSE_CONTIGS } from '../../../modules/nf-core/pairtools/parse/main'
+include { PAIRTOOLS_SORT as PAIRTOOLS_SORT_CONTIGS   } from '../../../modules/nf-core/pairtools/sort/main'
+include { PAIRTOOLS_DEDUP as PAIRTOOLS_DEDUP_CONTIGS } from '../../../modules/nf-core/pairtools/dedup/main'
+include { PLEXEMBLER_JUNCTIONS as JUNCTIONS_SCAFFOLDS } from '../../../modules/local/plexembler/junctions/main'
 include { PLEXEMBLER_FINALIZE                     } from '../../../modules/local/plexembler/finalize/main'
 
 workflow SCAFFOLD {
@@ -77,17 +84,39 @@ workflow SCAFFOLD {
     YAHS_RESCAFFOLD(ch_rescaffold)
 
     //
+    // MODULES: YaHS's joins, each scored by the pairs across it against the
+    // species' contact decay: the pairs on the contigs, parsed and deduplicated
+    // as the genome's are (MAPS), each mate placed on its scaffold by YaHS's AGP
+    //
+    def ch_parse = BWAMEM2_MEM_SPECIES.out.bam
+        .map { meta, bam -> [meta.id, meta, bam] }
+        .join(SAMTOOLS_FAIDX_CONTIGS.out.fai.map { meta, fai -> [meta.id, fai] })
+        .multiMap { _id, meta, bam, fai ->
+            bam: [meta, bam]
+            sizes: fai
+        }
+    PAIRTOOLS_PARSE_CONTIGS(ch_parse.bam, ch_parse.sizes)
+    PAIRTOOLS_SORT_CONTIGS(PAIRTOOLS_PARSE_CONTIGS.out.pairsam)
+    PAIRTOOLS_DEDUP_CONTIGS(PAIRTOOLS_SORT_CONTIGS.out.sorted)
+    JUNCTIONS_SCAFFOLDS(
+        PAIRTOOLS_DEDUP_CONTIGS.out.pairs
+            .join(YAHS_RESCAFFOLD.out.scaffolds_agp)
+    )
+
+    //
     // MODULE: the scaffolds named: chromosomes by size, the organelle, the
-    // unplaced. A species without Hi-C: its contigs, named as a genome all the same.
+    // unplaced; first, each join the pairs do not support cut. A species
+    // without Hi-C: its contigs, named as a genome all the same.
     //
     def ch_without_hic = ch_contigs
         .map { meta, fasta -> [meta.id, meta, fasta] }
         .join(ch_hic_pairs.map { meta, _reads -> [meta.id, true] }, remainder: true)
         .filter { _id, meta, _fasta, has_hic -> meta != null && has_hic == null }
-        .map { _id, meta, fasta, _has_hic -> [meta, fasta, []] }
+        .map { _id, meta, fasta, _has_hic -> [meta, fasta, [], []] }
     PLEXEMBLER_FINALIZE(
         YAHS_RESCAFFOLD.out.scaffolds_fasta
             .join(YAHS_RESCAFFOLD.out.scaffolds_agp)
+            .join(JUNCTIONS_SCAFFOLDS.out.table)
             .mix(ch_without_hic)
     )
 
@@ -97,5 +126,6 @@ workflow SCAFFOLD {
     sizes   = PLEXEMBLER_FINALIZE.out.sizes  // channel: [ val(meta), path(sizes) ]
     names   = PLEXEMBLER_FINALIZE.out.names  // channel: [ val(meta), path(tsv) ], each genome's names, lengths and roles
     agp     = PLEXEMBLER_FINALIZE.out.agp    // channel: [ val(meta), path(agp) ], the scaffolded species
+    joins   = JUNCTIONS_SCAFFOLDS.out.table  // channel: [ val(meta), path(tsv) ], YaHS's joins scored, before the cut
     hic     = ch_hic_pairs                   // channel: [ val(meta), [ path(R1), path(R2) ] ], each species' Hi-C pairs
 }

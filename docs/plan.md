@@ -328,6 +328,13 @@ its Hi-C maps.
       join against the species' own contact decay P(s), from the pairs within
       its contigs, and the joins they do not support (`genome/qc/junctions/`).
       `instagraal-refine` as a second opinion, with instaGRAAL.
+- [x] **The unsupported joins cut:** YaHS's joins scored before the genome is
+      written, from the pairs on the contigs placed through its AGP
+      (`plexembler junctions --contigs`, `candidates/scaffold/junctions/`),
+      and each join they do not support cut, its two sides two scaffolds
+      (`plexembler finalize --cut`); a join too thin to judge kept. On the
+      benchmark's medium set it cuts Scer's two joins through a collapsed Y'
+      and takes its misassemblies from 2 to 0.
 - [ ] **Telomeres:** `tidk explore` finds the repeat when the samplesheet has
       none, `tidk search` counts the chromosomes with telomeres at both ends
       (nf-core's subworkflow `fasta_explore_search_plot_tidk`).
@@ -566,8 +573,8 @@ pipeline's own steps need a container before the package is anywhere else.
       - YaHS joins two chromosomes' ends through a subtelomeric Y' the
         assembly collapsed (Scer, in its first pass at 5 kb; Spar on the hard
         set): `plexembler junctions` flags the join (6 % of the pairs
-        expected across it), and nothing cuts it. Cut the joins it flags, or
-        keep the scaffolder candidate without them (M3, "One candidate kept").
+        expected across it). Done: the joins it flags are cut before the
+        genome is written (M3, "The unsupported joins cut").
       - The Hi-C polishing was never kept, its held-out pairs too thin for
         the guard's QV to see a gain; the guard now counts the k-mers a
         polishing changed (M2). Kept, it fixes 42 % of the errors the WGS

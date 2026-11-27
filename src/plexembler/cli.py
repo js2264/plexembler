@@ -868,6 +868,13 @@ def screen_command(
     show_default=True,
     help="Without --n-chromosomes, the shortest scaffold named a chromosome, in bases.",
 )
+@click.option(
+    "--cut",
+    "cuts",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="The table of the scaffolder's joins from plexembler junctions --contigs: "
+    "each it finds unsupported is cut first, its two sides two scaffolds (needs --agp).",
+)
 @_FORCE
 @_VERBOSE
 @_QUIET
@@ -878,6 +885,7 @@ def finalize_command(
     agp: Path | None,
     n_chromosomes: int | None,
     min_chromosome: int,
+    cuts: Path | None,
     force: bool,
     verbose: bool,
     quiet: bool,
@@ -895,11 +903,12 @@ def finalize_command(
         "agp": agp,
         "n_chromosomes": n_chromosomes,
         "min_chromosome": min_chromosome,
+        "cut": cuts,
         "force": force,
     }
     with run_log(outdir, prefix, parameters, verbose=verbose, quiet=quiet):
         try:
-            finalize(fasta, prefix, outdir, agp, n_chromosomes, min_chromosome)
+            finalize(fasta, prefix, outdir, agp, n_chromosomes, min_chromosome, cuts)
         except ValueError as error:
             raise click.ClickException(str(error)) from error
 
@@ -949,6 +958,12 @@ def finalize_command(
     show_default=True,
     help="The pairs a join is expected to have, below which it is too thin to judge.",
 )
+@click.option(
+    "--contigs",
+    is_flag=True,
+    help="The pairs are on the AGP's contigs: each mate is placed on its scaffold "
+    "through the AGP (a scaffolder's joins, before the genome is written).",
+)
 @_FORCE
 @_VERBOSE
 @_QUIET
@@ -960,6 +975,7 @@ def junctions_command(
     window: int,
     min_ratio: float,
     min_expected: float,
+    contigs: bool,
     force: bool,
     verbose: bool,
     quiet: bool,
@@ -976,11 +992,12 @@ def junctions_command(
         "window": window,
         "min_ratio": min_ratio,
         "min_expected": min_expected,
+        "contigs": contigs,
         "force": force,
     }
     with run_log(outdir, prefix, parameters, verbose=verbose, quiet=quiet):
         try:
-            found = score(agp, pairs, window, min_ratio, min_expected)
+            found = score(agp, pairs, window, min_ratio, min_expected, contigs)
         except (OSError, ValueError) as error:
             raise click.ClickException(str(error)) from error
         write_outputs(found, outdir, prefix)

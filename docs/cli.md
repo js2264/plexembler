@@ -356,6 +356,17 @@ of names (`Scer.names.tsv`: `name`, `original_name`, `length_bp` and `role`,
 chromosome, organelle or unplaced), the AGP with the new names (`Scer.agp`)
 and its log.
 
+With `--cut`, the table of the scaffolder's joins that
+[`junctions --contigs`](#junctions) scored, it first cuts each join that table
+finds `unsupported`: the scaffold's two sides become two scaffolds,
+`scaffold_1.1` and `scaffold_1.2` (and so on, for more cuts in one scaffold),
+the gap between them dropped, and are named as any other. The log gives each
+cut, its pairs across and those expected. A `thin` join is kept.
+
+```bash
+plexembler finalize yahs_scaffolds_final.fa -a yahs_scaffolds_final.agp --cut Scer.junctions.tsv -p Scer -n 16 -o Scer/
+```
+
 | Option | Default | Description |
 |---|---|---|
 | `FASTA` | (required) | The scaffolds, FASTA, gzipped or not. |
@@ -364,6 +375,7 @@ and its log.
 | `-a, --agp` | | The scaffolder's AGP, written again with the new names. |
 | `-n, --n-chromosomes` | | The species' number of nuclear chromosomes: its longest scaffolds, named chromosomes. |
 | `--min-chromosome` | `100000` | Without `--n-chromosomes`, the shortest scaffold named a chromosome, in bases. |
+| `--cut` | | The table of the scaffolder's joins from `plexembler junctions --contigs`: each it finds unsupported is cut first, its two sides two scaffolds (needs `--agp`). |
 | `--force` | off | Overwrite outputs that exist already. |
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
@@ -384,7 +396,12 @@ plexembler junctions Scer.pairs.gz -a Scer.agp -p Scer -o Scer/
 
 The pairs are the species' deduplicated pairs on its genome (4DN pairs,
 pairtools'), and the AGP the genome's, in the same names
-([`finalize`](#finalize)'s). It writes the table of joins
+([`finalize`](#finalize)'s). Or, with `--contigs`, its pairs on the contigs the
+scaffolder laid out, and the scaffolder's AGP: each mate is placed on its
+scaffold through the AGP (a contig broken into pieces, or reversed, included),
+which scores the scaffolder's joins before the genome is written, so that
+[`finalize --cut`](#finalize) can cut those the pairs do not support. A mate
+on a part of a contig the AGP leaves out is dropped. It writes the table of joins
 (`Scer.junctions.tsv`: `scaffold`, `position`, the last base of the join's left
 contig, `left_contig`, `right_contig`, `observed`, `expected`, `ratio` and
 `verdict`), its MultiQC table and its log.
@@ -398,6 +415,7 @@ contig, `left_contig`, `right_contig`, `observed`, `expected`, `ratio` and
 | `-w, --window` | `20000` | How far from a join, on each side, a pair's mates may lie, in bases. |
 | `--min-ratio` | `0.2` | The pairs across a join over those expected, below which it is unsupported. |
 | `--min-expected` | `10.0` | The pairs a join is expected to have, below which it is too thin to judge. |
+| `--contigs` | off | The pairs are on the AGP's contigs: each mate is placed on its scaffold through the AGP (a scaffolder's joins, before the genome is written). |
 | `--force` | off | Overwrite outputs that exist already. |
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |

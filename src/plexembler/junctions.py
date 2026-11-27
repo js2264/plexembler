@@ -15,7 +15,11 @@ join of an AGP (docs/plan.md, M3):
   (``--min-expected``).
 
 The pairs are the species' deduplicated pairs on its genome (4DN pairs, from
-pairtools), and the AGP the genome's (``plexembler finalize``).
+pairtools), and the AGP the genome's (``plexembler finalize``). Or, with
+``--contigs``, its pairs on the contigs the scaffolder laid out, and the
+scaffolder's AGP: each mate is placed on its scaffold through the AGP, so that
+the scaffolder's joins are scored before the genome is written, and those the
+pairs do not support cut (``plexembler finalize --cut``).
 """
 
 from __future__ import annotations
@@ -40,11 +44,15 @@ SMALLEST = 10
 @dataclass
 class Component:
     """A contig of a scaffold: where it lies in the scaffold (0-based, end
-    excluded), and its name."""
+    excluded), its name, and the part of the contig it is (0-based, end
+    excluded) and its orientation."""
 
     start: int
     end: int
     name: str
+    contig_start: int = 0
+    contig_end: int = 0
+    orientation: str = "+"
 
 
 @dataclass
@@ -92,11 +100,51 @@ def read_agp(path: Path) -> Layout:
             if fields[4] in ("N", "U"):
                 continue
             layout.components.setdefault(fields[0], []).append(
-                Component(int(fields[1]) - 1, int(fields[2]), fields[5])
+                Component(
+                    int(fields[1]) - 1,
+                    int(fields[2]),
+                    fields[5],
+                    int(fields[6]) - 1,
+                    int(fields[7]),
+                    fields[8],
+                )
             )
     for components in layout.components.values():
         components.sort(key=lambda c: c.start)
     return layout
+
+
+class Lift:
+    """A position on a contig, placed on its scaffold through the AGP."""
+
+    def __init__(self, layout: Layout) -> None:
+        self.parts: dict[str, list[tuple[int, str, Component]]] = defaultdict(list)
+        for scaffold, components in layout.components.items():
+            for component in components:
+                self.parts[component.name].append(
+                    (component.contig_start, scaffold, component)
+                )
+        for parts in self.parts.values():
+            parts.sort(key=lambda part: part[0])
+        self.starts = {
+            name: [p[0] for p in parts] for name, parts in self.parts.items()
+        }
+
+    def __call__(self, contig: str, position: int) -> tuple[str, int] | None:
+        """The scaffold and the position there (0-based) of a contig's
+        position, or None when no component of the AGP holds it."""
+        parts = self.parts.get(contig)
+        if parts is None:
+            return None
+        index = bisect.bisect_right(self.starts[contig], position) - 1
+        if index < 0:
+            return None
+        _, scaffold, component = parts[index]
+        if position >= component.contig_end:
+            return None
+        if component.orientation == "-":
+            return scaffold, component.start + (component.contig_end - 1 - position)
+        return scaffold, component.start + (position - component.contig_start)
 
 
 def junctions(layout: Layout) -> list[Junction]:
@@ -181,12 +229,19 @@ def expected_across(decay: Decay, left: int, right: int) -> float:
 
 
 def read_pairs(
-    path: Path, layout: Layout, found: list[Junction], window: int
+    path: Path,
+    layout: Layout,
+    found: list[Junction],
+    window: int,
+    on_contigs: bool = False,
 ) -> tuple[Decay, int]:
     """The decay from the pairs within contigs; the pairs across each join.
+    With ``on_contigs``, the pairs' chromosomes are the AGP's contigs, and each
+    mate is placed on its scaffold first.
 
     Returns the decay and the number of pairs read.
     """
+    lift = Lift(layout) if on_contigs else None
     decay = Decay()
     across: dict[tuple[str, int], Junction] = {}
     for junction in found:
@@ -202,10 +257,15 @@ def read_pairs(
             if len(fields) < 5:
                 continue
             chrom1, chrom2 = fields[1], fields[3]
+            pos1, pos2 = int(fields[2]) - 1, int(fields[4]) - 1
+            if lift is not None:
+                one_place, two_place = lift(chrom1, pos1), lift(chrom2, pos2)
+                if one_place is None or two_place is None:
+                    continue
+                (chrom1, pos1), (chrom2, pos2) = one_place, two_place
             if chrom1 != chrom2 or chrom1 not in starts:
                 continue
             read += 1
-            pos1, pos2 = int(fields[2]) - 1, int(fields[4]) - 1
             if pos2 < pos1:
                 pos1, pos2 = pos2, pos1
             components = layout.components[chrom1]
@@ -233,11 +293,13 @@ def score(
     window: int = 20_000,
     min_ratio: float = 0.2,
     min_expected: float = 10.0,
+    on_contigs: bool = False,
 ) -> list[Junction]:
-    """Each join of the AGP, its pairs across, those expected, and its verdict."""
+    """Each join of the AGP, its pairs across, those expected, and its verdict;
+    with ``on_contigs``, the pairs on the AGP's contigs."""
     layout = read_agp(agp)
     found = junctions(layout)
-    decay, read = read_pairs(pairs, layout, found, window)
+    decay, read = read_pairs(pairs, layout, found, window, on_contigs)
     for components in layout.components.values():
         for component in components:
             length = component.end - component.start

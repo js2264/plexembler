@@ -6,8 +6,9 @@ process PLEXEMBLER_FINALIZE {
     container "ghcr.io/js2264/plexembler:${workflow.manifest.version}"
 
     input:
-    // A species' scaffolds, and the scaffolder's AGP; meta.n_chromosomes, when known.
-    tuple val(meta), path(fasta), path(agp)
+    // A species' scaffolds, the scaffolder's AGP, and its joins scored
+    // (plexembler junctions --contigs), the unsupported to cut; meta.n_chromosomes, when known.
+    tuple val(meta), path(fasta), path(agp), path(joins)
 
     output:
     tuple val(meta), path("${meta.id}.fa.gz")          , emit: fasta
@@ -26,6 +27,7 @@ process PLEXEMBLER_FINALIZE {
     script:
     def args = task.ext.args ?: ''
     def agp_arg = agp ? "-a ${agp}" : ''
+    def cut_arg = joins ? "--cut ${joins}" : ''
     def chromosomes = meta.n_chromosomes ? "-n ${meta.n_chromosomes}" : ''
     """
     plexembler finalize \\
@@ -33,6 +35,7 @@ process PLEXEMBLER_FINALIZE {
         -p ${meta.id} \\
         -o finalized \\
         ${agp_arg} \\
+        ${cut_arg} \\
         ${chromosomes} \\
         ${args}
     mv finalized/* .

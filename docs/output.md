@@ -175,7 +175,10 @@ The pool is split again, on the screened contigs
 scaffolded with its own Hi-C pairs: aligned to its contigs (bwa-mem2, each
 mate on its own), then [YaHS](https://github.com/c-zhou/yahs), told the
 library's restriction motifs, twice: the second pass on the first's scaffolds,
-which joins what the first left apart. [`plexembler finalize`](cli.md#finalize) names
+which joins what the first left apart. Each of YaHS's joins is scored by the
+same pairs, on the contigs, against the species' contact decay
+([`plexembler junctions --contigs`](cli.md#junctions)), and each join they do not
+support is cut: its scaffold's two sides become two scaffolds. [`plexembler finalize`](cli.md#finalize) names
 the scaffolds: the chromosomes, longest first, the samplesheet's
 `n_chromosomes` of them, or every scaffold of `--min_chromosome` bases or more;
 the mitochondrion; the unplaced. A species of a pool without Hi-C is finished
@@ -192,12 +195,18 @@ from its contigs, named the same way.
   row per join, `supported`, `unsupported` or `thin`).
 - `species/<species>/candidates/scaffold/yahs/`: YaHS's scaffolds and AGP of
   each pass, in its names (the first's, `<species>.yahs_scaffolds_final.fa` and
-  `.agp`; the second's, the genome's, `<species>.yahs_rescaffold_scaffolds_final.fa`
-  and `.agp`), and their logs.
+  `.agp`; the second's, the genome's before its cuts,
+  `<species>.yahs_rescaffold_scaffolds_final.fa` and `.agp`), and their logs.
+- `species/<species>/candidates/scaffold/junctions/`: each join of YaHS's
+  second pass scored, in its names (`<species>.junctions.tsv`, as the genome's
+  above); those `unsupported` are the ones cut, and the genome's log
+  (`species/<species>/genome/`) lists them. A scaffold cut once is two in the
+  table of names, `scaffold_1.1` and `scaffold_1.2` its `original_name`.
 
-The genome is what YaHS makes of the contigs, uncurated: a misjoin it makes
-stays, the chromosomes are its longest scaffolds whatever they hold. The
-joins' scores say where to look first, on the map.
+The genome is what YaHS makes of the contigs, its unsupported joins cut and
+otherwise uncurated: a join too thin to judge stays, the chromosomes are its
+longest scaffolds whatever they hold. The joins' scores say where to look
+first, on the map.
 
 ### Hi-C maps
 
