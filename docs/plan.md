@@ -577,17 +577,22 @@ pipeline's own steps need a container before the package is anywhere else.
         set): `plexembler junctions` flags the join (6 % of the pairs
         expected across it). Done: the joins it flags are cut before the
         genome is written (M3, "The unsupported joins cut").
-      - A contig that repeats its neighbour's end: Scer's contig 1 (22 kb)
-        holds a poorer copy of 15 kb of chrI that its contig 3 holds too (97 %
-        identity by QUAST, 84 % counting its indels), and 6 kb of chrI's left
-        end that no other contig has. YaHS lays it after contig 3, rightly,
-        and QUAST counts the 15 kb overlap as a misassembly. It also holds 73
-        % of Scer's errors against its reference: without it, the polished
-        contigs have 11.42 errors per 100 kb, not 42.39 (QV 39.4, not 33.7).
-        The screen keeps it (its depth 17.8, the species' 30), as it compares
-        no species' contigs with each other. Drop such a contig before
-        scaffolding, as purge_dups would (and lose chrI's 6 kb), or trim the
-        overlap at the join.
+      - A contig that repeats its neighbour's end: Scer's contig 1 (22 kb). In
+        Flye's graph it is a repeat edge, joined to both ends of chrI's main
+        edge and to the Y' edge chrVI's two ends share: contig 3 holds it at
+        its end (its path the edge, chrI's main edge, the edge reversed), and
+        contig 1 is the edge again, alone. It is a mixture of chrI's two ends:
+        mostly its left 6.8 to 28 kb (97 % identity by QUAST), its first 8.6
+        kb nearer its right 229 to 238 kb. The medium set's reads (N50 11 kb)
+        do not resolve it; the easy set's (25 kb) do, chrI end to end. YaHS
+        lays it after contig 3, rightly, and QUAST counts their 15 kb overlap
+        as a misassembly. It also holds 73 % of Scer's errors against its
+        reference: without it, the polished contigs have 11.42 errors per 100
+        kb, not 42.39 (QV 39.4, not 33.7). The screen keeps it (its depth
+        17.8, the species' 30), as it compares no species' contigs with each
+        other. Drop such a contig before scaffolding, as purge_dups would (and
+        lose the 6 kb of chrI's left end it alone holds), or trim the overlap
+        at the join; chrI's ends themselves wait for reads that cross them.
       - The Hi-C polishing was never kept, its held-out pairs too thin for
         the guard's QV to see a gain; the guard now counts the k-mers a
         polishing changed (M2). Kept, it fixes 42 % of the errors the WGS
