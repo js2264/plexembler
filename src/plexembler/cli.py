@@ -42,6 +42,18 @@ def _species(_context: click.Context, _parameter: click.Parameter, value: str) -
         raise click.BadParameter(str(error)) from error
 
 
+def _species_each(
+    _context: click.Context, _parameter: click.Parameter, values: tuple[str, ...]
+) -> tuple[str, ...]:
+    """Check each species' ID of an option given once per species."""
+    from .rename import check_species
+
+    try:
+        return tuple(check_species(value) for value in values)
+    except ValueError as error:
+        raise click.BadParameter(str(error)) from error
+
+
 def _pool(_context: click.Context, _parameter: click.Parameter, value: str) -> str:
     """Check a pool's ID as the option is read: a usage error otherwise."""
     if not SPECIES.match(value):
@@ -768,6 +780,30 @@ def _species_paf(
     help="Another species' depth on a duplicate, over its own species', each against "
     "their depth, from which the duplicate goes.",
 )
+@click.option(
+    "--haploid",
+    "haploid",
+    multiple=True,
+    callback=_species_each,
+    help="A haploid species of the pool, whose contigs another of its contigs holds "
+    "already go (--own-duplicate-share); once per species.",
+)
+@click.option(
+    "--own-duplicate-share",
+    type=click.FloatRange(0, 1, min_open=True),
+    default=0.5,
+    show_default=True,
+    help="The share of a contig found in a longer contig of its own species, 90 % "
+    "identical or more, from which it is a duplicate of it.",
+)
+@click.option(
+    "--own-duplicate-depth",
+    type=click.FloatRange(0),
+    default=0.75,
+    show_default=True,
+    help="Its own species' depth on a duplicate of one of its contigs, as a share of "
+    "their depth, under which it goes.",
+)
 @_FORCE
 @_VERBOSE
 @_QUIET
@@ -787,6 +823,9 @@ def screen_command(
     min_contacts: int,
     hic_own_depth: float,
     depth_ratio: float,
+    haploid: tuple[str, ...],
+    own_duplicate_share: float,
+    own_duplicate_depth: float,
     force: bool,
     verbose: bool,
     quiet: bool,
@@ -805,6 +844,8 @@ def screen_command(
         min_contacts=min_contacts,
         hic_own_depth=hic_own_depth,
         depth_ratio=depth_ratio,
+        own_duplicate_share=own_duplicate_share,
+        own_duplicate_depth=own_duplicate_depth,
     )
     parameters = {
         "contigs": contigs,
@@ -814,12 +855,20 @@ def screen_command(
         "prefix": prefix,
         "outdir": outdir,
         **{key: getattr(thresholds, key) for key in thresholds.__dataclass_fields__},
+        "haploid": ",".join(haploid),
         "force": force,
     }
     with run_log(outdir, prefix, parameters, verbose=verbose, quiet=quiet):
         try:
             found = screen(
-                contigs, reads, identity, list(contacts), outdir, prefix, thresholds
+                contigs,
+                reads,
+                identity,
+                list(contacts),
+                outdir,
+                prefix,
+                thresholds,
+                frozenset(haploid),
             )
         except (OSError, ValueError, KeyError) as error:
             raise click.ClickException(str(error)) from error

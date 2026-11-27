@@ -195,7 +195,10 @@ species' copy, 85 to 95 % identical.
 - **The screen:** each contig kept, moved to another species of its pool,
   dropped, or named its species' mitochondrion, from each species' nanopore
   depth on it, its identity to the other species' contigs and its Hi-C
-  contacts ([`plexembler screen`](cli.md#screen)). The pool is then split
+  contacts ([`plexembler screen`](cli.md#screen)). A haploid species'
+  (`ploidy` 1) contig that its other contigs hold already, and its reads cover
+  thinly, is dropped too: a stretch its assembler wrote twice. A diploid's
+  such contigs are its haplotigs, which the screen leaves. The pool is then split
   again, on the screened contigs: a species whose DNA another species' contigs
   held (a barcode's bleed-through, assembled) gets back the pairs the first
   split found ambiguous between the two.

@@ -159,7 +159,8 @@ it made that they lack.
 ### The contig screen
 
 [`plexembler screen`](cli.md#screen) weighs each contig's nanopore depth by
-species, its identity to the other species' contigs and its Hi-C contacts.
+species, its identity to the other species' contigs (and, for a haploid
+species, to its own longer contigs) and its Hi-C contacts.
 
 - `pools/<pool>/screen/<pool>.screen.tsv`: each contig's signals, verdict
   (`keep`, `move`, `drop`, `organelle`), new name and reason.

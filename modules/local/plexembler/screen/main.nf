@@ -8,7 +8,8 @@ process PLEXEMBLER_SCREEN {
     input:
     // A pool (meta.id): its contigs, each species' nanopore reads aligned to
     // them (PAF, in the order of meta.species), the contigs aligned to each
-    // other, and its Hi-C libraries' contacts between contigs.
+    // other, and its Hi-C libraries' contacts between contigs; meta.haploid,
+    // its species of ploidy 1.
     tuple val(meta), path(contigs), path(reads, stageAs: 'reads/*'), path(identity), path(contacts, stageAs: 'contacts/*')
 
     output:
@@ -28,12 +29,14 @@ process PLEXEMBLER_SCREEN {
     def species_reads = [meta.species, pafs].transpose().collect { species, paf -> "-r ${species}=${paf}" }.join(' ')
     def identity_arg = identity ? "-i ${identity}" : ''
     def contacts_args = [contacts].flatten().findAll { table -> table }.collect { table -> "-c ${table}" }.join(' ')
+    def haploid_args = (meta.haploid ?: []).collect { species -> "--haploid ${species}" }.join(' ')
     """
     plexembler screen \\
         ${contigs} \\
         ${species_reads} \\
         ${identity_arg} \\
         ${contacts_args} \\
+        ${haploid_args} \\
         -p ${meta.id} \\
         -o . \\
         ${args}

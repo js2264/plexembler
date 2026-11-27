@@ -288,15 +288,21 @@ assemble into contigs of the wrong species; the screen weighs three signals
 for each contig: each species' nanopore depth on it (against that species'
 depth on its own contigs, those its reads cover the most: a whole genome of
 bleed-through, assembled, can outweigh a species' own), the share of it found
-in another species' contigs at 99 % identity or more, and its Hi-C contacts
-with each species' contigs.
+in another species' contigs at 99 % identity or more (and in a longer contig of
+its own species at 90 %), and its Hi-C contacts with each species' contigs.
 
 - `organelle`: `--organelle-depth` times its species' depth and under
   `--organelle-gc` GC: kept as `<species>_chrM` (`chrM2`, … for more);
 - `drop`: most of it (`--duplicate-share`) found in another species' contigs, its own
   species' reads thin on it (under `--own-depth` of their depth), or that species' reads
   `--depth-ratio` times as deep on it, each against its own species' depth: that
-  species' DNA, which it holds already;
+  species' DNA, which it holds already. Or, for a species given `--haploid`,
+  `--own-duplicate-share` of it found in a longer contig of its own, 90 %
+  identical or more, and its own reads under `--own-duplicate-depth` of their
+  depth: a stretch of the genome its contigs hold already, which the assembler
+  wrote twice (a repeat of its graph, in a contig and alone), and to which the
+  reads go less, as they go to the better copy. A diploid's such contigs are
+  its haplotigs, and a hybrid's its other subgenome: the screen leaves them;
 - `move`: its own species' reads under `--own-depth` of their depth, another
   species' at `--other-depth` of theirs; or its own species' reads under
   `--hic-own-depth` and its Hi-C contacts with another species over
@@ -314,8 +320,9 @@ plexembler screen poolA.fa.gz -r Scer=Scer.paf -r Kmar=Kmar.paf -i poolA.self.pa
 
 It writes each species' screened contigs (`<species>.screened.fa.gz`), the
 verdicts (`poolA.screen.tsv`: each contig's length, GC, depth of each
-species' reads, share found in each species' contigs, contacts with each
-species, verdict, new name and reason), their MultiQC table and its log.
+species' reads, share found in each species' contigs (in its own species',
+the share in its longer contigs), contacts with each species, verdict, new
+name and reason), their MultiQC table and its log.
 
 | Option | Default | Description |
 |---|---|---|
@@ -334,6 +341,9 @@ species, verdict, new name and reason), their MultiQC table and its log.
 | `--min-contacts` | `20` | The fewest Hi-C contacts with another species that move a contig. |
 | `--hic-own-depth` | `0.5` | Its own species' depth on a contig, as a share of their depth, under which Hi-C contacts can move it. |
 | `--depth-ratio` | `2.0` | Another species' depth on a duplicate, over its own species', each against their depth, from which the duplicate goes. |
+| `--haploid` | | A haploid species of the pool, whose contigs another of its contigs holds already go (`--own-duplicate-share`); once per species. |
+| `--own-duplicate-share` | `0.5` | The share of a contig found in a longer contig of its own species, 90 % identical or more, from which it is a duplicate of it. |
+| `--own-duplicate-depth` | `0.75` | Its own species' depth on a duplicate of one of its contigs, as a share of their depth, under which it goes. |
 | `--force` | off | Overwrite outputs that exist already. |
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |

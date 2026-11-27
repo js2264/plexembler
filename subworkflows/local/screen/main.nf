@@ -24,11 +24,14 @@ workflow SCREEN {
     // MODULE: the pool's contigs together
     //
     def ch_pools = ch_contigs
-        .map { meta, fasta -> [meta.pool, meta.id, fasta] }
+        .map { meta, fasta -> [meta.pool, meta.id, meta.ploidy, fasta] }
         .groupTuple()
-        .map { pool, species, fastas ->
+        .map { pool, species, ploidies, fastas ->
             def sorted = [species, fastas].transpose().sort { pair -> pair[0] }
-            [[id: pool, species: sorted.collect { pair -> pair[0] }], sorted.collect { pair -> pair[1] }]
+            // The species of ploidy 1, whose contigs another of theirs holds
+            // already the screen drops (a diploid's are its haplotigs).
+            def haploid = [species, ploidies].transpose().findAll { pair -> pair[1] == 1 }.collect { pair -> pair[0] }.sort()
+            [[id: pool, species: sorted.collect { pair -> pair[0] }, haploid: haploid], sorted.collect { pair -> pair[1] }]
         }
     CAT_POOL(ch_pools)
     // The same contigs again, under another name: the all-against-all's

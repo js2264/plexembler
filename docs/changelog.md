@@ -102,7 +102,13 @@ follow [semantic versioning](https://semver.org).
   on the contigs its own reads cover the most: on the benchmark's easy set,
   bleed-through assembled into all of Cgla's genome, longer than Spar's own
   contigs, set Spar's depth, and the screen kept it as Spar's.
-  ([#8](https://github.com/js2264/plexembler/pull/8))
+  ([#8](https://github.com/js2264/plexembler/pull/8)) A haploid species'
+  (`ploidy` 1) contig half of which a longer contig of its own holds, 90 %
+  identical, and its reads cover thinly (`--own-duplicate-share`,
+  `--own-duplicate-depth`) is dropped: a stretch its assembler wrote twice. On
+  the benchmark's medium set, Scer's contig 1, a repeat of Flye's graph
+  written alone, held 73 % of its errors against the reference.
+  ([#12](https://github.com/js2264/plexembler/pull/12))
 - **The test data**, version 2: 30× of nanopore reads per species and 10,000
   WGS pairs, so that the test profile assembles; its second species leaves its
   chemistry and genome size to the pipeline.
