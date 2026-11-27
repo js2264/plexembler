@@ -2,9 +2,9 @@
 // Each species' genome, scaffolded with its own Hi-C pairs and finished
 // (docs/plan.md, M3): its screened contigs; its Hi-C reads from the pool's
 // split of the same contigs, aligned to them (bwa-mem2 -5SP); YaHS, its motifs
-// from the library's enzymes (none for Micro-C); the scaffolds named,
-// chromosomes first
-// (plexembler finalize).
+// from the library's enzymes (none for Micro-C), then YaHS again on its own
+// scaffolds (-a), which joins what its first pass left apart; the scaffolds
+// named, chromosomes first (plexembler finalize).
 //
 
 include { CAT_FASTQ as CAT_FASTQ_HIC              } from '../../../modules/nf-core/cat/fastq/main'
@@ -12,6 +12,7 @@ include { BWAMEM2_INDEX as BWAMEM2_INDEX_SPECIES  } from '../../../modules/nf-co
 include { BWAMEM2_MEM as BWAMEM2_MEM_SPECIES      } from '../../../modules/nf-core/bwamem2/mem/main'
 include { SAMTOOLS_FAIDX as SAMTOOLS_FAIDX_CONTIGS } from '../../../modules/nf-core/samtools/faidx/main'
 include { YAHS                                    } from '../../../modules/nf-core/yahs/main'
+include { YAHS as YAHS_RESCAFFOLD                 } from '../../../modules/nf-core/yahs/main'
 include { PLEXEMBLER_FINALIZE                     } from '../../../modules/local/plexembler/finalize/main'
 
 workflow SCAFFOLD {
@@ -59,7 +60,9 @@ workflow SCAFFOLD {
     SAMTOOLS_FAIDX_CONTIGS(ch_to_scaffold.map { meta, fasta, _reads -> [meta, fasta, []] }, false)
 
     //
-    // MODULE: YaHS
+    // MODULES: YaHS, then YaHS on its own scaffolds (-a): a scaffold of the
+    // first pass is one piece of the second, whose ends gather the links that
+    // its contigs' ends split (conf/modules.config, its resolutions)
     //
     def ch_yahs = ch_to_scaffold
         .map { meta, fasta, _reads -> [meta.id, meta, fasta] }
@@ -67,6 +70,11 @@ workflow SCAFFOLD {
         .join(BWAMEM2_MEM_SPECIES.out.bam.map { meta, bam -> [meta.id, bam] })
         .map { _id, meta, fasta, fai, bam -> [meta, fasta, fai, bam, []] }
     YAHS(ch_yahs)
+    def ch_rescaffold = ch_yahs
+        .map { meta, fasta, fai, bam, _agp -> [meta.id, meta, fasta, fai, bam] }
+        .join(YAHS.out.scaffolds_agp.map { meta, agp -> [meta.id, agp] })
+        .map { _id, meta, fasta, fai, bam, agp -> [meta, fasta, fai, bam, agp] }
+    YAHS_RESCAFFOLD(ch_rescaffold)
 
     //
     // MODULE: the scaffolds named: chromosomes by size, the organelle, the
@@ -78,8 +86,8 @@ workflow SCAFFOLD {
         .filter { _id, meta, _fasta, has_hic -> meta != null && has_hic == null }
         .map { _id, meta, fasta, _has_hic -> [meta, fasta, []] }
     PLEXEMBLER_FINALIZE(
-        YAHS.out.scaffolds_fasta
-            .join(YAHS.out.scaffolds_agp)
+        YAHS_RESCAFFOLD.out.scaffolds_fasta
+            .join(YAHS_RESCAFFOLD.out.scaffolds_agp)
             .mix(ch_without_hic)
     )
 

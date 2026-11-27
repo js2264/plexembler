@@ -34,9 +34,12 @@ nextflow_workflow {
         then {
             assertAll(
                 { assert workflow.success },
-                // Both species finished; only sp1 scaffolded.
+                // Both species finished; only sp1 scaffolded, by YaHS twice:
+                // the second pass on the first's scaffolds.
                 { assert workflow.out.genome.size() == 2 },
                 { assert workflow.out.hic.size() == 1 },
+                { assert workflow.trace.tasks().count { task -> task.name.contains(':YAHS (') } == 1 },
+                { assert workflow.trace.tasks().count { task -> task.name.contains(':YAHS_RESCAFFOLD (') } == 1 },
             )
         }
     }

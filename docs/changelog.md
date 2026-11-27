@@ -87,9 +87,11 @@ follow [semantic versioning](https://semver.org).
   chemistry and genome size to the pipeline.
 - **Each species' genome** (milestone 3): the pool split again on the screened
   contigs; each species scaffolded with its own Hi-C pairs by YaHS, told its
-  library's restriction motifs, its resolutions from 5 kb up (its own choice
-  joins nothing below a contig N50 of 100 kb); `plexembler finalize`, which names the
-  scaffolds, chromosomes first, longest first (`<species>_chr01`, …, the
+  library's restriction motifs, in two passes: from 1 kb up, then on its own
+  scaffolds from 5 kb up, which joins what the first left apart (YaHS's own
+  choice of resolutions joins nothing below a contig N50 of 100 kb);
+  `plexembler finalize`, which names the scaffolds, chromosomes first, longest
+  first (`<species>_chr01`, …, the
   samplesheet's `n_chromosomes` of them or every scaffold of
   `--min_chromosome` bases or more), the mitochondrion (`<species>_chrM`) and
   the unplaced, and writes the genome, its sizes, the table of names and the

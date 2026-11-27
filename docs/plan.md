@@ -284,7 +284,7 @@ its Hi-C maps.
       YaHS done, the only one for now (its candidate in
       `candidates/scaffold/yahs/`); instaGRAAL waits for its CPU image (T4):
       - YaHS (nf-core `yahs`), its motifs from the library's `enzymes` (none for
-        Micro-C);
+        Micro-C), in two passes, the second (`-a`) on the first's scaffolds;
       - instaGRAAL, a local module `INSTAGRAAL_ENDTOEND`:
         `instagraal-endtoend contigs.fa pairs.gz -e <enzymes> --mode cpu`, or
         `--instagraal_mode default` (MCMC and refine) on a GPU (`process_gpu`,

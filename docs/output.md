@@ -170,7 +170,8 @@ The pool is split again, on the screened contigs
 (`pools/<pool>/deconvolution/screened/`, as above), and each species is
 scaffolded with its own Hi-C pairs: aligned to its contigs (bwa-mem2, each
 mate on its own), then [YaHS](https://github.com/c-zhou/yahs), told the
-library's restriction motifs. [`plexembler finalize`](cli.md#finalize) names
+library's restriction motifs, twice: the second pass on the first's scaffolds,
+which joins what the first left apart. [`plexembler finalize`](cli.md#finalize) names
 the scaffolds: the chromosomes, longest first, the samplesheet's
 `n_chromosomes` of them, or every scaffold of `--min_chromosome` bases or more;
 the mitochondrion; the unplaced. A species of a pool without Hi-C is finished
@@ -185,8 +186,10 @@ from its contigs, named the same way.
   Hi-C pairs against the species' contact decay
   ([`plexembler junctions`](cli.md#junctions): `<species>.junctions.tsv`, a
   row per join, `supported`, `unsupported` or `thin`).
-- `species/<species>/candidates/scaffold/yahs/`: YaHS's scaffolds and AGP, in
-  its names (`<species>.yahs_scaffolds_final.fa`, `.agp`), and its log.
+- `species/<species>/candidates/scaffold/yahs/`: YaHS's scaffolds and AGP of
+  each pass, in its names (the first's, `<species>.yahs_scaffolds_final.fa` and
+  `.agp`; the second's, the genome's, `<species>.yahs_rescaffold_scaffolds_final.fa`
+  and `.agp`), and their logs.
 
 The genome is what YaHS makes of the contigs, uncurated: a misjoin it makes
 stays, the chromosomes are its longest scaffolds whatever they hold. The
