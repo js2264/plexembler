@@ -34,7 +34,7 @@ nextflow_process {
         then {
             assertAll(
                 { assert process.success },
-                { assert path(process.out.table[0][1]).readLines()[1].endsWith('thin') },
+                { assert path(process.out.table[0][1]).readLines()[1].split('\t')[7] == 'thin' },
             )
         }
     }

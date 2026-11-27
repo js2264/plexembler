@@ -31,7 +31,7 @@ process PLEXEMBLER_JUNCTIONS {
 
     stub:
     """
-    printf 'scaffold\\tposition\\tleft_contig\\tright_contig\\tobserved\\texpected\\tratio\\tverdict\\n' > ${meta.id}.junctions.tsv
+    printf 'scaffold\\tposition\\tleft_contig\\tright_contig\\tobserved\\texpected\\tratio\\tverdict\\tleft_seen\\tright_seen\\n' > ${meta.id}.junctions.tsv
     printf '# id: plexembler_junctions\\nSample\\tJoins\\n${meta.id}\\t0\\n' > ${meta.id}.junctions_mqc.tsv
     touch ${meta.id}.plexembler_20260101000000.log
     """

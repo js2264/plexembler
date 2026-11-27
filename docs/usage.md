@@ -195,7 +195,10 @@ species' copy, 85 to 95 % identical.
 - **The screen:** each contig kept, moved to another species of its pool,
   dropped, or named its species' mitochondrion, from each species' nanopore
   depth on it, its identity to the other species' contigs and its Hi-C
-  contacts ([`plexembler screen`](cli.md#screen)). The pool is then split
+  contacts ([`plexembler screen`](cli.md#screen)). A haploid species'
+  (`ploidy` 1) contig that its other contigs hold already, and its reads cover
+  thinly, is dropped too: a stretch its assembler wrote twice. A diploid's
+  such contigs are its haplotigs, which the screen leaves. The pool is then split
   again, on the screened contigs: a species whose DNA another species' contigs
   held (a barcode's bleed-through, assembled) gets back the pairs the first
   split found ambiguous between the two.
@@ -221,15 +224,19 @@ Each species' screened contigs become its genome (milestone 3 of the
 again on them, each species scaffolded with its own Hi-C pairs (YaHS, told the
 restriction motifs of the library's `enzymes`, from 1 kb up, then again on its
 own scaffolds from 5 kb up, which joins what the first pass left apart),
-the scaffolds named, the
+each of YaHS's joins that its Hi-C pairs do not support cut
+([`plexembler junctions --contigs`](cli.md#junctions)), the scaffolds named, the
 chromosomes first ([`plexembler finalize`](cli.md#finalize)), and its Hi-C map
 made on the genome (pairtools, cooler; its finest bin `--map_resolution`,
 1 kb). A Micro-C library (`enzymes` `none`) scaffolds too, without motifs. A
 species whose pool has no Hi-C library is not scaffolded: its genome is its
 contigs, named the same way.
 
-The scaffolds are YaHS's, uncurated. The steps that check and correct them
-(the junctions' support on the map, the telomeres, a second scaffolder) are to
+The scaffolds are YaHS's, less the joins their pairs do not support: such a
+join, a misjoin likely (two chromosomes joined through a repeat the assembly
+collapsed), is cut, and its two sides are named as any other scaffold. A join
+too thin to judge, where the pairs are too few to tell, is kept. The other
+steps that check and correct them (the telomeres, a second scaffolder) are to
 come; until then, look at each species' map before trusting its chromosomes.
 
 ## Annotation

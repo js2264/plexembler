@@ -1,5 +1,5 @@
 name: "plexembler_finalize"
-description: Names a species' scaffolds - its chromosomes by size, its organelle, the unplaced - and writes its genome, sizes, names and AGP
+description: Names a species' scaffolds - its chromosomes by size, its organelle, the unplaced - and writes its genome, sizes, names and AGP, once the joins its Hi-C pairs do not support are cut
 keywords:
   - genome
   - pool
@@ -23,6 +23,10 @@ input:
         type: file
         description: The scaffolder's AGP, or []
         pattern: "*.agp"
+    - joins:
+        type: file
+        description: The scaffolder's joins scored by plexembler junctions --contigs, or []; those unsupported are cut
+        pattern: "*.junctions.tsv"
 output:
   fasta:
     - - meta:

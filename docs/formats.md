@@ -82,7 +82,7 @@ the unplaced scaffolds, longest first.
 | Column | Description |
 |---|---|
 | `name` | Its name in the genome: `<species>_chr01`, …, `<species>_chrM`, `<species>_unplaced_01`, … |
-| `original_name` | Its name in the scaffolder's output (`scaffold_1`, …), or the contig's, for a species finished from its contigs |
+| `original_name` | Its name in the scaffolder's output (`scaffold_1`, …; `scaffold_1.1`, `scaffold_1.2`, … for the sides of a scaffold whose unsupported joins were cut), or the contig's, for a species finished from its contigs |
 | `length_bp` | Its length, in bases |
 | `role` | `chromosome`, `organelle` or `unplaced` |
 

@@ -102,7 +102,13 @@ follow [semantic versioning](https://semver.org).
   on the contigs its own reads cover the most: on the benchmark's easy set,
   bleed-through assembled into all of Cgla's genome, longer than Spar's own
   contigs, set Spar's depth, and the screen kept it as Spar's.
-  ([#8](https://github.com/js2264/plexembler/pull/8))
+  ([#8](https://github.com/js2264/plexembler/pull/8)) A haploid species'
+  (`ploidy` 1) contig half of which a longer contig of its own holds, 90 %
+  identical, and its reads cover thinly (`--own-duplicate-share`,
+  `--own-duplicate-depth`) is dropped: a stretch its assembler wrote twice. On
+  the benchmark's medium set, Scer's contig 1, a repeat of Flye's graph
+  written alone, held 73 % of its errors against the reference.
+  ([#12](https://github.com/js2264/plexembler/pull/12))
 - **The test data**, version 2: 30× of nanopore reads per species and 10,000
   WGS pairs, so that the test profile assembles; its second species leaves its
   chemistry and genome size to the pipeline.
@@ -121,7 +127,20 @@ follow [semantic versioning](https://semver.org).
 - **`plexembler junctions`**, which scores each join of a species' scaffolds
   by the Hi-C pairs across it against the species' contact decay, from the
   pairs within its contigs: `supported`, `unsupported` (a misjoin, likely) or
-  `thin` (`species/<species>/genome/qc/junctions/`).
+  `thin` (`species/<species>/genome/qc/junctions/`). Both the pairs across a
+  join and those expected are counted on the positions whose mates' coverage
+  is half to twice the genome's mean (`left_seen`, `right_seen`): a repeat at
+  a contig's end, which the pairs see nothing of, or see another copy's
+  contacts in, is left out. ([#12](https://github.com/js2264/plexembler/pull/12))
+- **The joins the Hi-C pairs do not support, cut**: each of YaHS's joins is
+  scored before the genome is written, from the species' pairs on its contigs,
+  each mate placed on its scaffold through YaHS's AGP (`plexembler junctions
+  --contigs`, `species/<species>/candidates/scaffold/junctions/`), and each
+  `unsupported` join is cut, its scaffold's two sides two scaffolds, named as
+  any other (`plexembler finalize --cut`; `scaffold_1.1` and `scaffold_1.2` in
+  the table of names). A `thin` join is kept. On the benchmark's medium set,
+  YaHS's join of Scer's chrI to its chrVI, at their two Y' ends, is cut.
+  ([#12](https://github.com/js2264/plexembler/pull/12))
 - **Each species' Hi-C map** on its genome: its pairs aligned (bwa-mem2),
   parsed, sorted and deduplicated (pairtools), binned at `--map_resolution`
   (1 kb) and zoomed out, balanced (cooler): `species/<species>/hic/<species>.mcool`.

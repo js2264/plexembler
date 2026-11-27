@@ -106,7 +106,8 @@ def pool(tmp_path: Path) -> dict:
                 paf_line(
                     "Scer_c1", 2000, 0, 2000, "Cgla_c2", 2000, 0, 2000, matches=1800
                 ),
-                # Within a species, alignments say nothing.
+                # Within a species, two contigs of one length: neither holds
+                # the other.
                 paf_line("Scer_c1", 2000, 0, 2000, "Scer_c2", 2000, 0, 2000),
             ]
         )
@@ -382,3 +383,89 @@ def test_a_species_most_of_whose_contigs_are_another_species(tmp_path: Path):
         assert found[copy].verdict == "drop"
         assert "Spar's reads at 0.08 of their depth" in found[copy].reason
     assert {found[c].verdict for c in ("Spar_c1", "Cgla_c1", "Cgla_c2")} == {"keep"}
+
+
+def test_a_contig_its_species_holds_already(tmp_path: Path):
+    """A haploid species' contig most of which a longer contig of its own
+    holds, and which its reads cover less: the assembler wrote that stretch
+    twice (a repeat of its graph, in a contig and alone), and the copy goes.
+    Deeper than its species' contigs (a collapsed repeat), or held in part, it
+    stays; and so it does for a species not known to be haploid (a diploid's
+    haplotig, a hybrid's other subgenome)."""
+    contigs = {
+        "Scer_c1": GC_RICH * 2,
+        "Scer_c2": GC_RICH * 2,
+        "Scer_copy": GC_RICH,
+        "Scer_repeat": GC_RICH,
+        "Scer_part": GC_RICH,
+    }
+    fasta = tmp_path / "pool.fa"
+    fasta.write_text("".join(f">{n}\n{s}\n" for n, s in contigs.items()))
+    reads = []
+    for name, times in [("Scer_c1", 40), ("Scer_c2", 40), ("Scer_copy", 20), ("Scer_repeat", 80), ("Scer_part", 20)]:  # fmt: skip
+        length = len(contigs[name])
+        reads += [
+            paf_line(f"r{name}{i}", length, 0, length, name, length, 0, length)
+            for i in range(times)
+        ]
+    paf = tmp_path / "Scer.paf"
+    paf.write_text("\n".join(reads) + "\n")
+    identity = tmp_path / "self.paf"
+    identity.write_text(
+        "\n".join(
+            [
+                # 80 % of Scer_copy in Scer_c1, 95 % identical; the longer
+                # contig the target, then the query.
+                paf_line("Scer_c1", 2000, 1000, 1500, "Scer_copy", 1000, 0, 500, matches=475),
+                paf_line("Scer_copy", 1000, 500, 800, "Scer_c1", 2000, 1500, 1800, matches=285),
+                paf_line("Scer_repeat", 1000, 0, 1000, "Scer_c2", 2000, 0, 1000),
+                paf_line("Scer_part", 1000, 0, 300, "Scer_c2", 2000, 1000, 1300),
+                # 85 % identical: not the same stretch.
+                paf_line("Scer_part", 1000, 300, 1000, "Scer_c1", 2000, 0, 700, matches=595),
+            ]
+        )
+        + "\n"
+    )  # fmt: skip
+    unknown = screen(fasta, {"Scer": paf}, identity, [], tmp_path / "unknown", "poolA")
+    assert unknown["Scer_copy"].verdict == "keep"
+    found = screen(
+        fasta,
+        {"Scer": paf},
+        identity,
+        [],
+        tmp_path / "out",
+        "poolA",
+        haploid=frozenset({"Scer"}),
+    )
+    assert found["Scer_copy"].within == {"Scer_c1": pytest.approx(0.8)}
+    assert found["Scer_copy"].verdict == "drop"
+    assert "80 % of it in Scer_c1" in found["Scer_copy"].reason
+    assert found["Scer_repeat"].verdict == "keep"
+    assert found["Scer_part"].within == {"Scer_c2": pytest.approx(0.3)}
+    assert found["Scer_part"].verdict == "keep"
+    assert found["Scer_c1"].within == {}
+    table = (tmp_path / "out" / "poolA.screen.tsv").read_text().splitlines()
+    copy = next(line.split("\t") for line in table if line.startswith("Scer_copy"))
+    assert copy[table[0].split("\t").index("found_in_Scer")] == "0.80"
+    with gzip.open(tmp_path / "out" / "Scer.screened.fa.gz", "rt") as handle:
+        assert "Scer_copy" not in [name for name, _ in read_fasta(handle)]
+    # Its thresholds, from the command line.
+    result = CliRunner().invoke(
+        cli,
+        [
+            "screen", str(fasta), "-r", f"Scer={paf}", "-i", str(identity),
+            "-p", "poolA", "-o", str(tmp_path / "cli"), "--haploid", "Scer",
+            "--own-duplicate-depth", "0.4",
+        ],
+    )  # fmt: skip
+    assert result.exit_code == 0, result.output
+    rows = (tmp_path / "cli" / "poolA.screen.tsv").read_text()
+    assert "\tkeep\tScer_copy\t" in rows
+    bad = CliRunner().invoke(
+        cli,
+        [
+            "screen", str(fasta), "-r", f"Scer={paf}", "-p", "poolA",
+            "-o", str(tmp_path / "bad"), "--haploid", "S cer",
+        ],
+    )  # fmt: skip
+    assert bad.exit_code == 2

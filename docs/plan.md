@@ -278,6 +278,11 @@ screened.
       of Cgla's genome, longer than Spar's own contigs, had set Spar's depth;
       the screen kept it as Spar's, and the pool's split then found 360,598 of
       Cgla's WGS pairs ambiguous, leaving it 4,856 (js2264/plexembler#8).
+      A haploid species' contig (its `ploidy` 1) half of which a longer contig
+      of its own holds, 90 % identical, and its reads cover under 0.75 of
+      their depth, is dropped too: a stretch the assembler wrote twice (on the
+      benchmark's medium set, Scer's contig 1, below). A diploid's such contigs
+      are its haplotigs, for purge_dups when asked (below).
 - [x] **Organelles and plasmids:** the mitochondrial contig, by circularity, GC,
       depth and `miniprot` hits of a small set of yeast mitochondrial proteins
       (`assets/`), kept apart as `<species>_chrM`. Today by depth and GC (the
@@ -288,7 +293,9 @@ screened.
       subworkflow `fasta_clean_fcs`); Tiara's labels (eukaryote, prokaryote,
       organelle) for the report.
 - [ ] **Haplotigs:** purge_dups for a species whose new column `purge` says so;
-      never by default, never for a hybrid (it would remove a subgenome).
+      never by default, never for a hybrid (it would remove a subgenome). A
+      haploid species has none: what the screen drops of its contigs is the
+      assembler's.
 - [ ] **The pool's Hi-C on the screened contigs** (a second `POOL_DECONVOLVE`),
       which M3 scaffolds with.
 
@@ -328,6 +335,18 @@ its Hi-C maps.
       join against the species' own contact decay P(s), from the pairs within
       its contigs, and the joins they do not support (`genome/qc/junctions/`).
       `instagraal-refine` as a second opinion, with instaGRAAL.
+- [x] **The unsupported joins cut:** YaHS's joins scored before the genome is
+      written, from the pairs on the contigs placed through its AGP
+      (`plexembler junctions --contigs`, `candidates/scaffold/junctions/`),
+      and each join they do not support cut, its two sides two scaffolds
+      (`plexembler finalize --cut`); a join too thin to judge kept. Both
+      counts on the positions whose mates' coverage is half to twice the
+      genome's mean, which leaves out the repeats contigs end in. On the
+      benchmark's medium set it cuts YaHS's join of Scer's chrI to its chrVI,
+      at their two Y' ends; on the hard set, one of Spar's (QUAST's
+      misassemblies 3 to 2). Without the coverage rule it would have cut both
+      of Cgla's hard joins (0.18 and 0.03 of their expected pairs), both true,
+      and Spar's across its Ty1 array.
 - [ ] **Telomeres:** `tidk explore` finds the repeat when the samplesheet has
       none, `tidk search` counts the chromosomes with telomeres at both ends
       (nf-core's subworkflow `fasta_explore_search_plot_tidk`).
@@ -578,8 +597,26 @@ pipeline's own steps need a container before the package is anywhere else.
       - YaHS joins two chromosomes' ends through a subtelomeric Y' the
         assembly collapsed (Scer, in its first pass at 5 kb; Spar on the hard
         set): `plexembler junctions` flags the join (6 % of the pairs
-        expected across it), and nothing cuts it. Cut the joins it flags, or
-        keep the scaffolder candidate without them (M3, "One candidate kept").
+        expected across it). Done: the joins it flags are cut before the
+        genome is written (M3, "The unsupported joins cut").
+      - A contig that repeats its neighbour's end: Scer's contig 1 (22 kb). In
+        Flye's graph it is a repeat edge, joined to both ends of chrI's main
+        edge and to the Y' edge chrVI's two ends share: contig 3 holds it at
+        its end (its path the edge, chrI's main edge, the edge reversed), and
+        contig 1 is the edge again, alone. It is a mixture of chrI's two ends:
+        mostly its left 6.8 to 28 kb (97 % identity by QUAST), its first 8.6
+        kb nearer its right 229 to 238 kb. The medium set's reads (N50 11 kb)
+        do not resolve it; the easy set's (25 kb) do, chrI end to end. YaHS
+        lays it after contig 3, rightly, and QUAST counts their 15 kb overlap
+        as a misassembly. It also holds 73 % of Scer's errors against its
+        reference: without it, the polished contigs have 11.42 errors per 100
+        kb, not 42.39 (QV 39.4, not 33.7). The screen keeps it (its depth
+        17.8, the species' 30), as it compares no species' contigs with each
+        other. Drop such a contig before scaffolding, as purge_dups would (and
+        lose the 6 kb of chrI's left end it alone holds), or trim the overlap
+        at the join; chrI's ends themselves wait for reads that cross them.
+        Done: the screen drops it (70 % of it in contig 3, its reads at 0.61
+        of Scer's depth), a haploid species' duplicate.
       - The Hi-C polishing was never kept, its held-out pairs too thin for
         the guard's QV to see a gain; the guard now counts the k-mers a
         polishing changed (M2). Kept, it fixes 42 % of the errors the WGS
@@ -590,6 +627,22 @@ pipeline's own steps need a container before the package is anywhere else.
         low (0.0259 of 0.03); the second split's is within 10 % (M2).
       - A circular contig that Flye writes as two copies of itself (Cgla's
         mitochondrion, once, on the first set) is kept as it is.
+- [ ] **What the hard set found** (a local run of js2264/plexembler#12), the
+      next pull requests:
+      - YaHS lays two of Scer's chrI contigs of 20 kb the wrong way round, and
+        joins chrI's right-end contig to its left-end region (QUAST's three
+        misassemblies on chrI). `plexembler junctions` supports the three
+        joins: a contig shorter than its window is counted whole either way
+        round. Check each join's orientation: the pairs across, near and far
+        from it, against what each orientation expects, as YaHS weighs them.
+      - QUAST counts a join across an unassembled planted array as a
+        relocation: Scer's chrIII, joined in order across its rDNA array (93
+        kb) and its Ty1 array (26 kb, the rest of it in an unplaced contig),
+        Scer's two other misassemblies. The misassembly check could leave out
+        relocations across the planted arrays, as the cover check leaves the
+        arrays out (a change of its decided criterion, to settle first).
+      - Spar: a misassembly inside one of Flye's contigs (a relocation of 100
+        kb in its contig 12), which no join check sees.
 - [ ] **`test_full`**: an in-silico pool of public data (nanopore, Hi-C, Illumina,
       RNA-seq) of five to ten yeasts with T2T references, subsampled and mixed,
       on Zenodo; run by hand on a cluster before each release, its numbers on

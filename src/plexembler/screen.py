@@ -11,7 +11,8 @@ species. ``plexembler screen`` weighs three signals for each contig of a pool
   most: a whole genome of bleed-through can outweigh a species' own);
 - **its identity to the other species' contigs** (minimap2's asm alignments of
   the pool's contigs to each other): the share of it found, 99 % identical or
-  more, in another species' contigs;
+  more, in another species' contigs; and the share found, 90 % identical or
+  more, in a longer contig of its own species;
 - **its Hi-C contacts** with each species' other contigs (``plexembler split``'s
   unique pairs between contigs).
 
@@ -23,7 +24,14 @@ And gives a verdict:
 - ``drop``: most of it (``--duplicate-share``) found in another species' contigs,
   and its own species' reads thin on it (under ``--own-depth`` of their depth),
   or that species' reads ``--depth-ratio`` times as deep on it, each against its
-  own species' depth: that species' DNA, which it holds already;
+  own species' depth: that species' DNA, which it holds already. Or, for a
+  species ``--haploid``, half of it (``--own-duplicate-share``) found in a
+  longer contig of its own species, kept, and its own reads under
+  ``--own-duplicate-depth`` of their depth: a stretch of the genome its
+  contigs hold already, which the assembler wrote twice (a repeat of its
+  graph, written in a contig and alone), and to which the reads go less, as
+  they go to the better copy. A diploid's such contigs are its haplotigs, and
+  a hybrid's its subgenomes, which the screen leaves;
 - ``move``: its own species' reads thin on it while another species' reads
   cover it (``--other-depth`` of their depth); or its own species' reads under
   ``--hic-own-depth`` of their depth and its Hi-C contacts with another
@@ -61,6 +69,7 @@ class Contig:
     sequence: str
     depth: dict[str, float] = field(default_factory=dict)
     found_in: dict[str, float] = field(default_factory=dict)
+    within: dict[str, float] = field(default_factory=dict)
     contacts: dict[str, int] = field(default_factory=dict)
     verdict: str = "keep"
     new_name: str = ""
@@ -96,6 +105,9 @@ class Thresholds:
     min_contacts: int = 20
     hic_own_depth: float = 0.5
     depth_ratio: float = 2.0
+    own_duplicate_share: float = 0.5
+    own_duplicate_identity: float = 0.9
+    own_duplicate_depth: float = 0.75
 
 
 def open_text(path: Path) -> TextIO:
@@ -136,22 +148,48 @@ def read_depths(paf: Path, species: str, contigs: dict[str, Contig]) -> None:
         contig.depth[species] = bases[name] / contig.length if contig.length else 0.0
 
 
-def read_identity(paf: Path, contigs: dict[str, Contig], identity: float) -> None:
+def read_identity(
+    paf: Path,
+    contigs: dict[str, Contig],
+    identity: float,
+    own_identity: float = 0.9,
+) -> None:
     """The share of each contig found in each other species' contigs, at
-    ``identity`` or more: minimap2's alignments of the pool's contigs to each
-    other. ``-X`` reports each pair of contigs once, one of them the query:
-    an alignment counts for both."""
+    ``identity`` or more, and in each longer contig of its own species, at
+    ``own_identity`` or more: minimap2's alignments of the pool's contigs to
+    each other. ``-X`` reports each pair of contigs once, one of them the
+    query: an alignment counts for both (within a species, for the shorter)."""
     intervals: dict[tuple[str, str], list[tuple[int, int]]] = defaultdict(list)
+    within: dict[tuple[str, str], list[tuple[int, int]]] = defaultdict(list)
     with open_text(paf) as handle:
         for line in handle:
             fields = line.rstrip("\n").split("\t")
             if len(fields) < 12:
                 continue
             query, target = fields[0], fields[5]
-            if species_of(query) == species_of(target):
-                continue
             block = int(fields[10])
-            if not block or int(fields[9]) / block < identity:
+            share = int(fields[9]) / block if block else 0.0
+            if species_of(query) == species_of(target):
+                if share < own_identity or int(fields[1]) == int(fields[6]):
+                    continue
+                if int(fields[1]) < int(fields[6]):
+                    shorter, start, end, longer = (
+                        query,
+                        int(fields[2]),
+                        int(fields[3]),
+                        target,
+                    )
+                else:
+                    shorter, start, end, longer = (
+                        target,
+                        int(fields[7]),
+                        int(fields[8]),
+                        query,
+                    )
+                if shorter in contigs:
+                    within[(shorter, longer)].append((start, end))
+                continue
+            if share < identity:
                 continue
             sides = (
                 (query, int(fields[2]), int(fields[3]), target),
@@ -163,6 +201,11 @@ def read_identity(paf: Path, contigs: dict[str, Contig], identity: float) -> Non
     for (query, other), found in intervals.items():
         contig = contigs[query]
         contig.found_in[other] = (
+            merged_length(found) / contig.length if contig.length else 0.0
+        )
+    for (shorter, longer), found in within.items():
+        contig = contigs[shorter]
+        contig.within[longer] = (
             merged_length(found) / contig.length if contig.length else 0.0
         )
 
@@ -210,8 +253,13 @@ def typical_depths(contigs: dict[str, Contig]) -> dict[str, float]:
     return typical
 
 
-def judge(contigs: dict[str, Contig], thresholds: Thresholds) -> None:
-    """Each contig's verdict, its new name and the reason."""
+def judge(
+    contigs: dict[str, Contig],
+    thresholds: Thresholds,
+    haploid: frozenset[str] = frozenset(),
+) -> None:
+    """Each contig's verdict, its new name and the reason; the ``haploid``
+    species' contigs that another of theirs holds already, dropped."""
     typical = typical_depths(contigs)
     for contig in contigs.values():
         own = contig.species
@@ -283,6 +331,26 @@ def judge(contigs: dict[str, Contig], thresholds: Thresholds) -> None:
                     )
                     continue
         contig.verdict = "keep"
+    for contig in contigs.values():
+        if contig.verdict != "keep" or contig.species not in haploid:
+            continue
+        own = contig.species
+        own_typical = typical.get(own, 0.0)
+        own_ratio = contig.depth.get(own, 0.0) / own_typical if own_typical else 1.0
+        held = {
+            other: share
+            for other, share in contig.within.items()
+            if share >= thresholds.own_duplicate_share
+            and other in contigs
+            and contigs[other].verdict in ("keep", "organelle")
+        }
+        if held and own_ratio < thresholds.own_duplicate_depth:
+            other = max(held, key=lambda name: held[name])
+            contig.verdict = "drop"
+            contig.reason = (
+                f"{100 * held[other]:.0f} % of it in {other}, a longer contig of "
+                f"{own}'s; {own}'s reads at {own_ratio:.2f} of their depth"
+            )
 
 
 def move(contig: Contig, other: str, reason: str) -> None:
@@ -335,7 +403,10 @@ def write_outputs(
                 f"{100 * contig.gc:.1f}",
             ]
             cells += [f"{contig.depth.get(s, 0.0):.1f}" for s in every]
-            cells += [f"{contig.found_in.get(s, 0.0):.2f}" for s in every]
+            cells += [
+                f"{max(contig.within.values(), default=0.0) if s == contig.species else contig.found_in.get(s, 0.0):.2f}"
+                for s in every
+            ]
             cells += [str(contig.contacts.get(s, 0)) for s in every]
             cells += [contig.verdict, contig.new_name, contig.reason]
             sink.write("\t".join(cells) + "\n")
@@ -382,6 +453,7 @@ def screen(
     outdir: Path,
     prefix: str,
     thresholds: Thresholds | None = None,
+    haploid: frozenset[str] = frozenset(),
 ) -> dict[str, Contig]:
     """Screen a pool's contigs; write each species' and the verdicts.
 
@@ -399,16 +471,24 @@ def screen(
         Where the outputs go, and the pool's ID, which names the table.
     thresholds
         What each verdict needs.
+    haploid
+        The species known to be haploid, whose contigs another of theirs holds
+        already are dropped.
     """
     thresholds = thresholds or Thresholds()
     contigs = read_contigs(fasta)
     for species, paf in reads.items():
         read_depths(paf, species, contigs)
     if identity_paf is not None:
-        read_identity(identity_paf, contigs, thresholds.duplicate_identity)
+        read_identity(
+            identity_paf,
+            contigs,
+            thresholds.duplicate_identity,
+            thresholds.own_duplicate_identity,
+        )
     for table in contacts:
         read_contacts(table, contigs)
-    judge(contigs, thresholds)
+    judge(contigs, thresholds, haploid)
     name_organelles(contigs)
     write_outputs(contigs, list(reads), outdir, prefix)
     for contig in contigs.values():

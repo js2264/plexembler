@@ -18,8 +18,8 @@ nextflow_workflow {
                 def contacts = file("\${launchDir}/pool.hic.contacts.tsv")
                 contacts.text = 'contig_a\\tcontig_b\\tpairs\\n'
                 input[0] = channel.of(
-                    [ [ id: 'sp1', pool: 'pool' ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ],
-                    [ [ id: 'sp2', pool: 'pool' ], file('${moduleDir}/../../../tests/data/truth/sp2.fa', checkIfExists: true) ],
+                    [ [ id: 'sp1', pool: 'pool', ploidy: 1 ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ],
+                    [ [ id: 'sp2', pool: 'pool', ploidy: null ], file('${moduleDir}/../../../tests/data/truth/sp2.fa', checkIfExists: true) ],
                 )
                 input[1] = channel.of(
                     [ [ id: 'sp1', pool: 'pool' ], file('${moduleDir}/../../../tests/data/sp1.ont.fastq.gz', checkIfExists: true) ],
@@ -36,6 +36,8 @@ nextflow_workflow {
                 { assert workflow.out.contigs.size() == 2 },
                 { assert workflow.out.contigs.every { meta, _fasta -> meta.pool == 'pool' } },
                 { assert workflow.out.table.size() == 1 },
+                // sp1's ploidy 1: its contigs another of its contigs holds go.
+                { assert workflow.out.table[0][0].haploid == ['sp1'] },
             )
         }
     }

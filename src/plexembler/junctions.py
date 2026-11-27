@@ -9,13 +9,22 @@ join of an AGP (docs/plan.md, M3):
   contig, where no join can mislead it: the pairs at each distance (in
   logarithmic bins), over the pairs of positions that distance apart;
 - for each join, the pairs across it, a mate within ``--window`` bases on each
-  side, against those P(s) expects there;
+  side, against those P(s) expects there; counted, both, on the positions whose
+  mates' coverage, in bins of 1 kb, is half to twice the genome's mean. A repeat
+  at a contig's end is left out: where no mate maps uniquely (its copies all
+  assembled), the pairs see nothing, and where a collapsed repeat's mates all
+  map (or another copy's reads, the assembly missing theirs), they see
+  contacts that are not its own, which a scaffolder's misjoin often rests on;
 - the join ``supported`` when their ratio is ``--min-ratio`` or more,
   ``unsupported`` below, ``thin`` when P(s) expects too few pairs to tell
   (``--min-expected``).
 
 The pairs are the species' deduplicated pairs on its genome (4DN pairs, from
-pairtools), and the AGP the genome's (``plexembler finalize``).
+pairtools), and the AGP the genome's (``plexembler finalize``). Or, with
+``--contigs``, its pairs on the contigs the scaffolder laid out, and the
+scaffolder's AGP: each mate is placed on its scaffold through the AGP, so that
+the scaffolder's joins are scored before the genome is written, and those the
+pairs do not support cut (``plexembler finalize --cut``).
 """
 
 from __future__ import annotations
@@ -35,21 +44,33 @@ logger = logging.getLogger(__name__)
 #: The decay's bins: ten a decade, from 10 bases.
 BINS_PER_DECADE = 10
 SMALLEST = 10
+#: The bins, in bases, in which the mates on each side of a join are counted.
+SEEN_BIN = 1_000
+#: A bin's mates over those the genome's mean gives it, from which and up to
+#: which its pairs count.
+SEEN_COVERAGE = (0.5, 2.0)
 
 
 @dataclass
 class Component:
     """A contig of a scaffold: where it lies in the scaffold (0-based, end
-    excluded), and its name."""
+    excluded), its name, and the part of the contig it is (0-based, end
+    excluded) and its orientation."""
 
     start: int
     end: int
     name: str
+    contig_start: int = 0
+    contig_end: int = 0
+    orientation: str = "+"
 
 
 @dataclass
 class Junction:
-    """A join between two consecutive contigs of a scaffold."""
+    """A join between two consecutive contigs of a scaffold: its pairs across,
+    those expected, and its verdict; the mates on each side, by bin of
+    ``SEEN_BIN`` bases from the join, nearest first, and the pairs across by
+    pair of bins; and the share of each side whose pairs count (0 to 1)."""
 
     scaffold: str
     left: Component
@@ -57,6 +78,11 @@ class Junction:
     observed: int = 0
     expected: float = 0.0
     verdict: str = ""
+    left_mates: list[int] = field(default_factory=list)
+    right_mates: list[int] = field(default_factory=list)
+    across: dict[tuple[int, int], int] = field(default_factory=dict)
+    left_seen: float = 1.0
+    right_seen: float = 1.0
 
     @property
     def ratio(self) -> float:
@@ -92,11 +118,51 @@ def read_agp(path: Path) -> Layout:
             if fields[4] in ("N", "U"):
                 continue
             layout.components.setdefault(fields[0], []).append(
-                Component(int(fields[1]) - 1, int(fields[2]), fields[5])
+                Component(
+                    int(fields[1]) - 1,
+                    int(fields[2]),
+                    fields[5],
+                    int(fields[6]) - 1,
+                    int(fields[7]),
+                    fields[8],
+                )
             )
     for components in layout.components.values():
         components.sort(key=lambda c: c.start)
     return layout
+
+
+class Lift:
+    """A position on a contig, placed on its scaffold through the AGP."""
+
+    def __init__(self, layout: Layout) -> None:
+        self.parts: dict[str, list[tuple[int, str, Component]]] = defaultdict(list)
+        for scaffold, components in layout.components.items():
+            for component in components:
+                self.parts[component.name].append(
+                    (component.contig_start, scaffold, component)
+                )
+        for parts in self.parts.values():
+            parts.sort(key=lambda part: part[0])
+        self.starts = {
+            name: [p[0] for p in parts] for name, parts in self.parts.items()
+        }
+
+    def __call__(self, contig: str, position: int) -> tuple[str, int] | None:
+        """The scaffold and the position there (0-based) of a contig's
+        position, or None when no component of the AGP holds it."""
+        parts = self.parts.get(contig)
+        if parts is None:
+            return None
+        index = bisect.bisect_right(self.starts[contig], position) - 1
+        if index < 0:
+            return None
+        _, scaffold, component = parts[index]
+        if position >= component.contig_end:
+            return None
+        if component.orientation == "-":
+            return scaffold, component.start + (component.contig_end - 1 - position)
+        return scaffold, component.start + (position - component.contig_start)
 
 
 def junctions(layout: Layout) -> list[Junction]:
@@ -134,14 +200,6 @@ def position_pairs_within(length: int, low: int, high: int) -> int:
     return count * length - (low + high - 1) * count // 2
 
 
-def position_pairs_across(left: int, right: int, distance: int) -> int:
-    """The pairs of positions ``distance`` apart, one in the last ``left`` bases
-    before a join and one in the first ``right`` after it."""
-    if distance < 1 or distance > left + right - 1:
-        return 0
-    return min(distance, left, right, left + right - distance)
-
-
 @dataclass
 class Decay:
     """The species' contact decay: pairs, and pairs of positions, by bin."""
@@ -160,40 +218,58 @@ class Decay:
         return self.pairs.get(index, 0) / positions if positions else 0.0
 
 
-def expected_across(decay: Decay, left: int, right: int) -> float:
-    """The pairs the decay expects across a join, ``left`` and ``right`` bases
-    of window on each side."""
-    expected = 0.0
-    longest = left + right - 1
-    index = 0
-    while True:
-        low, high = bin_edges(index)
-        if low > longest:
-            break
-        probability = decay.probability(max(low, 1))
-        if probability:
-            expected += probability * sum(
-                position_pairs_across(left, right, s)
-                for s in range(max(low, 1), min(high, longest + 1))
-            )
-        index += 1
-    return expected
+def side_bins(length: int, size: int = SEEN_BIN) -> int:
+    """The bins of a side of a join ``length`` bases long."""
+    return -(-length // size)
 
 
 def read_pairs(
-    path: Path, layout: Layout, found: list[Junction], window: int
-) -> tuple[Decay, int]:
-    """The decay from the pairs within contigs; the pairs across each join.
+    path: Path,
+    layout: Layout,
+    found: list[Junction],
+    window: int,
+    on_contigs: bool = False,
+) -> tuple[Decay, int, int]:
+    """The decay from the pairs within contigs; each join's pairs across, by
+    pair of bins, and its mates on either side, by bin. With ``on_contigs``,
+    the pairs' chromosomes are the AGP's contigs, and each mate is placed on
+    its scaffold first.
 
-    Returns the decay and the number of pairs read.
+    Returns the decay, the number of pairs within scaffolds and the number of
+    mates placed in the AGP's contigs.
     """
+    lift = Lift(layout) if on_contigs else None
     decay = Decay()
     across: dict[tuple[str, int], Junction] = {}
     for junction in found:
         index = layout.components[junction.scaffold].index(junction.left)
         across[(junction.scaffold, index)] = junction
+        left = min(window, junction.left.end - junction.left.start)
+        right = min(window, junction.right.end - junction.right.start)
+        junction.left_mates = [0] * side_bins(left)
+        junction.right_mates = [0] * side_bins(right)
     starts = {name: layout.starts(name) for name in layout.components}
     read = 0
+    placed = 0
+
+    def see(chrom: str, pos: int) -> None:
+        """A mate: counted in its contig, and beside each join it is near."""
+        nonlocal placed
+        if chrom not in starts:
+            return
+        components = layout.components[chrom]
+        index = bisect.bisect_right(starts[chrom], pos) - 1
+        if index < 0 or pos >= components[index].end:
+            return
+        placed += 1
+        component = components[index]
+        if index + 1 < len(components) and pos >= component.end - window:
+            junction = across[(chrom, index)]
+            junction.left_mates[(component.end - 1 - pos) // SEEN_BIN] += 1
+        if index > 0 and pos < component.start + window:
+            junction = across[(chrom, index - 1)]
+            junction.right_mates[(pos - component.start) // SEEN_BIN] += 1
+
     with open_text(path) as handle:
         for line in handle:
             if line.startswith("#"):
@@ -202,10 +278,22 @@ def read_pairs(
             if len(fields) < 5:
                 continue
             chrom1, chrom2 = fields[1], fields[3]
+            pos1, pos2 = int(fields[2]) - 1, int(fields[4]) - 1
+            if lift is not None:
+                one_place, two_place = lift(chrom1, pos1), lift(chrom2, pos2)
+                if one_place is not None:
+                    see(*one_place)
+                if two_place is not None:
+                    see(*two_place)
+                if one_place is None or two_place is None:
+                    continue
+                (chrom1, pos1), (chrom2, pos2) = one_place, two_place
+            else:
+                see(chrom1, pos1)
+                see(chrom2, pos2)
             if chrom1 != chrom2 or chrom1 not in starts:
                 continue
             read += 1
-            pos1, pos2 = int(fields[2]) - 1, int(fields[4]) - 1
             if pos2 < pos1:
                 pos1, pos2 = pos2, pos1
             components = layout.components[chrom1]
@@ -223,8 +311,75 @@ def read_pairs(
                     pos1 >= junction.left.end - window
                     and pos2 < junction.right.start + window
                 ):
-                    junction.observed += 1
-    return decay, read
+                    key = (
+                        (junction.left.end - 1 - pos1) // SEEN_BIN,
+                        (pos2 - junction.right.start) // SEEN_BIN,
+                    )
+                    junction.across[key] = junction.across.get(key, 0) + 1
+    return decay, read, placed
+
+
+def seen_bins(mates: list[int], length: int, per_base: float) -> list[float]:
+    """Whether the pairs of each bin of a side ``length`` bases long count (1)
+    or not (0): its mates, over those the genome's mean gives it, within
+    ``SEEN_COVERAGE``."""
+    low, high = SEEN_COVERAGE
+    seen = []
+    for index, count in enumerate(mates):
+        expected = min(SEEN_BIN, length - index * SEEN_BIN) * per_base
+        seen.append(1.0 if expected > 0 and low <= count / expected <= high else 0.0)
+    return seen
+
+
+class Expectation:
+    """The pairs the decay expects across joins, each pair of positions weighed
+    by its two bins' weights (``seen_bins``): the decay, by distance up to
+    ``longest``, and its sums over pairs of bins, kept from one join to the next."""
+
+    def __init__(self, decay: Decay, longest: int) -> None:
+        self.probability = [0.0] + [decay.probability(s) for s in range(1, longest + 1)]
+        self.blocks: dict[tuple[int, int, int], float] = {}
+
+    def block(self, first: int, left_span: int, right_span: int) -> float:
+        """The decay summed over the pairs of positions of two bins: ``first``
+        the distance of their nearest pair, each bin ``span`` positions past its
+        first."""
+        key = (first, left_span, right_span)
+        if key not in self.blocks:
+            probability = self.probability
+            self.blocks[key] = sum(
+                probability[first + t]
+                * (min(t, left_span, right_span, left_span + right_span - t) + 1)
+                for t in range(left_span + right_span + 1)
+            )
+        return self.blocks[key]
+
+    def across(
+        self,
+        left: int,
+        right: int,
+        left_weights: list[float],
+        right_weights: list[float],
+    ) -> float:
+        """The pairs expected across a join, ``left`` and ``right`` bases of
+        window on each side, their bins' weights nearest the join first."""
+        expected = 0.0
+        for p, left_weight in enumerate(left_weights):
+            if not left_weight:
+                continue
+            a0, a1 = p * SEEN_BIN + 1, min((p + 1) * SEEN_BIN, left)
+            for q, right_weight in enumerate(right_weights):
+                if not right_weight:
+                    continue
+                c0, c1 = q * SEEN_BIN + 1, min((q + 1) * SEEN_BIN, right)
+                # Positions a and c from the join, one on each side, lie
+                # a + c - 1 apart.
+                expected += (
+                    left_weight
+                    * right_weight
+                    * self.block(a0 + c0 - 1, a1 - a0, c1 - c0)
+                )
+        return expected
 
 
 def score(
@@ -233,19 +388,34 @@ def score(
     window: int = 20_000,
     min_ratio: float = 0.2,
     min_expected: float = 10.0,
+    on_contigs: bool = False,
 ) -> list[Junction]:
-    """Each join of the AGP, its pairs across, those expected, and its verdict."""
+    """Each join of the AGP, its pairs across, those expected, and its verdict;
+    with ``on_contigs``, the pairs on the AGP's contigs."""
     layout = read_agp(agp)
     found = junctions(layout)
-    decay, read = read_pairs(pairs, layout, found, window)
+    decay, read, placed = read_pairs(pairs, layout, found, window, on_contigs)
+    bases = 0
     for components in layout.components.values():
         for component in components:
             length = component.end - component.start
             decay.add_contig(length, length - 1)
+            bases += length
+    per_base = placed / bases if bases else 0.0
+    expectation = Expectation(decay, 2 * window)
     for junction in found:
         left = min(window, junction.left.end - junction.left.start)
         right = min(window, junction.right.end - junction.right.start)
-        junction.expected = expected_across(decay, left, right)
+        left_seen = seen_bins(junction.left_mates, left, per_base)
+        right_seen = seen_bins(junction.right_mates, right, per_base)
+        junction.left_seen = side_seen(left_seen, left)
+        junction.right_seen = side_seen(right_seen, right)
+        junction.observed = sum(
+            count
+            for (p, q), count in junction.across.items()
+            if left_seen[p] and right_seen[q]
+        )
+        junction.expected = expectation.across(left, right, left_seen, right_seen)
         if junction.expected < min_expected:
             junction.verdict = "thin"
         elif junction.ratio >= min_ratio:
@@ -263,18 +433,34 @@ def score(
     return found
 
 
+def side_seen(weights: list[float], length: int) -> float:
+    """The share of a side ``length`` bases long whose pairs count: its bins'
+    weights, by their lengths."""
+    if not length:
+        return 0.0
+    return (
+        sum(
+            weight * min(SEEN_BIN, length - index * SEEN_BIN)
+            for index, weight in enumerate(weights)
+        )
+        / length
+    )
+
+
 def write_outputs(found: list[Junction], outdir: Path, prefix: str) -> None:
     """``<prefix>.junctions.tsv``, a row per join, and its MultiQC table."""
     outdir.mkdir(parents=True, exist_ok=True)
     with (outdir / f"{prefix}.junctions.tsv").open("w", encoding="ascii") as sink:
         sink.write(
-            "scaffold\tposition\tleft_contig\tright_contig\tobserved\texpected\tratio\tverdict\n"
+            "scaffold\tposition\tleft_contig\tright_contig\tobserved\texpected\tratio"
+            "\tverdict\tleft_seen\tright_seen\n"
         )
         for j in found:
             ratio = "NA" if math.isnan(j.ratio) else f"{j.ratio:.3f}"
             sink.write(
                 f"{j.scaffold}\t{j.left.end}\t{j.left.name}\t{j.right.name}\t"
-                f"{j.observed}\t{j.expected:.1f}\t{ratio}\t{j.verdict}\n"
+                f"{j.observed}\t{j.expected:.1f}\t{ratio}\t{j.verdict}\t"
+                f"{j.left_seen:.2f}\t{j.right_seen:.2f}\n"
             )
     counts = {
         verdict: sum(j.verdict == verdict for j in found)

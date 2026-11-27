@@ -40,6 +40,9 @@ nextflow_workflow {
                 { assert workflow.out.hic.size() == 1 },
                 { assert workflow.trace.tasks().count { task -> task.name.contains(':YAHS (') } == 1 },
                 { assert workflow.trace.tasks().count { task -> task.name.contains(':YAHS_RESCAFFOLD (') } == 1 },
+                // YaHS's joins scored from sp1's pairs on its contigs, before the cut.
+                { assert workflow.out.joins.size() == 1 },
+                { assert workflow.trace.tasks().count { task -> task.name.contains(':PAIRTOOLS_DEDUP_CONTIGS (') } == 1 },
             )
         }
     }

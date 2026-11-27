@@ -288,15 +288,21 @@ assemble into contigs of the wrong species; the screen weighs three signals
 for each contig: each species' nanopore depth on it (against that species'
 depth on its own contigs, those its reads cover the most: a whole genome of
 bleed-through, assembled, can outweigh a species' own), the share of it found
-in another species' contigs at 99 % identity or more, and its Hi-C contacts
-with each species' contigs.
+in another species' contigs at 99 % identity or more (and in a longer contig of
+its own species at 90 %), and its Hi-C contacts with each species' contigs.
 
 - `organelle`: `--organelle-depth` times its species' depth and under
   `--organelle-gc` GC: kept as `<species>_chrM` (`chrM2`, … for more);
 - `drop`: most of it (`--duplicate-share`) found in another species' contigs, its own
   species' reads thin on it (under `--own-depth` of their depth), or that species' reads
   `--depth-ratio` times as deep on it, each against its own species' depth: that
-  species' DNA, which it holds already;
+  species' DNA, which it holds already. Or, for a species given `--haploid`,
+  `--own-duplicate-share` of it found in a longer contig of its own, 90 %
+  identical or more, and its own reads under `--own-duplicate-depth` of their
+  depth: a stretch of the genome its contigs hold already, which the assembler
+  wrote twice (a repeat of its graph, in a contig and alone), and to which the
+  reads go less, as they go to the better copy. A diploid's such contigs are
+  its haplotigs, and a hybrid's its other subgenome: the screen leaves them;
 - `move`: its own species' reads under `--own-depth` of their depth, another
   species' at `--other-depth` of theirs; or its own species' reads under
   `--hic-own-depth` and its Hi-C contacts with another species over
@@ -314,8 +320,9 @@ plexembler screen poolA.fa.gz -r Scer=Scer.paf -r Kmar=Kmar.paf -i poolA.self.pa
 
 It writes each species' screened contigs (`<species>.screened.fa.gz`), the
 verdicts (`poolA.screen.tsv`: each contig's length, GC, depth of each
-species' reads, share found in each species' contigs, contacts with each
-species, verdict, new name and reason), their MultiQC table and its log.
+species' reads, share found in each species' contigs (in its own species',
+the share in its longer contigs), contacts with each species, verdict, new
+name and reason), their MultiQC table and its log.
 
 | Option | Default | Description |
 |---|---|---|
@@ -334,6 +341,9 @@ species, verdict, new name and reason), their MultiQC table and its log.
 | `--min-contacts` | `20` | The fewest Hi-C contacts with another species that move a contig. |
 | `--hic-own-depth` | `0.5` | Its own species' depth on a contig, as a share of their depth, under which Hi-C contacts can move it. |
 | `--depth-ratio` | `2.0` | Another species' depth on a duplicate, over its own species', each against their depth, from which the duplicate goes. |
+| `--haploid` | | A haploid species of the pool, whose contigs another of its contigs holds already go (`--own-duplicate-share`); once per species. |
+| `--own-duplicate-share` | `0.5` | The share of a contig found in a longer contig of its own species, 90 % identical or more, from which it is a duplicate of it. |
+| `--own-duplicate-depth` | `0.75` | Its own species' depth on a duplicate of one of its contigs, as a share of their depth, under which it goes. |
 | `--force` | off | Overwrite outputs that exist already. |
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
@@ -356,6 +366,17 @@ of names (`Scer.names.tsv`: `name`, `original_name`, `length_bp` and `role`,
 chromosome, organelle or unplaced), the AGP with the new names (`Scer.agp`)
 and its log.
 
+With `--cut`, the table of the scaffolder's joins that
+[`junctions --contigs`](#junctions) scored, it first cuts each join that table
+finds `unsupported`: the scaffold's two sides become two scaffolds,
+`scaffold_1.1` and `scaffold_1.2` (and so on, for more cuts in one scaffold),
+the gap between them dropped, and are named as any other. The log gives each
+cut, its pairs across and those expected. A `thin` join is kept.
+
+```bash
+plexembler finalize yahs_scaffolds_final.fa -a yahs_scaffolds_final.agp --cut Scer.junctions.tsv -p Scer -n 16 -o Scer/
+```
+
 | Option | Default | Description |
 |---|---|---|
 | `FASTA` | (required) | The scaffolds, FASTA, gzipped or not. |
@@ -364,6 +385,7 @@ and its log.
 | `-a, --agp` | | The scaffolder's AGP, written again with the new names. |
 | `-n, --n-chromosomes` | | The species' number of nuclear chromosomes: its longest scaffolds, named chromosomes. |
 | `--min-chromosome` | `100000` | Without `--n-chromosomes`, the shortest scaffold named a chromosome, in bases. |
+| `--cut` | | The table of the scaffolder's joins from `plexembler junctions --contigs`: each it finds unsupported is cut first, its two sides two scaffolds (needs `--agp`). |
 | `--force` | off | Overwrite outputs that exist already. |
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
@@ -378,16 +400,31 @@ bases on each side, against those the decay expects there. A join is
 likely: the log warns of each), `thin` when the decay expects too few pairs to
 judge it (`--min-expected`).
 
+Both counts leave out the positions the pairs cannot be trusted on: each side
+of a join is cut into bins of 1 kb, and a bin counts when its mates' coverage
+is half to twice the genome's mean. A contig often ends in a repeat: where its
+copies all assembled, no mate maps there uniquely, and a true join would look
+unsupported; where the assembly collapsed them, or misses a copy, another
+copy's reads map there, and their contacts can make a misjoin look supported,
+which is how a scaffolder makes one. A join with no such bin on a side is
+`thin`.
+
 ```bash
 plexembler junctions Scer.pairs.gz -a Scer.agp -p Scer -o Scer/
 ```
 
 The pairs are the species' deduplicated pairs on its genome (4DN pairs,
 pairtools'), and the AGP the genome's, in the same names
-([`finalize`](#finalize)'s). It writes the table of joins
+([`finalize`](#finalize)'s). Or, with `--contigs`, its pairs on the contigs the
+scaffolder laid out, and the scaffolder's AGP: each mate is placed on its
+scaffold through the AGP (a contig broken into pieces, or reversed, included),
+which scores the scaffolder's joins before the genome is written, so that
+[`finalize --cut`](#finalize) can cut those the pairs do not support. A mate
+on a part of a contig the AGP leaves out is dropped. It writes the table of joins
 (`Scer.junctions.tsv`: `scaffold`, `position`, the last base of the join's left
-contig, `left_contig`, `right_contig`, `observed`, `expected`, `ratio` and
-`verdict`), its MultiQC table and its log.
+contig, `left_contig`, `right_contig`, `observed`, `expected`, `ratio`,
+`verdict`, and `left_seen` and `right_seen`, the share of each side's window
+whose pairs count), its MultiQC table and its log.
 
 | Option | Default | Description |
 |---|---|---|
@@ -398,6 +435,7 @@ contig, `left_contig`, `right_contig`, `observed`, `expected`, `ratio` and
 | `-w, --window` | `20000` | How far from a join, on each side, a pair's mates may lie, in bases. |
 | `--min-ratio` | `0.2` | The pairs across a join over those expected, below which it is unsupported. |
 | `--min-expected` | `10.0` | The pairs a join is expected to have, below which it is too thin to judge. |
+| `--contigs` | off | The pairs are on the AGP's contigs: each mate is placed on its scaffold through the AGP (a scaffolder's joins, before the genome is written). |
 | `--force` | off | Overwrite outputs that exist already. |
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
