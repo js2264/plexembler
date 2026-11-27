@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "plexembler_browser"
+description: Writes chromosomix's store of the results - every species' genome, map and tracks, by their paths in the results
+keywords:
+  - browser
+  - chromosomix
+  - hi-c
+tools:
+  - "plexembler":
+      description: "The companion package of js2264/plexembler"
+      homepage: "https://js2264.github.io/plexembler/"
+      documentation: "https://js2264.github.io/plexembler/cli/#browser"
+      tool_dev_url: "https://github.com/js2264/plexembler"
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - species:
+      type: list
+      description: Each species and its pool, SPECIES=POOL
+  - files:
+      type: list
+      description: Each species' genome, map and tracks, by their paths in the results, SPECIES=PATH
+output:
+  store:
+    - chromosomix.store.json:
+        type: file
+        description: chromosomix's store of the results
+        pattern: "chromosomix.store.json"
+  log:
+    - "*.log":
+        type: file
+        description: The command's log
+        pattern: "*.log"
+  versions_plexembler:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

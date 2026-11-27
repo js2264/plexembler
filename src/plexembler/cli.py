@@ -68,6 +68,7 @@ _QUIET = click.option(
 @click.command_panel(
     "Genomes", commands=["finalize", "junctions", "genes", "expression"]
 )
+@click.command_panel("Reports", commands=["report", "browser"])
 @click.command_panel("Reads", commands=["digest"])
 @click.command_panel("Pools", commands=["ani", "split"])
 def cli() -> None:
@@ -1003,3 +1004,141 @@ def expression_command(
         except (OSError, ValueError) as error:
             raise click.ClickException(str(error)) from error
         write_outputs(table, outdir, prefix, min_count)
+
+
+@cli.command(name="report", context_settings=CONTEXT_SETTINGS)
+@click.argument(
+    "files",
+    nargs=-1,
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "-p",
+    "--prefix",
+    required=True,
+    callback=_species,
+    help="The species' ID, which its files' names start with and which names the report.",
+)
+@click.option("--pool", help="The species' pool, which starts its pool's files' names.")
+@click.option(
+    "-o",
+    "--outdir",
+    required=True,
+    type=click.Path(file_okay=False, path_type=Path),
+    help="The folder of the report and the log.",
+)
+@_FORCE
+@_VERBOSE
+@_QUIET
+def report_command(
+    files: tuple[Path, ...],
+    prefix: str,
+    pool: str | None,
+    outdir: Path,
+    force: bool,
+    verbose: bool,
+    quiet: bool,
+) -> None:
+    """Write a species' report from the files the pipeline wrote for it."""
+    from .report import write
+
+    _refuse_existing([outdir / f"{prefix}.report.txt"], force)
+    parameters = {
+        "files": ",".join(str(f) for f in files),
+        "prefix": prefix,
+        "pool": pool,
+        "outdir": outdir,
+        "force": force,
+    }
+    with run_log(outdir, prefix, parameters, verbose=verbose, quiet=quiet):
+        try:
+            write(prefix, pool, list(files), outdir)
+        except (OSError, ValueError, KeyError) as error:
+            raise click.ClickException(str(error)) from error
+
+
+def _pairs(
+    _context: click.Context, parameter: click.Parameter, values: tuple[str, ...]
+) -> list[tuple[str, str]]:
+    """``KEY=VALUE`` pairs, in order."""
+    pairs = []
+    for value in values:
+        key, separator, rest = value.partition("=")
+        if not separator or not key or not rest:
+            raise click.BadParameter(f"{value!r} is not {parameter.metavar}")
+        pairs.append((key, rest))
+    return pairs
+
+
+@cli.command(name="browser", context_settings=CONTEXT_SETTINGS)
+@click.option(
+    "-s",
+    "--species",
+    "species",
+    multiple=True,
+    required=True,
+    metavar="SPECIES=POOL",
+    callback=_pairs,
+    help="A species and its pool, SPECIES=POOL; once per species.",
+)
+@click.option(
+    "-f",
+    "--file",
+    "files",
+    multiple=True,
+    metavar="SPECIES=PATH",
+    callback=_pairs,
+    help="A species' map, genome or track, by its path in the results; once per file.",
+)
+@click.option(
+    "-o",
+    "--outdir",
+    required=True,
+    type=click.Path(file_okay=False, path_type=Path),
+    help="The top of the results, where the store goes, and the log's folder.",
+)
+@click.option(
+    "-n",
+    "--name",
+    default="plexembler",
+    show_default=True,
+    help="The store's name, as chromosomix's picker shows it.",
+)
+@click.option(
+    "--base",
+    help="Where the results are served (https://…/results/), when they are on a bucket.",
+)
+@_FORCE
+@_VERBOSE
+@_QUIET
+def browser_command(
+    species: list[tuple[str, str]],
+    files: list[tuple[str, str]],
+    outdir: Path,
+    name: str,
+    base: str | None,
+    force: bool,
+    verbose: bool,
+    quiet: bool,
+) -> None:
+    """Write chromosomix's store of every species' map, genome and tracks."""
+    from .browser import STORE_NAME, gather, store, write
+
+    _refuse_existing([outdir / STORE_NAME], force)
+    if base is not None and not base.startswith(("https://", "http://")):
+        raise click.BadParameter(f"{base!r} is not an http(s) URL", param_hint="--base")
+    parameters = {
+        "species": ",".join(f"{k}={v}" for k, v in species),
+        "files": len(files),
+        "outdir": outdir,
+        "name": name,
+        "base": base,
+        "force": force,
+    }
+    with run_log(outdir, "browser", parameters, verbose=verbose, quiet=quiet):
+        try:
+            found = gather(dict(species), files)
+        except ValueError as error:
+            raise click.ClickException(str(error)) from error
+        write(store(found, name, base), outdir)

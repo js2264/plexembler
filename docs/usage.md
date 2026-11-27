@@ -259,6 +259,15 @@ expression: the tables are made for it.
 Each species' tracks go beside them: each library's coverage on each strand,
 and the nanopore reads' depth, as bigWig.
 
+## Reports and the browser
+
+Each species has its report (milestone 6): a page, its numbers as text, and its
+row in MultiQC's General Statistics. The results open in
+[chromosomix](https://chromosomix.app) through the store the run writes at
+their top, `chromosomix.store.json`: connect the results folder in its app, or
+put the results on a bucket and give the run their address
+(`--browser_base https://…/results/`) to open them at chromosomix.app.
+
 ## Profiles
 
 `-profile` takes a container engine (`docker`, `apptainer`, `singularity`,
