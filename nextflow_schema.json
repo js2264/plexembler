@@ -277,21 +277,6 @@
                 }
             }
         },
-        "report_options": {
-            "title": "Reports and the browser",
-            "type": "object",
-            "fa_icon": "fas fa-file-alt",
-            "description": "Each species' report, and chromosomix's store of the results (milestone 6).",
-            "properties": {
-                "browser_base": {
-                    "type": "string",
-                    "pattern": "^https?://\\S+$",
-                    "description": "Where the results will be served (https://.../results/), when they go on a bucket: the store's base, which its relative paths join.",
-                    "help_text": "Without it, the store's paths are relative to it: the results open in chromosomix with their folder connected, or wherever they are served beside it.",
-                    "fa_icon": "fas fa-globe"
-                }
-            }
-        },
         "institutional_config_options": {
             "title": "Institutional config options",
             "type": "object",
@@ -450,9 +435,6 @@
         },
         {
             "$ref": "#/$defs/expression_options"
-        },
-        {
-            "$ref": "#/$defs/report_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"

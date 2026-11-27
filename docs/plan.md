@@ -395,16 +395,12 @@ Spearman's ρ ≥ 0.9 for every species.
 
 ## M6 · Reports and extras · v0.6.0
 
-- [x] **`plexembler report`**, on chromokit's report kit (CONVENTIONS.md § 12):
+- [ ] **`plexembler report`**, on chromokit's report kit (CONVENTIONS.md § 12):
       per species, `report.txt`, its MultiQC row and its page: the summary;
       its share of the pool; the candidates and the choice; contamination; a
       karyotype (chromosomes, telomeres, centromeres, rDNA, chrM); BUSCO, QV,
       OMArk; the annotation; the expression; versions and methods. A pool's
-      report beside it (`pools/<pool>/`). Done on the kit's own page: the
-      assembly and polishing, the share of each library, the screen, the
-      chromosomes, BUSCO and QV, the joins, the genes and BUSCO on the
-      proteins, the expression. To come: its own template and plots, the
-      telomeres, centromeres and rDNA in the karyotype, the pool's report.
+      report beside it (`pools/<pool>/`).
 - [ ] **Contamination, further:** EukCC; a GC × depth plot of the contigs,
       labelled by Tiara, FCS-GX and the screen.
 - [ ] **Ploidy, heterozygosity, aneuploidy:** Clair3 (nanopore) and bcftools (WGS)
@@ -417,10 +413,7 @@ Spearman's ρ ≥ 0.9 for every species.
       28S rRNA, against a local UNITE or NCBI set (BLAST): sample swaps show.
 - [ ] **Comparative**, per pool (`--comparative`): OrthoFinder (orthogroups,
       species tree), synteny (GENESPACE, local), the ANI matrix of M1.
-- [x] **A browser for the delivery: chromosomix.** Done: the store, checked
-      by chromosomix's own `check_store` in the package's tests; the
-      species' workspaces, which name absolute URLs only, wait for
-      `--browser_base`. `plexembler browser` writes,
+- [ ] **A browser for the delivery: chromosomix.** `plexembler browser` writes,
       for each species, a workspace (`<species>.chromosomix.json`: its map with
       its genome, genes, repeats, telomeres, centromeres and coverage tracks
       placed, a colour scale, a first window), and, at the top of the results, a
