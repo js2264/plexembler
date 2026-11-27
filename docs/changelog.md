@@ -149,3 +149,4 @@ follow [semantic versioning](https://semver.org).
   command (`-a, --assembly-info`), keeps the contigs it says are linear whole.
   `--no-collapse`, `--min-unit` and `--min-identity` set it; the names table
   has three more columns: `original_length_bp`, `copies` and `circular`.
+  ([#9](https://github.com/js2264/plexembler/pull/9))
