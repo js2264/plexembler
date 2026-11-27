@@ -518,7 +518,20 @@ pipeline's own steps need a container before the package is anywhere else.
       (`benchmarks/README.md`); each reference gene characterized or not,
       milestone 4 counting the characterized ones; milestone 3 leaving out the
       tandem arrays no read crosses. `benchmarks.yml` runs the three, the easy
-      and medium sets gating, the hard one reported.
+      set gating, the medium and hard ones reported.
+- [ ] **What the medium set found** (js2264/plexembler#8), the next pull
+      requests; the medium set gates the benchmarks once they pass it:
+      - YaHS joins two chromosomes' ends through a subtelomeric Y' the
+        assembly collapsed (Scer, in its first pass at 5 kb; Spar on the hard
+        set): `plexembler junctions` flags the join (6 % of the pairs
+        expected across it), and nothing cuts it. Cut the joins it flags, or
+        keep the scaffolder candidate without them (M3, "One candidate kept").
+      - The Hi-C polishing is never kept: the held-out pairs of a digested
+        Hi-C library are too thin for the guard's QV to see a gain (M2).
+      - The first split's epsilon, on the contigs before the screen, is 14 %
+        low (0.0259 of 0.03); the second split's is within 10 % (M2).
+      - A circular contig that Flye writes as two copies of itself (Cgla's
+        mitochondrion, once, on the first set) is kept as it is.
 - [ ] **`test_full`**: an in-silico pool of public data (nanopore, Hi-C, Illumina,
       RNA-seq) of five to ten yeasts with T2T references, subsampled and mixed,
       on Zenodo; run by hand on a cluster before each release, its numbers on

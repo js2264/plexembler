@@ -128,10 +128,11 @@ each set, a job each, in parallel (Docker, on GitHub's runner, the package's
 image built from the checkout), then the checks: every set's and every
 milestone's for every release tag (`v*`), and by hand (Actions, Benchmarks,
 Run workflow: a branch, one set or all, one milestone or all, and whether to
-publish a set the run had to make). The easy and medium sets must pass; the
-hard set measures how far the pipeline gets, its failures reported, not the
-run's. Each milestone's table lands in the run's summary, its report in the
-run's artifact. A run takes hours, so a pull request has the pipeline's
+publish a set the run had to make). The easy set must pass; the medium and
+hard sets measure how far the pipeline gets, their failures reported, not the
+run's, until the pipeline passes the medium set too (docs/plan.md, T2). Each
+milestone's table lands in the run's summary, its report in the run's
+artifact. A run takes hours, so a pull request has the pipeline's
 nf-tests instead (`pipeline.yml`).
 
 ## To come

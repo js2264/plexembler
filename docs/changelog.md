@@ -63,7 +63,8 @@ follow [semantic versioning](https://semver.org).
   them; errors the nanopore reads share, for the polishing to fix; RNA-seq at
   known levels; each gene characterized or not. `benchmarks/evaluate.py` checks
   milestones 1 to 5's "Done when" on a set's results, all of them on every set
-  for every release (`benchmarks.yml`; the hard set reported, not gating).
+  for every release (`benchmarks.yml`; the easy set gating, the others
+  reported).
   ([#8](https://github.com/js2264/plexembler/pull/8))
 - **The pool, split** (milestone 2): each pooled WGS and Hi-C library aligned
   to every species' contigs of its pool at once (bwa-mem2) and split between

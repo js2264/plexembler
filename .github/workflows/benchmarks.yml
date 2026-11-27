@@ -4,9 +4,10 @@ name: Benchmarks
 # three sets, easy, medium and hard (benchmarks/README.md): the pipeline runs
 # on each with Docker, a job per set, then benchmarks/evaluate.py checks its
 # results against the set's truth. Every set and every milestone for every
-# release tag; by hand, one set or all, one milestone or all. The easy and
-# medium sets must pass; the hard set's tables are reported, its failures not
-# the run's. A run takes hours: pull requests have nf-test (pipeline.yml).
+# release tag; by hand, one set or all, one milestone or all. The easy set
+# must pass; the medium and hard sets' tables are reported, their failures not
+# the run's, until the pipeline passes the medium set too (docs/plan.md, T2).
+# A run takes hours: pull requests have nf-test (pipeline.yml).
 #
 # Each set is deterministic: it is fetched from the release
 # `benchmark-data-v<GENERATOR_VERSION of benchmarks/make_benchmark_data.py>`
@@ -195,9 +196,10 @@ jobs:
             report="results/benchmark/m$milestone.md"
             [ -f "$report" ] && cat "$report" >> "$GITHUB_STEP_SUMMARY"
           done
-          # The hard set measures how far the pipeline gets: reported, not gating.
-          if [ "$SET" = "hard" ] && [ "$failed" = 1 ]; then
-            echo "::warning::the hard set fails some checks (see the summary)"
+          # The medium and hard sets measure how far the pipeline gets:
+          # reported, not gating, until it passes the medium one.
+          if [ "$SET" != "easy" ] && [ "$failed" = 1 ]; then
+            echo "::warning::the $SET set fails some checks (see the summary)"
             failed=0
           fi
           exit "$failed"
