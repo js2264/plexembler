@@ -1,11 +1,12 @@
 """A milestone's "Done when" (docs/plan.md), checked on the benchmark's results.
 
-Reads a run of the pipeline on the benchmark pool's small set (``-profile
-benchmark``) and the set's truth, runs the checks the milestone names, and
-writes ``<results>/benchmark/m<N>.md`` and ``m<N>.json``. It exits 1 when a
-check fails; a check with nothing to judge reads "not judged" and fails nothing.
+Reads a run of the pipeline on one of the benchmark pool's sets (``-profile
+benchmark_easy``, ``benchmark_medium`` or ``benchmark_hard``) and the set's
+truth, runs the checks the milestone names, and writes
+``<results>/benchmark/m<N>.md`` and ``m<N>.json``. It exits 1 when a check
+fails; a check with nothing to judge reads "not judged" and fails nothing.
 
-    python benchmarks/evaluate.py --results results --data benchmarks/data/small \\
+    python benchmarks/evaluate.py --results results --data benchmarks/data/medium \\
         --milestone 1 --busco-db busco_downloads
 
 Milestone 1, for each species: BUSCO's completeness of the kept contigs within
@@ -26,15 +27,18 @@ mismatches and indels, what the QV guards); and, with ``--hic-results`` (a run w
 Milestone 3, for each species: 90 % or more of its reference's chromosomes
 each 90 % in one of its genome's chromosomes, and as many end to end (both ends
 of the reference chromosome, within 2 kb, in that chromosome: their telomeres,
-since the references are complete); no misassembly over 10 kb against its
+since the references are complete); a tandem array the set planted (Ty1
+elements in tandem, Y' elements, the rDNA), which no read crosses, left out of
+both, an array at a chromosome's end moving that end inside it; no misassembly over 10 kb against its
 reference (QUAST); none of its scaffolds' joins flagged by ``plexembler
 junctions``; and, on its own Hi-C pairs, its chromosomes cut in two and laid
 back each join supported, a planted inversion and translocation flagged.
 
-Milestone 4, for each species: 90 % or more of its reference's nuclear genes
-found, a predicted CDS covering 80 % of the reference's at 95 % identity
-(minimap2: the genome's coordinates are not the reference's); BUSCO on its
-proteins within 2 points of BUSCO on its genome.
+Milestone 4, for each species: 90 % or more of its reference's characterized
+nuclear genes found (``truth/<species>.genes.tsv``; every gene in a set that
+does not class them), a predicted CDS covering 80 % of the reference's at 95 %
+identity (minimap2: the genome's coordinates are not the reference's); BUSCO on
+its proteins within 2 points of BUSCO on its genome.
 
 Milestone 5, for each species: Spearman's rho of 0.9 or more between its TPM
 and the true TPM (``truth/<species>.tpm.tsv``) in every RNA-seq library, on its
@@ -408,11 +412,30 @@ def merged(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
     return found
 
 
+def tandem_arrays(data: Path, species: str) -> dict[str, list[tuple[int, int]]]:
+    """The tandem arrays the set planted in a species' genome, by chromosome:
+    0-based, half-open."""
+    truth = json.loads((data / "truth.json").read_text())
+    arrays: dict[str, list[tuple[int, int]]] = {}
+    for repeat in truth["species"][species].get("repeats", []):
+        if repeat.get("tandem"):
+            arrays.setdefault(repeat["chromosome"], []).append(
+                (repeat["start"] - 1, repeat["end"])
+            )
+    return arrays
+
+
 def chromosome_cover(
-    minimap2: list[str], genome: Path, reference: Path, workdir: Path
+    minimap2: list[str],
+    genome: Path,
+    reference: Path,
+    workdir: Path,
+    arrays: dict[str, list[tuple[int, int]]] | None = None,
 ) -> dict[str, tuple[str, float, bool]]:
     """Each reference chromosome's best genome sequence: its name, the share of
-    the reference chromosome it covers, and whether it holds both its ends."""
+    the reference chromosome it covers, and whether it holds both its ends.
+    The ``arrays`` (0-based, half-open), which no read crosses, are left out of
+    the share; one within 2 kb of an end moves that end inside it."""
     paf = workdir / f"{genome.name}.vs_reference.paf"
     with paf.open("w") as sink:
         subprocess.run(
@@ -433,8 +456,23 @@ def chromosome_cover(
     best: dict[str, tuple[str, float, bool]] = {}
     for (target, query), intervals in covered.items():
         pieces = merged(intervals)
-        share = sum(end - start for start, end in pieces) / lengths[target]
-        ends = pieces[0][0] <= 2000 and pieces[-1][1] >= lengths[target] - 2000
+        holes = merged((arrays or {}).get(target, []))
+        length = lengths[target]
+        inside = sum(
+            max(0, min(end, hole_end) - max(start, hole_start))
+            for start, end in pieces
+            for hole_start, hole_end in holes
+        )
+        kept = length - sum(end - start for start, end in holes)
+        share = (sum(end - start for start, end in pieces) - inside) / kept
+        first, last = 0, length
+        for hole_start, hole_end in holes:
+            if hole_start <= first + 2000:
+                first = max(first, hole_end)
+        for hole_start, hole_end in reversed(holes):
+            if hole_end >= last - 2000:
+                last = min(last, hole_start)
+        ends = pieces[0][0] <= first + 2000 and pieces[-1][1] >= last - 2000
         if target not in best or share > best[target][1]:
             best[target] = (query, share, ends)
     return best
@@ -579,7 +617,7 @@ def milestone_3(
         cover = {
             target: found
             for target, found in chromosome_cover(
-                minimap2, genome, reference, workdir
+                minimap2, genome, reference, workdir, tandem_arrays(data, species)
             ).items()
             if not target.endswith("_chrM")
         }
@@ -730,6 +768,16 @@ def gene_pairs(matches: list[dict]) -> dict[str, str]:
     }
 
 
+def gene_classes(data: Path, species: str) -> dict[str, str]:
+    """Each reference gene's class (characterized or not), from the set's
+    truth; none in a set that does not class them."""
+    table = data / "truth" / f"{species}.genes.tsv"
+    if not table.exists():
+        return {}
+    with table.open(newline="") as handle:
+        return {r["gene"]: r["class"] for r in csv.DictReader(handle, delimiter="\t")}
+
+
 def reference_cds(data: Path, species: str) -> Path:
     return data / "references" / f"{species}.cds.fa"
 
@@ -745,7 +793,7 @@ def milestone_4(results: Path, data: Path, minimap2: list[str]) -> list[dict]:
     for row in species_rows(data):
         species = row["species"]
         reference = reference_cds(data, species)
-        n_reference = reference.read_text().count(">")
+        every = re.findall(r"^>(\S+)", reference.read_text(), re.MULTILINE)
         matches = cds_matches(
             minimap2, predicted_cds(results, species), reference, workdir
         )
@@ -754,13 +802,25 @@ def milestone_4(results: Path, data: Path, minimap2: list[str]) -> list[dict]:
             for m in matches
             if m["identity"] >= 0.95 and m["reference_cover"] >= 0.8
         }
+        classes = gene_classes(data, species)
+        counted = (
+            [g for g in every if classes.get(g) == "characterized"]
+            if classes
+            else every
+        )
+        hits = sum(g in found for g in counted)
+        which = "characterized reference genes" if classes else "reference genes"
         checks.append(
             {
                 "species": species,
-                "check": "90 % of its reference genes found (80 % of their CDS)",
-                "value": f"{len(found)} of {n_reference}"
-                f" ({100 * len(found) / n_reference:.1f} %)",
-                "passed": len(found) >= 0.9 * n_reference,
+                "check": f"90 % of its {which} found (80 % of their CDS)",
+                "value": f"{hits} of {len(counted)} ({100 * hits / len(counted):.1f} %)"
+                + (
+                    f"; all genes {sum(g in found for g in every)} of {len(every)}"
+                    if classes
+                    else ""
+                ),
+                "passed": hits >= 0.9 * len(counted),
             }
         )
         base = results / "species" / species
@@ -861,12 +921,22 @@ def milestone_5(results: Path, data: Path, minimap2: list[str]) -> list[dict]:
     return checks
 
 
-def write_report(checks: list[dict], results: Path, milestone: int) -> bool:
+def set_name(data: Path) -> str:
+    """The set's level (easy, medium, hard), from its truth; its folder's name
+    for a set without one."""
+    truth = json.loads((data / "truth.json").read_text())
+    return truth.get("level", {}).get("name", data.name)
+
+
+def write_report(
+    checks: list[dict], results: Path, milestone: int, name: str = ""
+) -> bool:
     out = results / "benchmark"
     out.mkdir(parents=True, exist_ok=True)
     (out / f"m{milestone}.json").write_text(json.dumps(checks, indent=2) + "\n")
+    on = f"the benchmark pool's {name} set" if name else "the benchmark pool"
     lines = [
-        f"# Milestone {milestone}, on the benchmark pool",
+        f"# Milestone {milestone}, on {on}",
         "",
         "| Species | Check | Value | Passed |",
         "|---|---|---|---|",
@@ -887,7 +957,7 @@ def main() -> int:
         "--results", type=Path, required=True, help="the pipeline's --outdir"
     )
     parser.add_argument(
-        "--data", type=Path, default=Path(__file__).parent / "data" / "small"
+        "--data", type=Path, default=Path(__file__).parent / "data" / "medium"
     )
     parser.add_argument("--milestone", type=int, choices=[1, 2, 3, 4, 5], default=1)
     parser.add_argument("--busco", default="busco", help="how to run BUSCO")
@@ -937,7 +1007,10 @@ def main() -> int:
         checks = milestone_5(
             arguments.results, arguments.data, shlex.split(arguments.minimap2)
         )
-    return 0 if write_report(checks, arguments.results, arguments.milestone) else 1
+    name = set_name(arguments.data)
+    return (
+        0 if write_report(checks, arguments.results, arguments.milestone, name) else 1
+    )
 
 
 if __name__ == "__main__":
