@@ -107,10 +107,14 @@ far the pipeline gets and decides nothing). Each milestone's checks are its
 "Done when":
 
 - milestone 1, the kept contigs: BUSCO against the reference's,
-  misassemblies; and the QV after polishing, against the reference (QUAST's
+  misassemblies (QUAST's, each between two pieces aligned over 10 kb: a
+  shorter piece, such as another chromosome's subtelomere at a contig's end,
+  is not one); and the QV after polishing, against the reference (QUAST's
   mismatches and indels);
 - milestone 2, the two splits (on the contigs, then on the screened contigs)
-  and their epsilon, the screened contigs and the polishing: its QV, and its
+  and their epsilon (the screened contigs' deciding; the first, which a
+  species' assembled bleed-through holds low, reported), the screened contigs
+  and the polishing: its QV, and its
   errors against the reference, QUAST's, and a polishing that fixes some kept;
   the same of the Hi-C reads' polishing, a pool's fallback without WGS
   (`--hic-results`: a second run, polished with the Hi-C reads, `--polish_reads
@@ -118,8 +122,8 @@ far the pipeline gets and decides nothing). Each milestone's checks are its
   (80 % the aim, deciding nothing);
 - milestone 3, each genome's chromosomes against the reference's (whole, end
   to end; the planted tandem arrays, which no read crosses, left out, an array
-  at a chromosome's end moving that end inside it), its misassemblies and its
-  flagged joins; and, on its own Hi-C pairs, its chromosomes cut in two and
+  at a chromosome's end moving that end inside it; an end missed is named),
+  its misassemblies (as milestone 1's) and its flagged joins; and, on its own Hi-C pairs, its chromosomes cut in two and
   laid back (each join supported), and planted misjoins, an inversion and a
   translocation (each flagged);
 - milestone 4, its characterized reference genes found among its predicted

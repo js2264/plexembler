@@ -122,15 +122,25 @@ def reference_busco(
     return float(found["complete"])
 
 
+#: The smallest misassembly the checks count: a misjoin of two pieces this long.
+MISASSEMBLY_SIZE = 10_000
+
+
 def quast_report(
-    quast: list[str], assembly: Path, reference: Path, out: Path
+    quast: list[str],
+    assembly: Path,
+    reference: Path,
+    out: Path,
+    min_alignment: int | None = None,
 ) -> dict[str, str]:
     """QUAST's report of an assembly against its reference, misassemblies
-    over 10 kb."""
+    over 10 kb; with ``min_alignment``, only its alignments that long."""
     command = [
         *quast, str(assembly), "-r", str(reference), "-o", str(out),
         "--extensive-mis-size", "10000", "--min-identity", "90", "-t", "4", "--fast",
     ]  # fmt: skip
+    if min_alignment is not None:
+        command += ["--min-alignment", str(min_alignment)]
     subprocess.run(
         command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
@@ -143,9 +153,16 @@ def quast_report(
 def quast_misassemblies(
     quast: list[str], assembly: Path, reference: Path, workdir: Path
 ) -> int:
-    """QUAST's misassemblies of an assembly against its reference, over 10 kb."""
+    """QUAST's misassemblies of an assembly against its reference, over 10 kb:
+    between two of its pieces each aligned over 10 kb. A piece shorter, such as
+    another chromosome's subtelomere at a contig's end, is not one (QUAST's
+    ``--extensive-mis-size`` sizes relocations alone, not translocations)."""
     report = quast_report(
-        quast, assembly, reference, workdir / f"quast_{reference.stem}"
+        quast,
+        assembly,
+        reference,
+        workdir / f"quast_{reference.stem}",
+        min_alignment=MISASSEMBLY_SIZE,
     )
     return int(report.get("# misassemblies", "0"))
 
@@ -330,6 +347,10 @@ def milestone_2(
                 "passed": bool(
                     found and expected and abs(found - expected) <= 0.1 * expected
                 ),
+                # Before the screen, a species' bleed-through assembled in
+                # another's contigs makes its pairs ambiguous, and epsilon low:
+                # the estimate is the screened contigs' (docs/plan.md, M2).
+                "reported": stage == "contigs",
             }
         )
     every = workdir / "references.fa"
@@ -461,11 +482,12 @@ def chromosome_cover(
     reference: Path,
     workdir: Path,
     arrays: dict[str, list[tuple[int, int]]] | None = None,
-) -> dict[str, tuple[str, float, bool]]:
+) -> dict[str, tuple[str, float, bool, str]]:
     """Each reference chromosome's best genome sequence: its name, the share of
-    the reference chromosome it covers, and whether it holds both its ends.
-    The ``arrays`` (0-based, half-open), which no read crosses, are left out of
-    the share; one within 2 kb of an end moves that end inside it."""
+    the reference chromosome it covers, and whether it holds both its ends (and
+    if not, where its sequence stops short of them). The ``arrays`` (0-based,
+    half-open), which no read crosses, are left out of the share; one within
+    2 kb of an end moves that end inside it."""
     paf = workdir / f"{genome.name}.vs_reference.paf"
     with paf.open("w") as sink:
         subprocess.run(
@@ -483,7 +505,7 @@ def chromosome_cover(
         covered.setdefault((target, fields[0]), []).append(
             (int(fields[7]), int(fields[8]))
         )
-    best: dict[str, tuple[str, float, bool]] = {}
+    best: dict[str, tuple[str, float, bool, str]] = {}
     for (target, query), intervals in covered.items():
         pieces = merged(intervals)
         holes = merged((arrays or {}).get(target, []))
@@ -502,9 +524,13 @@ def chromosome_cover(
         for hole_start, hole_end in reversed(holes):
             if hole_end >= last - 2000:
                 last = min(last, hole_start)
-        ends = pieces[0][0] <= first + 2000 and pieces[-1][1] >= last - 2000
+        missed = []
+        if pieces[0][0] > first + 2000:
+            missed.append(f"its left end from {pieces[0][0]:,}")
+        if pieces[-1][1] < last - 2000:
+            missed.append(f"its right end to {pieces[-1][1]:,} of {length:,}")
         if target not in best or share > best[target][1]:
-            best[target] = (query, share, ends)
+            best[target] = (query, share, not missed, ", ".join(missed))
     return best
 
 
@@ -664,6 +690,7 @@ def milestone_3(
             and roles.get(cover[t][0]) == "chromosome"
         ]
         end_to_end = [t for t in whole if cover[t][2]]
+        short = [f"{t} ({cover[t][3]})" for t in whole if not cover[t][2]]
         checks.append(
             {
                 "species": species,
@@ -676,7 +703,8 @@ def milestone_3(
             {
                 "species": species,
                 "check": "90 % of its chromosomes end to end",
-                "value": f"{len(end_to_end)} of {len(nuclear)}",
+                "value": f"{len(end_to_end)} of {len(nuclear)}"
+                + (f"; not {', '.join(short)}" if short else ""),
                 "passed": len(end_to_end) >= 0.9 * len(nuclear),
             }
         )

@@ -62,6 +62,7 @@ it applies.
 | Delivery | A pull request per milestone into `main`, squash-merged by the maintainer: each milestone on its own branch, its pull request stacked on the previous milestone's until that one is merged, then rebased onto `main` |
 | Benchmark | Public data of yeasts with T2T references, mixed in silico (T2) |
 | Benchmark sets | Three, from the easiest to the hardest (2026-11-27): each plants more of the repeats yeast genomes hold and gives worse long reads and Hi-C, R10 in all three. Milestone 4 counts the characterized genes, not the uncharacterized ORFs (T2) |
+| Benchmark checks | A misassembly is a misjoin between two pieces over 10 kb each, QUAST's translocations included (a subtelomere's copy at a contig's end is not one); epsilon is judged on the screened contigs, the first split's, before the screen, reported (2026-11-27) |
 | Hi-C polishing | The fallback of a pool without WGS, never a rival to WGS's (2026-11-27): a pool with WGS polishes with it. Milestone 2 asks that it never leave a genome with more errors and be kept when it fixes some; its gain against WGS's is reported, 80 % its aim |
 | Upstream | hicstuff, instaGRAAL, chromosomix and metacooler are attached: their changes are prepared there (T4, T7), and worked around here until they are released |
 | The package's container | An image on GHCR per release, `ghcr.io/js2264/plexembler:X.Y.Z`, built from the released wheel; PyPI later (T1) |
@@ -160,7 +161,8 @@ usable as a draft genome on its own.
 
 **Done when**, on the benchmark pool (T2): each species' BUSCO is within 1 point
 of its reference's; QV ≥ 40 after polishing; QUAST against the T2T references
-finds no misassembly over 10 kb in the kept candidate.
+finds no misassembly over 10 kb in the kept candidate (a misjoin between two
+pieces over 10 kb each: Decisions, "Benchmark checks").
 
 ## M2 · The pool, split · v0.2.0
 
@@ -284,7 +286,7 @@ screened.
 
 **Done when**, on the benchmark pool: ≥ 99.5 % of the assigned pairs go to their
 true species (the reads' names carry it) for pairs of species below 90 % ANI;
-ε within 10 % of the simulated rate; every planted bleed-through contig moved
+ε within 10 % of the simulated rate, on the screened contigs; every planted bleed-through contig moved
 or dropped; no species' QV lower after polishing; polishing with digested Hi-C
 alone, the fallback of a pool without WGS, never leaves a species with more
 errors, and is kept when it fixes some, species by species (its gain against
@@ -355,7 +357,8 @@ its Hi-C maps.
       `plexembler junctions` scores joins against).
 
 **Done when**, on the benchmark pool: ≥ 90 % of the reference chromosomes are
-T2T in the kept candidate; no misjoin against the T2T references; the
+T2T in the kept candidate; no misjoin against the T2T references (between two
+pieces over 10 kb each: Decisions, "Benchmark checks"); the
 benchmark's planted misjoins are flagged by `plexembler junctions`.
 
 ## M4 · Annotation · v0.4.0
