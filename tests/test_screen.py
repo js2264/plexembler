@@ -328,3 +328,57 @@ def test_a_duplicate_another_species_covers_deeper(pool, tmp_path: Path):
     )
     assert found["Scer_dup"].verdict == "drop"
     assert "Cgla's at 2.70" in found["Scer_dup"].reason
+
+
+def test_a_species_most_of_whose_contigs_are_another_species(tmp_path: Path):
+    """Bleed-through assembled whole, longer than the species' own contigs (the
+    benchmark's easy set: all of Cgla's genome among Spar's contigs). Their
+    depth is not Spar's: its own contig's is, which Spar's reads cover the most."""
+    lengths = {"Spar_c1": 2000, "Spar_cg1": 3000, "Spar_cg2": 3000}
+    lengths |= {"Cgla_c1": 3000, "Cgla_c2": 3000}
+    fasta = tmp_path / "pool.fa"
+    fasta.write_text(
+        "".join(
+            f">{n}\n{GC_RICH[:1000] * (n_bp // 1000)}\n" for n, n_bp in lengths.items()
+        ),
+        encoding="ascii",
+    )
+
+    def cover(contig: str, times: int, prefix: str) -> list[str]:
+        n = lengths[contig]
+        return [
+            paf_line(f"{prefix}{contig}{i}", n, 0, n, contig, n, 0, n)
+            for i in range(times)
+        ]
+
+    spar = tmp_path / "Spar.paf"
+    spar.write_text(
+        "\n".join(
+            cover("Spar_c1", 38, "s")
+            + cover("Spar_cg1", 3, "s")
+            + cover("Spar_cg2", 3, "s")
+        )
+        + "\n"
+    )
+    cgla = tmp_path / "Cgla.paf"
+    cgla.write_text(
+        "\n".join(
+            cover("Cgla_c1", 28, "c") + cover("Cgla_c2", 28, "c")
+            + cover("Spar_cg1", 18, "c") + cover("Spar_cg2", 18, "c")
+        ) + "\n"
+    )  # fmt: skip
+    identity = tmp_path / "self.paf"
+    identity.write_text(
+        "\n".join(
+            paf_line(q, 3000, 0, 3000, t, 3000, 0, 3000, matches=2997)
+            for q, t in (("Spar_cg1", "Cgla_c1"), ("Spar_cg2", "Cgla_c2"))
+        )
+        + "\n"
+    )
+    found = screen(
+        fasta, {"Spar": spar, "Cgla": cgla}, identity, [], tmp_path / "out", "poolA"
+    )
+    for copy in ("Spar_cg1", "Spar_cg2"):
+        assert found[copy].verdict == "drop"
+        assert "Spar's reads at 0.08 of their depth" in found[copy].reason
+    assert {found[c].verdict for c in ("Spar_c1", "Cgla_c1", "Cgla_c2")} == {"keep"}

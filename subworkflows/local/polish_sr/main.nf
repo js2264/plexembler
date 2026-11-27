@@ -3,9 +3,11 @@
 // its WGS pairs; or, in a pool without WGS (or with --polish_reads hic), its
 // Hi-C reads cut at their ligation junctions (plexembler digest), as single
 // reads. Polypolish on every alignment of each read (bwa mem -a), then pypolca.
-// The guard: Merqury's QV of the draft and of each polishing, against the
-// k-mers of the pairs plexembler split held out, which the polishing never saw;
-// a polishing is kept only if it raises the QV (plexembler select).
+// The guard: the pairs plexembler split held out, which the polishing never
+// saw. Where a polishing changed the draft, the draft's k-mers they lack that
+// it removed, and those it made that they lack (MERYL_CHANGES); the polishing
+// kept is the one that removed the most more than it made, if one did
+// (plexembler select). Merqury's QV of each, against the same pairs, reported.
 //
 
 include { PLEXEMBLER_DIGEST                        } from '../../../modules/local/plexembler/digest/main'
@@ -18,6 +20,7 @@ include { PYPOLCA                                  } from '../../../modules/loca
 include { MERYL_COUNT as MERYL_COUNT_HOLDOUT       } from '../../../modules/nf-core/meryl/count/main'
 include { MERYL_UNIONSUM as MERYL_UNIONSUM_HOLDOUT } from '../../../modules/nf-core/meryl/unionsum/main'
 include { MERQURY_MERQURY as MERQURY_POLISH        } from '../../../modules/nf-core/merqury/merqury/main'
+include { MERYL_CHANGES                            } from '../../../modules/local/meryl/changes/main'
 include { PLEXEMBLER_SELECT as SELECT_POLISH       } from '../../../modules/local/plexembler/select/main'
 
 workflow POLISH_SR {
@@ -140,21 +143,35 @@ workflow POLISH_SR {
     )
 
     //
-    // MODULE: the polishing kept, if one raised the QV
+    // MODULE: the k-mers each polishing changed, that the held-out pairs lack
+    //
+    MERYL_CHANGES(
+        ch_candidates
+            .filter { meta, _fasta -> meta.candidate != 'draft' }
+            .map { meta, fasta -> [meta.id, meta, fasta] }
+            .combine(CAT_DRAFT_PLAIN.out.file_out.map { meta, draft -> [meta.id, draft] }, by: 0)
+            .combine(MERYL_UNIONSUM_HOLDOUT.out.meryl_db.map { meta, db -> [meta.id, db] }, by: 0)
+            .map { _id, meta, fasta, draft, db -> [meta, draft, fasta, db] },
+        kmer_size,
+    )
+
+    //
+    // MODULE: the polishing kept, if the held-out pairs favour one
     //
     def no_file = file("${projectDir}/assets/NO_FILE", checkIfExists: true)
     def order = ['draft', 'polypolish', 'pypolca']
     def ch_selection = ch_candidates
         .map { meta, fasta -> [[meta.id, meta.candidate], meta, fasta] }
         .join(MERQURY_POLISH.out.assembly_qv.map { meta, qv -> [[meta.id, meta.candidate], qv] }, remainder: true)
-        .filter { _key, meta, _fasta, _qv -> meta != null }
-        .map { _key, meta, fasta, qv ->
+        .join(MERYL_CHANGES.out.kmers.map { meta, kmers -> [[meta.id, meta.candidate], kmers] }, remainder: true)
+        .filter { _key, meta, _fasta, _qv, _kmers -> meta != null }
+        .map { _key, meta, fasta, qv, kmers ->
             def species = meta.findAll { key, _value -> key != 'candidate' }
-            [groupKey(species, order.size()), meta.candidate, fasta, qv ?: no_file]
+            [groupKey(species, order.size()), meta.candidate, fasta, qv ?: no_file, kmers ?: no_file]
         }
         .groupTuple()
-        .map { species, names, fastas, qvs ->
-            def rows = [names, fastas, qvs].transpose().sort { row -> order.indexOf(row[0]) }
+        .map { species, names, fastas, qvs, kmers ->
+            def rows = [names, fastas, qvs, kmers].transpose().sort { row -> order.indexOf(row[0]) }
             [
                 species.getGroupTarget(),
                 rows.collect { row -> row[0] },
@@ -162,6 +179,7 @@ workflow POLISH_SR {
                 rows.collect { _row -> no_file },
                 rows.collect { row -> row[2] },
                 rows.collect { _row -> no_file },
+                rows.collect { row -> row[3] },
             ]
         }
     SELECT_POLISH(ch_selection, 'polish')

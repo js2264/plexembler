@@ -51,11 +51,22 @@ follow [semantic versioning](https://semver.org).
 - **`plexembler select`**, which keeps one candidate of a step by its checks
   and writes why; **`plexembler ani`**, the identity between the species of a
   pool (skani), with a warning above 95 %.
-- **The benchmark pool** (`-profile benchmark`): three yeasts, two of a genus,
-  their nanopore reads and their pool's WGS and Arima Hi-C simulated from their
-  references by `benchmarks/make_benchmark_data.py`, published as the release
-  `benchmark-data-v1`; `benchmarks/evaluate.py` checks a milestone's "Done
-  when" on its results.
+- **The benchmark pool** (`-profile benchmark_easy`, `benchmark_medium` or
+  `benchmark_hard`, `benchmark` the medium one; each task within 4 CPUs and
+  12 GB, GitHub's runner): three yeasts, two of a genus, their nanopore reads
+  and their pool's WGS, Arima Hi-C and RNA-seq simulated from their references
+  and annotations by `benchmarks/make_benchmark_data.py`, in three sets from
+  the easiest to the hardest, published as the release `benchmark-data-v4`
+  with each file's checksum: each plants more of the repeats yeast genomes
+  hold, S288C's own (Ty1 upstream of tRNA genes, Y' arrays inside the
+  telomeres, an rDNA array), and gives R10 reads and Hi-C less able to resolve
+  them (the easy set's reads without Badread's junk, random or chimeric
+  reads); errors the nanopore reads share, for the polishing to fix; RNA-seq at
+  known levels; each gene characterized or not. `benchmarks/evaluate.py` checks
+  milestones 1 to 5's "Done when" on a set's results, all of them on every set
+  for every release (`benchmarks.yml`; the easy set gating, the others
+  reported).
+  ([#8](https://github.com/js2264/plexembler/pull/8))
 - **The pool, split** (milestone 2): each pooled WGS and Hi-C library aligned
   to every species' contigs of its pool at once (bwa-mem2) and split between
   them by `plexembler split`: a pair to a species when both mates are unique
@@ -65,9 +76,20 @@ follow [semantic versioning](https://semver.org).
   `pools/<pool>/deconvolution/`.
 - **Short-read polishing**: each species with its WGS pairs, or, in a pool
   without WGS, its Hi-C reads cut at their ligation junctions (`plexembler
-  digest`); Polypolish then pypolca, kept only when the QV against pairs held
-  out of the polishing rises (`plexembler select --step polish`);
+  digest`); Polypolish (`--careful` on the Hi-C pieces: a single read from a
+  repeat aligns to every copy, and on the benchmark's easy set took Spar's
+  errors from 2.14 to 5.51 per 100 kb; 0.51 with it) then pypolca, judged by
+  pairs held out of the
+  polishing where it changed the draft: the draft's k-mers they lack that it
+  removed, against those it made that they lack (`MERYL_CHANGES`); the one
+  that removed the most more than it made is kept, if one did (`plexembler
+  select --step polish`, the selection table's `kmers_fixed` and
+  `kmers_introduced`). A QV on thin held-out pairs, Hi-C's above all, sits far
+  below the genome's and hid a polishing's gain: on the benchmark's medium
+  set, the Hi-C polishing that took Cgla's errors against its reference from
+  5.00 to 0.65 per 100 kb raised that QV by 0.01, and was not kept.
   `--polish_reads`, `--sr_polisher`, `--polish_holdout`.
+  ([#8](https://github.com/js2264/plexembler/pull/8))
 - **The contig screen**, `plexembler screen`: each contig kept, moved to
   another species of its pool, dropped, or named its species' mitochondrion
   (`<species>_chrM`), from each species' nanopore depth on it, its identity to
@@ -76,20 +98,26 @@ follow [semantic versioning](https://semver.org).
   goes when its own reads are thin on it or another species' twice as deep,
   `--depth-ratio`; an alignment between two contigs counts for both); a moved
   contig is named after the species it goes to, its name kept; each species'
-  contigs after it in `species/<species>/contigs/`.
+  contigs after it in `species/<species>/contigs/`. A species' depth is taken
+  on the contigs its own reads cover the most: on the benchmark's easy set,
+  bleed-through assembled into all of Cgla's genome, longer than Spar's own
+  contigs, set Spar's depth, and the screen kept it as Spar's.
+  ([#8](https://github.com/js2264/plexembler/pull/8))
 - **The test data**, version 2: 30× of nanopore reads per species and 10,000
   WGS pairs, so that the test profile assembles; its second species leaves its
   chemistry and genome size to the pipeline.
 - **Each species' genome** (milestone 3): the pool split again on the screened
   contigs; each species scaffolded with its own Hi-C pairs by YaHS, told its
-  library's restriction motifs; `plexembler finalize`, which names the
-  scaffolds, chromosomes first, longest first (`<species>_chr01`, …, the
-  samplesheet's `n_chromosomes` of them or every scaffold of
-  `--min_chromosome` bases or more), the mitochondrion (`<species>_chrM`) and
-  the unplaced, and writes the genome, its sizes, the table of names and the
-  AGP in the new names; the genome's gfastats, BUSCO and Merqury checks; all
-  in `species/<species>/genome/`. A species of a pool without Hi-C is finished
-  from its contigs.
+  library's restriction motifs, in two passes: from 1 kb up, then on its own
+  scaffolds from 5 kb up, which joins what the first left apart (YaHS's own
+  choice of resolutions joins nothing below a contig N50 of 100 kb);
+  `plexembler finalize`, which names the scaffolds, chromosomes first, longest
+  first (`<species>_chr01`, …, the samplesheet's `n_chromosomes` of them or
+  every scaffold of `--min_chromosome` bases or more), the mitochondrion
+  (`<species>_chrM`) and the unplaced, and writes the genome, its sizes, the
+  table of names and the AGP in the new names; the genome's gfastats, BUSCO and
+  Merqury checks; all in `species/<species>/genome/`. A species of a pool
+  without Hi-C is finished from its contigs.
 - **`plexembler junctions`**, which scores each join of a species' scaffolds
   by the Hi-C pairs across it against the species' contact decay, from the
   pairs within its contigs: `supported`, `unsupported` (a misjoin, likely) or
@@ -105,8 +133,9 @@ follow [semantic versioning](https://semver.org).
   ambiguous.
 - **Each species' annotation**: its repeats found de novo (RepeatModeler2) and
   masked soft (RepeatMasker, `--repeats`); its genes predicted by BRAKER3 with
-  its RNA-seq and `--orthodb_proteins`, or by AUGUSTUS ab initio
-  (`--augustus_species`) when it has neither (`--gene_predictor`); named,
+  AUGUSTUS's model of `--augustus_species`, its RNA-seq and `--orthodb_proteins`
+  as hints, without training (`--braker_train` to train on the species), or by
+  AUGUSTUS ab initio when it has neither (`--gene_predictor`); named,
   translated with its genetic code and written by `plexembler genes`; BUSCO on
   its proteins; its tRNAs (tRNAscan-SE) and rRNAs (barrnap); all in
   `species/<species>/annotation/`.
