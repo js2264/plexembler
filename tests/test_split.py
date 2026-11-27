@@ -223,7 +223,7 @@ def test_supplementary_records_are_skipped(tmp_path: Path):
     assert tally.kept == {"Scer": 1}
 
 
-def test_the_command(tmp_path: Path):
+def test_the_command(tmp_path: Path, plain):
     path = tmp_path / "wgs.sam"
     path.write_text(HEADER + "\n" + "\n".join(wgs_lines()) + "\n", encoding="utf-8")
     outdir = tmp_path / "out"
@@ -253,7 +253,7 @@ def test_the_command(tmp_path: Path):
     assert "Scer: 1 pairs (50.0 %)" in log.read_text()
     again = CliRunner().invoke(cli, arguments)
     assert again.exit_code == 1
-    assert "--force" in again.output
+    assert "--force" in plain(again.output)
     # From stdin, and gzipped.
     zipped = tmp_path / "wgs.sam.gz"
     zipped.write_bytes(gzip.compress(path.read_bytes()))
@@ -299,7 +299,7 @@ def test_the_command(tmp_path: Path):
         ],
     )
     assert failed.exit_code == 1
-    assert "without its mate" in failed.output
+    assert "without its mate" in plain(failed.output)
 
 
 def test_an_rnaseq_library(tmp_path: Path):
