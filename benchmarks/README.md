@@ -48,7 +48,8 @@ python benchmarks/evaluate.py --results results --milestone 1
 
 `evaluate.py` runs BUSCO on the references and QUAST against them (`--busco`,
 `--quast`: how to run them, on PATH by default) and writes
-`results/benchmark/m<N>.md`; it exits 1 when a check fails.
+`results/benchmark/m<N>.md`; it exits 1 when a check fails (a check with
+nothing to judge reads "not judged").
 
 ## To come
 
