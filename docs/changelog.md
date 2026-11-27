@@ -114,6 +114,21 @@ follow [semantic versioning](https://semver.org).
   genome's order (`<species>_000010`, …) and writes GFF3, GTF, the proteins,
   translated with the species' genetic code (tables 1, 3, 4, 11, 12 and 26),
   the CDS and a table of the genes.
+- **Each species' expression** (milestone 5): featureCounts on its pairs of
+  each pooled RNA-seq library (`--rnaseq_strandedness`); `plexembler
+  expression`, which writes its counts and TPM, genes by libraries, each
+  library named `<condition>_<replicate>`, in `species/<species>/expression/`.
+- **Each species' tracks**: each RNA-seq library's coverage on each strand, in
+  counts per million, and the nanopore reads' depth on its genome, as bigWig
+  (deepTools), in `species/<species>/tracks/`.
+- **Each species' report** (milestone 6), `plexembler report`, on chromokit's
+  report kit: its page, its numbers as text and its row of MultiQC's General
+  Statistics (its genome's length, chromosomes, BUSCO and QV, its genes, BUSCO
+  on its proteins), from the files the pipeline wrote for it and its pool.
+- **The results in chromosomix**: `plexembler browser` writes
+  `chromosomix.store.json` at their top, a card per species, its genome and
+  Hi-C map with its genes and tracks placed (`--browser_base`, where the
+  results will be served).
 - **The test data**, version 4: genes every 6 kb (open reading frames of
   yeast's codon usage, which AUGUSTUS's yeast model finds), the RNA-seq read
   from them; the second species of the CUG-Ser clade (table 12).

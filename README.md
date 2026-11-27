@@ -23,7 +23,8 @@ map, its expression table and its report.
 > plexembler is being built, milestone by milestone: today it makes each
 > species' contigs, splits the pooled libraries between the species, polishes
 > and screens the contigs, scaffolds them into chromosomes with Hi-C, annotates
-> their repeats and genes. Each milestone has steps still to come:
+> their repeats and genes, and writes their expression tables, tracks, reports
+> and a chromosomix store. Each milestone has steps still to come:
 > [the implementation plan](https://js2264.github.io/plexembler/plan/) says
 > which.
 

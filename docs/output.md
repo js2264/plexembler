@@ -7,7 +7,7 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 
 ```text
 <outdir>/
-├── chromosomix.store.json   every species' map, genome, tracks and workspace, for chromosomix
+├── chromosomix.store.json   (now) every species' map, genome and tracks, for chromosomix
 ├── species/<species>/
 │   ├── assembly/      (now) <species>.assembly.fa.gz: the kept contigs, polished;
 │   │                  the table of candidates
@@ -21,9 +21,10 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 │   │                  RNA-seq library, on its genome
 │   ├── hic/           (now) <species>.mcool, <species>.pairs.gz and their stats;
 │   │                  later <species>.hic, <species>.pretext, maps (PNG), contact decay
-│   ├── expression/    <species>.counts.tsv, <species>.tpm.tsv: genes × RNA-seq libraries
+│   ├── expression/    (now) <species>.counts.tsv, <species>.tpm.tsv: genes × RNA-seq libraries
 │   ├── variation/     heterozygous sites, ploidy and per-chromosome depth
-│   ├── tracks/        coverage of the RNA-seq, WGS and nanopore reads (bigWig)
+│   ├── tracks/        (now) coverage of the RNA-seq, by strand, and the nanopore reads'
+│   │                  depth (bigWig); later the WGS'
 │   ├── contigs/       (now) <species>.contigs.fa.gz: polished with its short reads,
 │   │                  screened, its organelle named <species>_chrM
 │   ├── polish/        (now) the short-read polishing's choice; the Hi-C reads' digestion
@@ -33,8 +34,8 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 │   │                  the k-mer spectrum's fit (GenomeScope2)
 │   ├── reads/         (now, with --save_ont_reads) the nanopore reads as assembled
 │   ├── qc/            nanoplot/ and filtlong/ (now), OMArk, contamination, …
-│   ├── <species>.chromosomix.json   the species' view: map, genome, genes, tracks
-│   └── <species>.report.html, .report.txt, .report_mqc.yaml
+│   ├── <species>.chromosomix.json   the species' view: map, genome, genes, tracks (to come)
+│   └── <species>.report.html, .report.txt, .report_mqc.yaml (now)
 ├── pools/<pool>/
 │   ├── qc/            fastqc/ (now): the pooled libraries
 │   ├── ani/           (now) the identity between the pool's species (skani)
@@ -243,6 +244,47 @@ with its RNA-seq alignments and `--orthodb_proteins`, or by
 - `species/<species>/candidates/genes/`: the predictor's own files
   (`braker3/braker.gtf`, `.aa`, `.codingseq`, `.log`; `augustus/<species>.augustus.gff3`).
 
+### Expression and tracks
+
+Each species' read pairs of each pooled RNA-seq library, counted on its genes
+by [featureCounts](https://subread.sourceforge.net) (exons, by gene,
+`--rnaseq_strandedness`), and its tables written by
+[`plexembler expression`](cli.md#expression).
+
+- `species/<species>/expression/<species>.counts.tsv`: the pairs, genes by
+  libraries, each library's column named `<condition>_<replicate>`, after each
+  gene's length.
+- `species/<species>/expression/<species>.tpm.tsv`: the TPM, within the
+  species, from the counts and the genes' lengths.
+- `species/<species>/expression/featurecounts/`: featureCounts' table and its
+  summary.
+- `species/<species>/tracks/`: [deepTools](https://deeptools.readthedocs.io)'
+  bigWigs: each library's coverage of the genes on each strand, in counts per
+  million (`<species>.<library>.forward.bigWig`, `.reverse.bigWig`), and the
+  nanopore reads' depth on the genome (`<species>.ont.bigWig`).
+
+### Reports
+
+[`plexembler report`](cli.md#report) gathers what the pipeline made of each
+species ([format](formats.md#the-report-of-a-species)).
+
+- `species/<species>/<species>.report.html`: its page: the assembly's
+  candidates and choice, the polishing, its share of each pooled library, the
+  screen, its chromosomes, BUSCO and QV, its joins, genes and expression.
+- `species/<species>/<species>.report.txt`: every number of it, for scripts.
+- `species/<species>/<species>.report_mqc.yaml`: its row of MultiQC's General
+  Statistics table.
+
+### The browser
+
+`chromosomix.store.json`, at the top of the results:
+[chromosomix](https://chromosomix.app)'s store
+([`plexembler browser`](cli.md#browser)), a card per species, its genome and
+Hi-C map each with its genes and tracks placed, every file named by its path in
+the results. Connect the results folder in chromosomix's app; or, once the
+results are on a bucket, open chromosomix.app with `?store=<its URL>`, the
+run's `--browser_base` its address.
+
 ### MultiQC
 
 `multiqc/multiqc_report.html`: the reads' QC, each candidate's BUSCO and
@@ -251,7 +293,9 @@ between the species of every pool, each library's split (the first, on the
 contigs), each species' polishing and its Hi-C reads' digestion, the contig
 screen, each genome's BUSCO and gfastats numbers and its joins' verdicts, each
 map's pairs, each RNA-seq library's split and STAR's report, each species'
-genes and BUSCO on its proteins, and the software versions, in one report,
+genes and BUSCO on its proteins, featureCounts' assignments and each
+library's pairs on genes, each species' row of the General Statistics (its
+report), and the software versions, in one report,
 with the methods' description and its references.
 
 ### Pipeline information

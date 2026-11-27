@@ -38,6 +38,11 @@ dependencies = [
     "click>=8.1",
     # 1.9: rich-click's command_panel, which groups the commands into panels.
     "rich-click>=1.9",
+    # 3.1: the report kit's pages (src/plexembler/_report), its ChoiceLoader
+    # and StrictUndefined.
+    "jinja2>=3.1",
+    # 6.0: the report kit's MultiQC file (report_mqc.yaml), yaml.safe_dump.
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]

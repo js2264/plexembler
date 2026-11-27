@@ -374,28 +374,37 @@ BUSCO's genome.
 **Goal:** each species' expression tables, counts and TPM, and its coverage
 tracks. Differential expression is out of scope (Decisions).
 
-- [ ] **Counts:** featureCounts on each RNA-seq library's per-species
-      alignments, its strandedness from Salmon's library type.
+- [x] **Counts:** featureCounts on each RNA-seq library's per-species
+      alignments, its strandedness `--rnaseq_strandedness` (from Salmon's
+      library type, to come).
 - [ ] **TPM:** Salmon on the pool's transcripts, every species with its genome
       as decoy, so that a read of a gene shared by two species is shared by
       Salmon's EM; TPM within each species, from that species' reads alone.
       `plexembler expression` writes `<species>.counts.tsv` and
       `<species>.tpm.tsv`: genes × libraries (`<condition>_<replicate>`), and each
-      gene's ambiguous fraction.
+      gene's ambiguous fraction. Done: `plexembler expression`'s counts and
+      TPM, from featureCounts' counts and the genes' lengths, the split's
+      pairs alone; to come: Salmon's EM for the shared reads, and each gene's
+      ambiguous fraction.
 - [ ] **Tracks:** bigWig of the RNA-seq (by strand), the WGS and the nanopore
-      reads (`deeptools bamCoverage`, `mosdepth`).
+      reads (`deeptools bamCoverage`, `mosdepth`). The RNA-seq's and the
+      nanopore reads' done; the WGS', to come.
 
 **Done when**, on the benchmark pool's simulated RNA-seq (known TPMs):
 Spearman's ρ ≥ 0.9 for every species.
 
 ## M6 · Reports and extras · v0.6.0
 
-- [ ] **`plexembler report`**, on chromokit's report kit (CONVENTIONS.md § 12):
+- [x] **`plexembler report`**, on chromokit's report kit (CONVENTIONS.md § 12):
       per species, `report.txt`, its MultiQC row and its page: the summary;
       its share of the pool; the candidates and the choice; contamination; a
       karyotype (chromosomes, telomeres, centromeres, rDNA, chrM); BUSCO, QV,
       OMArk; the annotation; the expression; versions and methods. A pool's
-      report beside it (`pools/<pool>/`).
+      report beside it (`pools/<pool>/`). Done on the kit's own page: the
+      assembly and polishing, the share of each library, the screen, the
+      chromosomes, BUSCO and QV, the joins, the genes and BUSCO on the
+      proteins, the expression. To come: its own template and plots, the
+      telomeres, centromeres and rDNA in the karyotype, the pool's report.
 - [ ] **Contamination, further:** EukCC; a GC × depth plot of the contigs,
       labelled by Tiara, FCS-GX and the screen.
 - [ ] **Ploidy, heterozygosity, aneuploidy:** Clair3 (nanopore) and bcftools (WGS)
@@ -408,7 +417,10 @@ Spearman's ρ ≥ 0.9 for every species.
       28S rRNA, against a local UNITE or NCBI set (BLAST): sample swaps show.
 - [ ] **Comparative**, per pool (`--comparative`): OrthoFinder (orthogroups,
       species tree), synteny (GENESPACE, local), the ANI matrix of M1.
-- [ ] **A browser for the delivery: chromosomix.** `plexembler browser` writes,
+- [x] **A browser for the delivery: chromosomix.** Done: the store, checked
+      by chromosomix's own `check_store` in the package's tests; the
+      species' workspaces, which name absolute URLs only, wait for
+      `--browser_base`. `plexembler browser` writes,
       for each species, a workspace (`<species>.chromosomix.json`: its map with
       its genome, genes, repeats, telomeres, centromeres and coverage tracks
       placed, a colour scale, a first window), and, at the top of the results, a
