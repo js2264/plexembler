@@ -36,6 +36,27 @@ nextflow_pipeline {
                 { assert path("$outputDir/species/sp1/candidates/assembly/flye/qc/gfastats/sp1.flye.assembly_summary").exists() },
                 // The pool's two species, and their identity.
                 { assert path("$outputDir/pools/pool/ani/pool.ani.tsv").readLines()[0] == 'species\tsp1\tsp2' },
+                // The pool, split; each species polished and screened (M2).
+                { assert path("$outputDir/pools/pool/deconvolution/contigs/pool.wgs.split.tsv").exists() },
+                { assert path("$outputDir/pools/pool/deconvolution/contigs/pool.hic.contacts.tsv").exists() },
+                { assert path("$outputDir/pools/pool/screen/pool.screen.tsv").exists() },
+                { assert path("$outputDir/species/sp1/contigs/sp1.contigs.fa.gz").exists() },
+                // Each species' genome, its joins and its map (M3): sp1's two chromosomes.
+                { assert path("$outputDir/species/sp1/genome/sp1.names.tsv").readLines().count { it.endsWith('\tchromosome') } == 2 },
+                { assert path("$outputDir/species/sp1/genome/sp1.fa.gz.fai").exists() },
+                { assert path("$outputDir/species/sp1/genome/qc/junctions/sp1.junctions.tsv").exists() },
+                { assert path("$outputDir/species/sp1/hic/sp1.mcool").exists() },
+                // Its RNA-seq, split, and its genes: the test data plants six in each (M4).
+                { assert path("$outputDir/species/sp1/rnaseq/sp1.rna-ypd-1.bam").exists() },
+                { assert path("$outputDir/species/sp1/annotation/sp1.genes.tsv").readLines().size() > 5 },
+                { assert path("$outputDir/species/sp2/annotation/sp2.proteins.faa.gz").exists() },
+                // Its expression and tracks (M5).
+                { assert path("$outputDir/species/sp1/expression/sp1.counts.tsv").readLines()[0] == 'gene\tlength_bp\tYPD_1' },
+                { assert path("$outputDir/species/sp1/tracks/sp1.ont.bigWig").exists() },
+                { assert path("$outputDir/species/sp1/tracks/sp1.rna-ypd-1.forward.bigWig").exists() },
+                // Its report, and the store of the results (M6).
+                { assert path("$outputDir/species/sp1/sp1.report.txt").text.contains('[genome]') },
+                { assert path("$outputDir/chromosomix.store.json").json.entries.size() == 4 },
                 { assert path("$outputDir/multiqc/multiqc_report.html").exists() },
                 { assert path("$outputDir/pipeline_info/plexembler_software_mqc_versions.yml").text.contains('flye') },
             )
@@ -57,6 +78,11 @@ nextflow_pipeline {
                 { assert workflow.success },
                 { assert path("$outputDir/species/sp1/assembly/sp1.assembly.fa.gz").exists() },
                 { assert path("$outputDir/pools/pool/ani/pool.ani.tsv").exists() },
+                { assert path("$outputDir/species/sp1/genome/sp1.fa.gz").exists() },
+                { assert path("$outputDir/species/sp1/annotation/sp1.gff3.gz").exists() },
+                { assert path("$outputDir/species/sp1/expression/sp1.tpm.tsv").exists() },
+                { assert path("$outputDir/species/sp1/sp1.report.html").exists() },
+                { assert path("$outputDir/chromosomix.store.json").exists() },
                 { assert path("$outputDir/multiqc/multiqc_report.html").exists() },
             )
         }

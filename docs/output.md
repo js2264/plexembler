@@ -7,7 +7,7 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 
 ```text
 <outdir>/
-├── chromosomix.store.json   every species' map, genome, tracks and workspace, for chromosomix
+├── chromosomix.store.json   (now) every species' map, genome and tracks, for chromosomix
 ├── species/<species>/
 │   ├── assembly/      (now) <species>.assembly.fa.gz: the kept contigs, polished;
 │   │                  the table of candidates
@@ -25,8 +25,8 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 │   ├── variation/     heterozygous sites, ploidy and per-chromosome depth
 │   ├── tracks/        (now) coverage of the RNA-seq, by strand, and the nanopore reads'
 │   │                  depth (bigWig); later the WGS'
-│   ├── contigs/       (now) <species>.contigs.fa.gz: polished with its short reads,
-│   │                  screened, its organelle named <species>_chrM
+│   ├── contigs/       (now) <species>.contigs.fa.gz: screened, its organelle named
+│   │                  <species>_chrM; then polished with its short reads (polish/)
 │   ├── polish/        (now) the short-read polishing's choice; the Hi-C reads' digestion
 │   ├── candidates/    assembly/<assembler>/, polish/, scaffold/yahs/ and genes/ (now):
 │   │                  every candidate, its checks; later every scaffolder's, with its map
@@ -34,8 +34,8 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 │   │                  the k-mer spectrum's fit (GenomeScope2)
 │   ├── reads/         (now, with --save_ont_reads) the nanopore reads as assembled
 │   ├── qc/            nanoplot/ and filtlong/ (now), OMArk, contamination, …
-│   ├── <species>.chromosomix.json   the species' view: map, genome, genes, tracks
-│   └── <species>.report.html, .report.txt, .report_mqc.yaml
+│   ├── <species>.chromosomix.json   the species' view: map, genome, genes, tracks (to come)
+│   └── <species>.report.html, .report.txt, .report_mqc.yaml (now)
 ├── pools/<pool>/
 │   ├── qc/            fastqc/ (now): the pooled libraries
 │   ├── ani/           (now) the identity between the pool's species (skani)
@@ -137,8 +137,9 @@ needs them makes them again from the alignments.
 
 ### Short-read polishing
 
-Each species' contigs, polished with its own short reads: its WGS pairs, or,
-when its pool has no WGS library, its Hi-C reads cut at their junctions
+Each species' screened contigs (below), polished with its own short reads, of
+the pool's second split, on the screened contigs: its WGS pairs, or, when its
+pool has no WGS library, its Hi-C reads cut at their junctions
 ([`plexembler digest`](cli.md#digest)). Polypolish, then pypolca; each kept only
 if its QV, against the k-mers of the pairs held out of the polishing, beats the
 draft's.
@@ -160,7 +161,8 @@ species, its identity to the other species' contigs and its Hi-C contacts.
   (`keep`, `move`, `drop`, `organelle`), new name and reason.
 - `species/<species>/contigs/<species>.contigs.fa.gz`: the species' contigs
   after the screen, those moved in from another species included, its
-  mitochondrion named `<species>_chrM`: what is scaffolded.
+  mitochondrion named `<species>_chrM`: what is polished with its short reads
+  (`species/<species>/polish/<species>.polish.fa.gz`), then scaffolded.
 
 ### The genome
 
@@ -263,6 +265,28 @@ by [featureCounts](https://subread.sourceforge.net) (exons, by gene,
   million (`<species>.<library>.forward.bigWig`, `.reverse.bigWig`), and the
   nanopore reads' depth on the genome (`<species>.ont.bigWig`).
 
+### Reports
+
+[`plexembler report`](cli.md#report) gathers what the pipeline made of each
+species ([format](formats.md#the-report-of-a-species)).
+
+- `species/<species>/<species>.report.html`: its page: the assembly's
+  candidates and choice, the polishing, its share of each pooled library, the
+  screen, its chromosomes, BUSCO and QV, its joins, genes and expression.
+- `species/<species>/<species>.report.txt`: every number of it, for scripts.
+- `species/<species>/<species>.report_mqc.yaml`: its row of MultiQC's General
+  Statistics table.
+
+### The browser
+
+`chromosomix.store.json`, at the top of the results:
+[chromosomix](https://chromosomix.app)'s store
+([`plexembler browser`](cli.md#browser)), a card per species, its genome and
+Hi-C map each with its genes and tracks placed, every file named by its path in
+the results. Connect the results folder in chromosomix's app; or, once the
+results are on a bucket, open chromosomix.app with `?store=<its URL>`, the
+run's `--browser_base` its address.
+
 ### MultiQC
 
 `multiqc/multiqc_report.html`: the reads' QC, each candidate's BUSCO and
@@ -272,7 +296,8 @@ contigs), each species' polishing and its Hi-C reads' digestion, the contig
 screen, each genome's BUSCO and gfastats numbers and its joins' verdicts, each
 map's pairs, each RNA-seq library's split and STAR's report, each species'
 genes and BUSCO on its proteins, featureCounts' assignments and each
-library's pairs on genes, and the software versions, in one report,
+library's pairs on genes, each species' row of the General Statistics (its
+report), and the software versions, in one report,
 with the methods' description and its references.
 
 ### Pipeline information

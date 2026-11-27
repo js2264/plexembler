@@ -51,9 +51,10 @@ python benchmarks/evaluate.py --results results --milestone 1
 writes `results/benchmark/m<N>.md`; it exits 1 when a check fails (a check with
 nothing to judge reads "not judged"). Each milestone's checks are its "Done
 when": milestone 1, the kept contigs (BUSCO against the reference's, QV,
-misassemblies); milestone 2, the split, epsilon, the screened contigs and the
-polishing (`--hic-results`: a second run, polished with the Hi-C reads,
-`--polish_reads hic`); milestone 3, each genome's chromosomes against the
+misassemblies); milestone 2, the two splits (on the contigs, then on the
+screened contigs) and their epsilon, the screened contigs and the polishing
+(its QV, and its errors against the reference, QUAST's; `--hic-results`: a
+second run, polished with the Hi-C reads, `--polish_reads hic`); milestone 3, each genome's chromosomes against the
 reference's (whole, end to end), its misassemblies and its flagged joins.
 
 ## To come

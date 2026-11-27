@@ -10,6 +10,7 @@ components:
   - cat/fastq
   - bwa/index
   - bwa/mem
+  - find/concatenate
   - polypolish/polish
   - pypolca
   - meryl/count

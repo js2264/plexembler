@@ -14,10 +14,12 @@ over 10 kb against its reference (QUAST). And the pool: the pair of the genus
 found as one (85 to 95 %), the distant species below.
 
 Milestone 2: 99.5 % or more of each species' split WGS pairs its own (InSilicoSeq
-names each read after its sequence: ``--save_split_reads``); epsilon within 10 %
-of the simulated rate; each species' screened contigs its own (minimap2 against
+names each read after its sequence: ``--save_split_reads``) and epsilon within
+10 % of the simulated rate, in both splits of the pool (on the contigs, then on
+the screened contigs); each species' screened contigs its own (minimap2 against
 the references: the planted bleed-through moved or dropped); no QV lower after
-the short-read polishing; and, with ``--hic-results`` (a run with
+the short-read polishing, nor more errors against the reference (QUAST's
+mismatches and indels, what the QV guards); and, with ``--hic-results`` (a run with
 ``--polish_reads hic``), the Hi-C reads' polishing gain 80 % of the WGS pairs'
 (not judged when the WGS pairs' polishing was not kept: no gain to compare).
 
@@ -102,11 +104,11 @@ def reference_busco(
     return float(found["complete"])
 
 
-def quast_misassemblies(
-    quast: list[str], assembly: Path, reference: Path, workdir: Path
-) -> int:
-    """QUAST's misassemblies of an assembly against its reference, over 10 kb."""
-    out = workdir / f"quast_{reference.stem}"
+def quast_report(
+    quast: list[str], assembly: Path, reference: Path, out: Path
+) -> dict[str, str]:
+    """QUAST's report of an assembly against its reference, misassemblies
+    over 10 kb."""
     command = [
         *quast, str(assembly), "-r", str(reference), "-o", str(out),
         "--extensive-mis-size", "10000", "--min-identity", "90", "-t", "4", "--fast",
@@ -115,10 +117,27 @@ def quast_misassemblies(
         command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
     with (out / "report.tsv").open(newline="") as handle:
-        report = {
+        return {
             row[0]: row[1] for row in csv.reader(handle, delimiter="\t") if len(row) > 1
         }
+
+
+def quast_misassemblies(
+    quast: list[str], assembly: Path, reference: Path, workdir: Path
+) -> int:
+    """QUAST's misassemblies of an assembly against its reference, over 10 kb."""
+    report = quast_report(
+        quast, assembly, reference, workdir / f"quast_{reference.stem}"
+    )
     return int(report.get("# misassemblies", "0"))
+
+
+def quast_errors(quast: list[str], assembly: Path, reference: Path, out: Path) -> float:
+    """An assembly's mismatches and indels per 100 kb of its reference."""
+    report = quast_report(quast, assembly, reference, out)
+    return float(report.get("# mismatches per 100 kbp", "0")) + float(
+        report.get("# indels per 100 kbp", "0")
+    )
 
 
 def milestone_1(
@@ -220,7 +239,11 @@ def contig_species(
 
 
 def milestone_2(
-    results: Path, data: Path, minimap2: list[str], hic_results: Path | None
+    results: Path,
+    data: Path,
+    minimap2: list[str],
+    quast: list[str],
+    hic_results: Path | None,
 ) -> list[dict]:
     truth = json.loads((data / "truth.json").read_text())
     rows = species_rows(data)
@@ -228,40 +251,45 @@ def milestone_2(
     workdir = results / "benchmark"
     workdir.mkdir(parents=True, exist_ok=True)
     checks = []
-    deconvolution = results / "pools" / pool / "deconvolution" / "contigs"
-    for row in rows:
-        species = row["species"]
-        reads = deconvolution / "reads" / f"{species}.{pool}-wgs_R1.fastq.gz"
-        own = total = 0
-        with gzip.open(reads, "rt") as handle:
-            for index, line in enumerate(handle):
-                if index % 4 == 0:
-                    total += 1
-                    own += line[1:].startswith(f"{species}_")
-        share = own / total if total else 0.0
+    # The pool is split twice: on the contigs, for the screen, then on the
+    # screened contigs, for the polishing and the scaffolds.
+    for stage, on in (("contigs", "contigs"), ("screened", "screened contigs")):
+        deconvolution = results / "pools" / pool / "deconvolution" / stage
+        for row in rows:
+            species = row["species"]
+            reads = deconvolution / "reads" / f"{species}.{pool}-wgs_R1.fastq.gz"
+            own = total = 0
+            with gzip.open(reads, "rt") as handle:
+                for index, line in enumerate(handle):
+                    if index % 4 == 0:
+                        total += 1
+                        own += line[1:].startswith(f"{species}_")
+            share = own / total if total else 0.0
+            checks.append(
+                {
+                    "species": species,
+                    "check": f"99.5 % of its split WGS pairs its own (on the {on})",
+                    "value": f"{100 * share:.2f} % of {total}",
+                    "passed": share >= 0.995,
+                }
+            )
+        numbers = json.loads(
+            (deconvolution / f"{pool}.{pool}-hic.split.json").read_text()
+        )
+        expected = truth["hic"].get("random_ligation")
+        found = numbers.get("epsilon")
         checks.append(
             {
-                "species": species,
-                "check": "99.5 % of its split WGS pairs its own",
-                "value": f"{100 * share:.2f} % of {total}",
-                "passed": share >= 0.995,
+                "species": pool,
+                "check": f"epsilon within 10 % of the simulated rate (on the {on})",
+                "value": f"{found:.4f} (simulated {expected})"
+                if found is not None and expected
+                else str(found),
+                "passed": bool(
+                    found and expected and abs(found - expected) <= 0.1 * expected
+                ),
             }
         )
-    numbers = json.loads((deconvolution / f"{pool}.{pool}-hic.split.json").read_text())
-    expected = truth["hic"].get("random_ligation")
-    found = numbers.get("epsilon")
-    checks.append(
-        {
-            "species": pool,
-            "check": "epsilon within 10 % of the simulated rate",
-            "value": f"{found:.4f} (simulated {expected})"
-            if found is not None and expected
-            else str(found),
-            "passed": bool(
-                found and expected and abs(found - expected) <= 0.1 * expected
-            ),
-        }
-    )
     every = workdir / "references.fa"
     every.write_text(
         "".join((data / "references" / f"{r['species']}.fa").read_text() for r in rows)
@@ -305,6 +333,31 @@ def milestone_2(
                     "check": "Hi-C's polishing gain 80 % of WGS's",
                     "value": f"{hic_gain:.1f} vs {wgs_gain:.1f}",
                     "passed": passed,
+                }
+            )
+        # What the QV guards, against the truth: the polished genome's errors
+        # against its reference, the draft's (its screened contigs) before.
+        reference = data / "references" / f"{species}.fa"
+        runs = [("", results)] + ([(" with Hi-C", hic_results)] if hic_results else [])
+        draft = None
+        for how, run in runs:
+            kept = run / "species" / species / "polish" / f"{species}.polish.fa.gz"
+            if not kept.exists():
+                continue
+            if draft is None:
+                draft = quast_errors(
+                    quast, contigs, reference, workdir / f"quast_draft_{species}"
+                )
+            name = "hic" if how else "wgs"
+            after = quast_errors(
+                quast, kept, reference, workdir / f"quast_{name}_{species}"
+            )
+            checks.append(
+                {
+                    "species": species,
+                    "check": f"no more errors against its reference after polishing{how}",
+                    "value": f"{draft:.2f} -> {after:.2f} per 100 kb (QUAST)",
+                    "passed": after <= draft,
                 }
             )
     return checks
@@ -487,6 +540,7 @@ def main() -> int:
             arguments.results,
             arguments.data,
             shlex.split(arguments.minimap2),
+            shlex.split(arguments.quast),
             arguments.hic_results,
         )
     else:

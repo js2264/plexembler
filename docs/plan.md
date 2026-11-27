@@ -215,6 +215,17 @@ screened.
       coverage makes a QV from its k-mers pessimistic); the polished version is
       kept only if it is better (`plexembler select --step polish`: the draft,
       Polypolish's and pypolca's QVs). pypolca runs `--careful`.
+- [ ] **A polishing guard that sees past the held-out pairs' sampling.** On the
+      benchmark pool the held-out pairs are 3 to 4× of each genome, at which 3
+      to 7 % of a genome's 21-mers are missing from them by chance: the QV reads
+      about 24 to 27 whatever the genome's true quality, and a polishing's gain or
+      harm moves it by hundredths. There, measured against the references, the
+      WGS pairs' polishing fixed 2 of Scer's 3 indels and 2 of Spar's 9 errors,
+      and the Hi-C reads' added errors (Spar: 36 mismatches and 10 indels;
+      Scer: 20 mismatches and 2 indels); the QV saw neither, and the guard's
+      tolerance (1 QV) kept every draft: the small gains lost, the harm
+      avoided. To try: the assembly-only k-mers the candidates differ in,
+      rather than their QVs; a larger hold-out when the coverage allows it.
 - [ ] **Micro-C** (`enzymes` is `none`) has no junction sequence to cut at:
       such a pool's species stay polished with nanopore reads alone, by default.
       Polishing with the clipped local alignments of its reads (primary and
@@ -395,12 +406,16 @@ Spearman's ρ ≥ 0.9 for every species.
 
 ## M6 · Reports and extras · v0.6.0
 
-- [ ] **`plexembler report`**, on chromokit's report kit (CONVENTIONS.md § 12):
+- [x] **`plexembler report`**, on chromokit's report kit (CONVENTIONS.md § 12):
       per species, `report.txt`, its MultiQC row and its page: the summary;
       its share of the pool; the candidates and the choice; contamination; a
       karyotype (chromosomes, telomeres, centromeres, rDNA, chrM); BUSCO, QV,
       OMArk; the annotation; the expression; versions and methods. A pool's
-      report beside it (`pools/<pool>/`).
+      report beside it (`pools/<pool>/`). Done on the kit's own page: the
+      assembly and polishing, the share of each library, the screen, the
+      chromosomes, BUSCO and QV, the joins, the genes and BUSCO on the
+      proteins, the expression. To come: its own template and plots, the
+      telomeres, centromeres and rDNA in the karyotype, the pool's report.
 - [ ] **Contamination, further:** EukCC; a GC × depth plot of the contigs,
       labelled by Tiara, FCS-GX and the screen.
 - [ ] **Ploidy, heterozygosity, aneuploidy:** Clair3 (nanopore) and bcftools (WGS)
@@ -413,7 +428,10 @@ Spearman's ρ ≥ 0.9 for every species.
       28S rRNA, against a local UNITE or NCBI set (BLAST): sample swaps show.
 - [ ] **Comparative**, per pool (`--comparative`): OrthoFinder (orthogroups,
       species tree), synteny (GENESPACE, local), the ANI matrix of M1.
-- [ ] **A browser for the delivery: chromosomix.** `plexembler browser` writes,
+- [x] **A browser for the delivery: chromosomix.** Done: the store, checked
+      by chromosomix's own `check_store` in the package's tests; the
+      species' workspaces, which name absolute URLs only, wait for
+      `--browser_base`. `plexembler browser` writes,
       for each species, a workspace (`<species>.chromosomix.json`: its map with
       its genome, genes, repeats, telomeres, centromeres and coverage tracks
       placed, a colour scale, a first window), and, at the top of the results, a
@@ -467,7 +485,16 @@ pipeline's own steps need a container before the package is anywhere else.
       when"; `.github/workflows/benchmarks.yml` fetches the release, or makes
       and publishes it, and runs both.
 - [ ] **`benchmark-data-v2`**: RNA-seq of each species' genes (polyester), and
-      misjoins planted in a draft, for M3 to M5.
+      misjoins planted in a draft, for M3 to M5. What v1 showed (the M1 to M3
+      PRs hold the numbers): Flye assembles each of its small chromosomes in
+      one contig, so YaHS joins nothing and `plexembler junctions` scores
+      nothing. v2 needs drafts broken where the scaffolds must join them
+      (shorter reads, or contigs cut before scaffolding), the references'
+      annotations for M4 (gffcompare), and RNA-seq with known levels for M5.
+      And drafts with errors for the short-read polishing to fix: v1's (Badread
+      at 98 %, Flye, Medaka) have under one mismatch or indel per 100 kb outside
+      a misjoined subtelomere, so no polishing is kept and M2's Hi-C check, a
+      gain against WGS's, is not judged.
 - [ ] **`test_full`**: an in-silico pool of public data (nanopore, Hi-C, Illumina,
       RNA-seq) of five to ten yeasts with T2T references, subsampled and mixed,
       on Zenodo; run by hand on a cluster before each release, its numbers on

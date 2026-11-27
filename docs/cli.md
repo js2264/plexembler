@@ -373,3 +373,62 @@ library's pairs on genes and genes detected) and its log.
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
 
+### `report` { #report }
+
+Writes a species' report from the files the pipeline wrote for it, each known
+by its name: its assembly's candidates and choice
+(`<species>.assembly.selection.tsv`), its polishing's
+(`<species>.polish.selection.tsv`), its share of each pooled library
+(`<pool>.<library>.split.tsv`), the screen's verdicts on its contigs
+(`<pool>.screen.tsv`), its chromosomes (`<species>.names.tsv`), BUSCO and
+Merqury on its genome (`short_summary.*.<species>.fa.txt`,
+`<species>.genome.<k-mers>.qv`), its joins (`<species>.junctions.tsv`), its
+genes (`<species>.genes.tsv`), BUSCO on its proteins
+(`short_summary.*.<species>.proteins.faa.txt`) and its pairs on genes
+(`<species>.counts.tsv`). A file it is not given leaves its numbers `NA`.
+
+```bash
+plexembler report Scer.* poolA.* short_summary.* -p Scer --pool poolA -o Scer/
+```
+
+It writes chromokit's three files ([format](formats.md#the-report-of-a-species)):
+`Scer.report.txt`, every number; `Scer.report_mqc.yaml`, the species' row of
+MultiQC's General Statistics table (its genome's length, chromosomes, BUSCO
+and QV, its genes, BUSCO on its proteins); `Scer.report.html`, its page; and
+its log.
+
+| Option | Default | Description |
+|---|---|---|
+| `FILES` | (required) | The species' files, and its pool's. |
+| `-p, --prefix` | (required) | The species' ID, which its files' names start with and which names the report. |
+| `--pool` | | The species' pool, which starts its pool's files' names. |
+| `-o, --outdir` | (required) | The folder of the report and the log. |
+| `--force` | off | Overwrite outputs that exist already. |
+| `-v, --verbose` | off | Debug messages, in the log and on stderr. |
+| `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
+
+### `browser` { #browser }
+
+Writes `chromosomix.store.json`, [chromosomix](https://chromosomix.app)'s
+store of the results: a row per species' genome and Hi-C map, each with its
+tracks (genes, RNA-seq coverage, nanopore depth) placed, laid out as cards,
+one per species, every file named by its path in the results. They then open
+in chromosomix as they are: its app with the results folder connected, or
+chromosomix.app with `?store=<url>` once they are on a bucket (`--base`).
+Each file is known by its name: a `.mcool` is the species' map, a FASTA its
+genome, a GFF3, GTF or bigWig one of its tracks.
+
+```bash
+plexembler browser -s Scer=poolA -f Scer=species/Scer/hic/Scer.mcool -f Scer=species/Scer/genome/Scer.fa.gz -o results/
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `-s, --species` | (required) | A species and its pool, SPECIES=POOL; once per species. |
+| `-f, --file` | | A species' map, genome or track, by its path in the results; once per file. |
+| `-o, --outdir` | (required) | The top of the results, where the store goes, and the log's folder. |
+| `-n, --name` | `plexembler` | The store's name, as chromosomix's picker shows it. |
+| `--base` | | Where the results are served (https://…/results/), when they are on a bucket. |
+| `--force` | off | Overwrite outputs that exist already. |
+| `-v, --verbose` | off | Debug messages, in the log and on stderr. |
+| `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |

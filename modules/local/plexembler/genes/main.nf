@@ -43,7 +43,8 @@ process PLEXEMBLER_GENES {
     for suffix in gff3 gtf proteins.faa cds.fna; do
         echo "" | gzip -n > ${meta.id}.\${suffix}.gz
     done
-    printf 'gene\\ttranscripts\\n' > ${meta.id}.genes.tsv
+    # A gene, so that the steps after it run in a stub run too.
+    printf 'gene\\ttranscripts\\n${meta.id}_000010\\t1\\n' > ${meta.id}.genes.tsv
     printf '# id: plexembler_genes\\nSample\\tGenes\\n${meta.id}\\t0\\n' > ${meta.id}.genes_mqc.tsv
     touch ${meta.id}.plexembler_20260101000000.log
     """
