@@ -129,6 +129,11 @@ follow [semantic versioning](https://semver.org).
   `chromosomix.store.json` at their top, a card per species, its genome and
   Hi-C map with its genes and tracks placed (`--browser_base`, where the
   results will be served).
+- **Each species polished after the screen**, with the pairs of the pool's
+  second split, on the screened contigs: in the first, a species whose DNA
+  another species' contigs held (bleed-through, assembled) lost those pairs
+  as ambiguous between the two; the benchmark's Cgla lost three quarters of
+  its WGS pairs to Spar's copies of its chromosomes.
 - **The test data**, version 4: genes every 6 kb (open reading frames of
   yeast's codon usage, which AUGUSTUS's yeast model finds), the RNA-seq read
   from them; the second species of the CUG-Ser clade (table 12).

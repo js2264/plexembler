@@ -474,7 +474,12 @@ pipeline's own steps need a container before the package is anywhere else.
       when"; `.github/workflows/benchmarks.yml` fetches the release, or makes
       and publishes it, and runs both.
 - [ ] **`benchmark-data-v2`**: RNA-seq of each species' genes (polyester), and
-      misjoins planted in a draft, for M3 to M5.
+      misjoins planted in a draft, for M3 to M5. What v1 showed (the M1 to M3
+      PRs hold the numbers): Flye assembles each of its small chromosomes in
+      one contig, so YaHS joins nothing and `plexembler junctions` scores
+      nothing. v2 needs drafts broken where the scaffolds must join them
+      (shorter reads, or contigs cut before scaffolding), the references'
+      annotations for M4 (gffcompare), and RNA-seq with known levels for M5.
 - [ ] **`test_full`**: an in-silico pool of public data (nanopore, Hi-C, Illumina,
       RNA-seq) of five to ten yeasts with T2T references, subsampled and mixed,
       on Zenodo; run by hand on a cluster before each release, its numbers on

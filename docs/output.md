@@ -25,8 +25,8 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 │   ├── variation/     heterozygous sites, ploidy and per-chromosome depth
 │   ├── tracks/        (now) coverage of the RNA-seq, by strand, and the nanopore reads'
 │   │                  depth (bigWig); later the WGS'
-│   ├── contigs/       (now) <species>.contigs.fa.gz: polished with its short reads,
-│   │                  screened, its organelle named <species>_chrM
+│   ├── contigs/       (now) <species>.contigs.fa.gz: screened, its organelle named
+│   │                  <species>_chrM; then polished with its short reads (polish/)
 │   ├── polish/        (now) the short-read polishing's choice; the Hi-C reads' digestion
 │   ├── candidates/    assembly/<assembler>/, polish/, scaffold/yahs/ and genes/ (now):
 │   │                  every candidate, its checks; later every scaffolder's, with its map
@@ -137,8 +137,9 @@ needs them makes them again from the alignments.
 
 ### Short-read polishing
 
-Each species' contigs, polished with its own short reads: its WGS pairs, or,
-when its pool has no WGS library, its Hi-C reads cut at their junctions
+Each species' screened contigs (below), polished with its own short reads, of
+the pool's second split, on the screened contigs: its WGS pairs, or, when its
+pool has no WGS library, its Hi-C reads cut at their junctions
 ([`plexembler digest`](cli.md#digest)). Polypolish, then pypolca; each kept only
 if its QV, against the k-mers of the pairs held out of the polishing, beats the
 draft's.
@@ -160,7 +161,8 @@ species, its identity to the other species' contigs and its Hi-C contacts.
   (`keep`, `move`, `drop`, `organelle`), new name and reason.
 - `species/<species>/contigs/<species>.contigs.fa.gz`: the species' contigs
   after the screen, those moved in from another species included, its
-  mitochondrion named `<species>_chrM`: what is scaffolded.
+  mitochondrion named `<species>_chrM`: what is polished with its short reads
+  (`species/<species>/polish/<species>.polish.fa.gz`), then scaffolded.
 
 ### The genome
 

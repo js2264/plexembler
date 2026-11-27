@@ -190,17 +190,21 @@ once, each pair given to the species of its two mates when both are unique
 region missing from its own species' contigs aligns, unique, to the sister
 species' copy, 85 to 95 % identical.
 
-- **Polishing:** each species with its own short reads (`--polish_reads auto`:
-  its WGS pairs, or, in a pool without WGS, its Hi-C reads cut at their
-  ligation junctions; `wgs` or `hic` to choose), Polypolish then pypolca,
-  kept only when the QV against `--polish_holdout` (10 %) of the pairs, held
-  out of the polishing, rises. A pool whose Hi-C library was made without an
-  enzyme (Micro-C) and that has no WGS library is not polished with short
-  reads. `--sr_polisher none` skips the step.
 - **The screen:** each contig kept, moved to another species of its pool,
   dropped, or named its species' mitochondrion, from each species' nanopore
   depth on it, its identity to the other species' contigs and its Hi-C
-  contacts ([`plexembler screen`](cli.md#screen)).
+  contacts ([`plexembler screen`](cli.md#screen)). The pool is then split
+  again, on the screened contigs: a species whose DNA another species' contigs
+  held (a barcode's bleed-through, assembled) gets back the pairs the first
+  split found ambiguous between the two.
+- **Polishing:** each species' screened contigs with its own short reads, of
+  that second split (`--polish_reads auto`: its WGS pairs, or, in a pool
+  without WGS, its Hi-C reads cut at their ligation junctions; `wgs` or `hic`
+  to choose), Polypolish then pypolca, kept only when the QV against
+  `--polish_holdout` (10 %) of the pairs, held out of the polishing, rises. A
+  pool whose Hi-C library was made without an enzyme (Micro-C) and that has no
+  WGS library is not polished with short reads. `--sr_polisher none` skips the
+  step.
 
 ## Chromosomes
 

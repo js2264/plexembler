@@ -17,6 +17,7 @@ process PLEXEMBLER_SELECT {
     tuple val(meta), path("${meta.id}.${step}_selection_mqc.tsv"), emit: multiqc
     tuple val(meta), path("*.log")                             , emit: log
     tuple val("${task.process}"), val('plexembler'), eval("plexembler --version | sed 's/.* //'"), emit: versions_plexembler, topic: versions
+    tuple val("${task.process}"), val('samtools'), eval("samtools version | sed '1!d;s/.* //'"), emit: versions_samtools, topic: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -43,6 +44,9 @@ process PLEXEMBLER_SELECT {
         -o . \\
         ${keep} \\
         ${args}
+    # bgzip, so that the kept sequence can be indexed where it lies.
+    zcat ${meta.id}.${step}.fa.gz | bgzip -@ ${task.cpus} > bgzipped.fa.gz
+    mv bgzipped.fa.gz ${meta.id}.${step}.fa.gz
     """
 
     stub:

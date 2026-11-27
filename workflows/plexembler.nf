@@ -90,41 +90,44 @@ workflow PLEXEMBLER {
     ch_multiqc_files = ch_multiqc_files.mix(CONTIGS.out.multiqc_files)
 
     //
-    // SUBWORKFLOW: each pooled library split between its pool's species, on their contigs
+    // SUBWORKFLOW: each pooled library split between its pool's species, on
+    // their contigs: the Hi-C contacts the screen weighs
     //
     POOL_DECONVOLVE(CONTIGS.out.contigs, ch_libraries, 'contigs')
     ch_multiqc_files = ch_multiqc_files.mix(POOL_DECONVOLVE.out.multiqc_files)
 
     //
+    // SUBWORKFLOW: each contig kept, moved to another species of its pool, or
+    // dropped; each species' organelle named
+    //
+    SCREEN(CONTIGS.out.contigs, ONT_READS.out.reads, POOL_DECONVOLVE.out.contacts)
+    ch_multiqc_files = ch_multiqc_files.mix(SCREEN.out.multiqc_files)
+
+    //
+    // SUBWORKFLOW: the pool split again, on the screened contigs: the pairs
+    // each species is polished and scaffolded with, none of them lost to
+    // another species' copy of its DNA (the first split's ambiguous pairs).
+    // Its tables are published, not given to MultiQC, whose split is the
+    // first's (their files share their names).
+    //
+    POOL_DECONVOLVE_SCREENED(SCREEN.out.contigs, ch_libraries, 'screened')
+
+    //
     // SUBWORKFLOW: each species polished with its own short reads, when that raises its QV
     //
-    def ch_polished = CONTIGS.out.contigs
+    def ch_polished = SCREEN.out.contigs
     def ch_polish_selection = channel.empty()
     if (params.sr_polisher != 'none') {
-        POLISH_SR(CONTIGS.out.contigs, POOL_DECONVOLVE.out.reads, params.polish_reads, params.kmer_size)
+        POLISH_SR(SCREEN.out.contigs, POOL_DECONVOLVE_SCREENED.out.reads, params.polish_reads, params.kmer_size)
         ch_polished = POLISH_SR.out.contigs
         ch_polish_selection = POLISH_SR.out.selection
         ch_multiqc_files = ch_multiqc_files.mix(POLISH_SR.out.multiqc_files)
     }
 
     //
-    // SUBWORKFLOW: each contig kept, moved to another species of its pool, or
-    // dropped; each species' organelle named
-    //
-    SCREEN(ch_polished, ONT_READS.out.reads, POOL_DECONVOLVE.out.contacts)
-    ch_multiqc_files = ch_multiqc_files.mix(SCREEN.out.multiqc_files)
-
-    //
-    // SUBWORKFLOW: the pool split again, on the screened contigs: the pairs
-    // each species is scaffolded with. Its tables are published, not given to
-    // MultiQC, whose split is the first's (their files share their names).
-    //
-    POOL_DECONVOLVE_SCREENED(SCREEN.out.contigs, ch_libraries, 'screened')
-
-    //
     // SUBWORKFLOW: each species scaffolded with its own Hi-C pairs, and finished
     //
-    SCAFFOLD(SCREEN.out.contigs, POOL_DECONVOLVE_SCREENED.out.reads)
+    SCAFFOLD(ch_polished, POOL_DECONVOLVE_SCREENED.out.reads)
 
     //
     // SUBWORKFLOW: the final genome's checks
