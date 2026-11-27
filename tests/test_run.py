@@ -105,7 +105,8 @@ def test_runs_the_release_of_its_version(nextflow: Path, launched):
         "--outdir",
         "out",
     ]
-    assert f"Running {nextflow} run {REPOSITORY} -r {RELEASE}" in result.stderr
+    # result.output: stdout and stderr, as click 8.1 (the floor) and 8.2 keep both.
+    assert f"Running {nextflow} run {REPOSITORY} -r {RELEASE}" in result.output
 
 
 @pytest.mark.usefixtures("released")
@@ -167,7 +168,7 @@ def test_a_dry_run_prints_the_command_and_runs_nothing(nextflow: Path, launched)
     result = invoke("--dry-run", "-profile", "docker", "--input", "my species.csv")
     assert result.exit_code == 0, result.output
     assert not launched
-    assert result.stdout == (
+    assert result.output == (
         f"{nextflow} run {REPOSITORY} -r {RELEASE} "
         "-profile docker --input 'my species.csv'\n"
     )
@@ -186,8 +187,9 @@ def test_without_nextflow_it_fails_and_says_how_to_get_it(
     # A dry run prints the command all the same, with a warning.
     result = invoke("--dry-run", "-profile", "docker")
     assert result.exit_code == 0
-    assert result.stdout == f"nextflow run {REPOSITORY} -r {RELEASE} -profile docker\n"
-    assert "WARNING :: Nextflow was not found" in result.stderr
+    *logged, command = result.output.splitlines()
+    assert command == f"nextflow run {REPOSITORY} -r {RELEASE} -profile docker"
+    assert any("WARNING :: Nextflow was not found" in line for line in logged)
 
 
 @pytest.mark.usefixtures("released")
@@ -200,8 +202,9 @@ def test_a_nextflow_that_cannot_run_is_an_error(
     monkeypatch.setattr(os, "execve", execve)
     result = invoke("-profile", "docker")
     assert result.exit_code == 1
-    # The path may break over the error panel's lines: its end does not.
-    assert "nextflow: [Errno 13] Permission denied" in plain(result.output)
+    # The error panel breaks the path where its width does: no space counts.
+    text = plain(result.output).replace(" ", "")
+    assert f"{nextflow}:[Errno13]Permissiondenied" in text
 
 
 def test_help_and_usage_errors(plain):
