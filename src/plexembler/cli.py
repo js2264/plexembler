@@ -17,6 +17,8 @@ import rich_click as click
 from . import __version__
 from ._log import logger, run_log, stderr_log
 from .circular import MIN_IDENTITY, MIN_UNIT, read_assembly_info
+from .closest import DATASETS
+from .dotplot import MIN_LENGTH
 from .rename import SPECIES, rename_contigs, write_names
 from .run import REPOSITORY, split_arguments
 
@@ -71,7 +73,8 @@ _QUIET = click.option(
 @click.command_panel("Pipeline", commands=["run"])
 @click.command_panel("Contigs", commands=["rename", "select", "screen"])
 @click.command_panel(
-    "Genomes", commands=["finalize", "junctions", "genes", "expression"]
+    "Genomes",
+    commands=["finalize", "junctions", "genes", "expression", "closest", "dotplot"],
 )
 @click.command_panel("Reports", commands=["report", "browser"])
 @click.command_panel("Reads", commands=["digest"])
@@ -1138,6 +1141,192 @@ def expression_command(
         except (OSError, ValueError) as error:
             raise click.ClickException(str(error)) from error
         write_outputs(table, outdir, prefix, min_count)
+
+
+@cli.command(name="closest", context_settings=CONTEXT_SETTINGS)
+@click.argument("gather", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option(
+    "-p",
+    "--prefix",
+    required=True,
+    callback=_species,
+    help="The species' ID, which names the outputs.",
+)
+@click.option(
+    "-o",
+    "--outdir",
+    required=True,
+    type=click.Path(file_okay=False, path_type=Path),
+    help="The folder of the table, the closest genome's sequence, MultiQC's table and the log.",
+)
+@click.option(
+    "-l",
+    "--lineages",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="The database's taxonomy, sourmash's lineages (CSV, or gzipped CSV): each match's lineage.",
+)
+@click.option(
+    "-n",
+    "--top",
+    type=click.IntRange(1),
+    default=5,
+    show_default=True,
+    help="How many matches the table keeps, best first.",
+)
+@click.option(
+    "--download/--no-download",
+    default=True,
+    show_default=True,
+    help="Download the closest genome's sequence from NCBI, for the dotplot.",
+)
+@click.option(
+    "--timeout",
+    type=click.FloatRange(1),
+    default=60.0,
+    show_default=True,
+    help="How long to wait for NCBI at each step of the download, in seconds.",
+)
+@click.option(
+    "--attempts",
+    type=click.IntRange(1),
+    default=3,
+    show_default=True,
+    help="How many times to try NCBI when it cannot be reached or is busy.",
+)
+@click.option(
+    "--api",
+    default=DATASETS,
+    show_default=True,
+    help="NCBI Datasets' API, which the sequence is downloaded from.",
+)
+@_FORCE
+@_VERBOSE
+@_QUIET
+def closest_command(
+    gather: Path,
+    prefix: str,
+    outdir: Path,
+    lineages: Path | None,
+    top: int,
+    download: bool,
+    timeout: float,
+    attempts: int,
+    api: str,
+    force: bool,
+    verbose: bool,
+    quiet: bool,
+) -> None:
+    """A species' closest known genome, from sourmash gather's matches; its sequence, from NCBI.
+
+    The sequence is the step's only use of the network: when it cannot be
+    downloaded (no network, an accession NCBI does not know, a database whose
+    names are not NCBI's), the command warns and ends without an error.
+    """
+    from .closest import closest
+
+    names = ("closest.tsv", "closest_mqc.tsv", "closest.fa.gz")
+    _refuse_existing([outdir / f"{prefix}.{name}" for name in names], force)
+    parameters = {
+        "gather": gather,
+        "prefix": prefix,
+        "outdir": outdir,
+        "lineages": lineages,
+        "top": top,
+        "download": download,
+        "timeout": timeout,
+        "attempts": attempts,
+        "api": api,
+        "force": force,
+    }
+    with run_log(outdir, prefix, parameters, verbose=verbose, quiet=quiet):
+        # An old sequence must not pass for this run's.
+        (outdir / f"{prefix}.closest.fa.gz").unlink(missing_ok=True)
+        try:
+            closest(
+                gather, prefix, outdir, lineages, top, download, api, timeout, attempts
+            )
+        except ValueError as error:
+            raise click.ClickException(str(error)) from error
+
+
+@cli.command(name="dotplot", context_settings=CONTEXT_SETTINGS)
+@click.argument("paf", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option(
+    "-p",
+    "--prefix",
+    required=True,
+    callback=_species,
+    help="The species' ID, which names the outputs and the y axis.",
+)
+@click.option(
+    "-o",
+    "--outdir",
+    required=True,
+    type=click.Path(file_okay=False, path_type=Path),
+    help="The folder of the dotplot, its figure, its table and the log.",
+)
+@click.option(
+    "-g",
+    "--genome",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="The species' genome (FASTA), the alignments' query: its sequences without an alignment are drawn too.",
+)
+@click.option(
+    "-r",
+    "--reference",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="The other genome (FASTA), the alignments' target: its sequences' order, and names from their headers.",
+)
+@click.option(
+    "-c",
+    "--closest",
+    "closest_table",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="plexembler closest's table, whose first match names the other genome on the x axis.",
+)
+@click.option(
+    "--min-length",
+    type=click.IntRange(1),
+    default=MIN_LENGTH,
+    show_default=True,
+    help="The shortest alignment drawn, in bases; the table counts every one.",
+)
+@_FORCE
+@_VERBOSE
+@_QUIET
+def dotplot_command(
+    paf: Path,
+    prefix: str,
+    outdir: Path,
+    genome: Path | None,
+    reference: Path | None,
+    closest_table: Path | None,
+    min_length: int,
+    force: bool,
+    verbose: bool,
+    quiet: bool,
+) -> None:
+    """Draw a species' genome against another, from minimap2's alignments: a dotplot."""
+    from .dotplot import dotplot, reference_title
+
+    names = ("dotplot.svg", "dotplot.json", "dotplot.tsv")
+    _refuse_existing([outdir / f"{prefix}.{name}" for name in names], force)
+    parameters = {
+        "paf": paf,
+        "prefix": prefix,
+        "outdir": outdir,
+        "genome": genome,
+        "reference": reference,
+        "closest": closest_table,
+        "min_length": min_length,
+        "force": force,
+    }
+    with run_log(outdir, prefix, parameters, verbose=verbose, quiet=quiet):
+        try:
+            name = reference_title(closest_table) if closest_table else None
+            dotplot(paf, prefix, outdir, genome, reference, name, min_length)
+        except (OSError, ValueError) as error:
+            raise click.ClickException(str(error)) from error
 
 
 @cli.command(name="report", context_settings=CONTEXT_SETTINGS)

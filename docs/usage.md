@@ -274,6 +274,63 @@ their top, `chromosomix.store.json`: connect the results folder in its app, or
 put the results on a bucket and give the run their address
 (`--browser_base https://…/results/`) to open them at chromosomix.app.
 
+## The closest known genome
+
+Each species' genome can be matched against a database of known genomes
+(milestone 6; [the parameters](parameters.md#the-closest-known-genome)): its
+k-mers against the database's genomes ([sourmash](https://sourmash.readthedocs.io)
+`gather`), the genome that shares the most of them named its closest, with an
+estimate of their identity (ANI) and, with the database's taxonomy, its
+lineage. That genome's sequence is then downloaded from
+[NCBI Datasets](https://www.ncbi.nlm.nih.gov/datasets/), by its accession; the
+species' genome is aligned to it (minimap2 `-x asm20`) and drawn against it
+([`plexembler dotplot`](cli.md#dotplot)): the chromosomes the two genomes share
+make a diagonal, and an inversion, a translocation or a fusion stands out of
+it. The dotplot is in the species' report too.
+
+The step runs when `--sourmash_db` is given: one of sourmash's
+[prepared databases](https://sourmash.readthedocs.io/en/latest/databases.html),
+downloaded once, and its taxonomy for the lineages (`--sourmash_taxonomy`). For
+fungi, the reference genomes of NCBI's eukaryotes (January 2025):
+
+```bash
+curl -LO 'https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-euks-fungi-2025.01.dna.k=51.sig.zip'
+curl -LO 'https://farm.cse.ucdavis.edu/~ctbrown/sourmash-db.new/ncbi-euks-2025.01/ncbi-eukaryotes.2025.01.lineages.csv'
+```
+
+```bash
+nextflow run js2264/plexembler -profile docker \
+    --input species.csv --libraries libraries.csv --outdir results \
+    --sourmash_db ncbi-euks-fungi-2025.01.dna.k=51.sig.zip \
+    --sourmash_taxonomy ncbi-eukaryotes.2025.01.lineages.csv
+```
+
+These sketches are of 51-mers (`--sourmash_ksize 51`, the default): for a
+yeast's genome, a search reaches genomes down to about 90 % identity. sourmash's
+older GenBank databases (2022.03; `genbank-2022.03-fungi-k21.zip`, `-k31.zip`,
+`-k51.zip`, and `genbank-2022.03-fungi.lineages.csv.gz`) have fewer genomes but
+shorter k-mers, which reach further: `--sourmash_ksize 21` finds genomes down to
+about 80 %. A species far from every genome of the database has no match, and
+no dotplot: the run says so.
+
+The database is read where it is: the download of the closest genome's
+sequence is the only step of the pipeline that needs the network, and it never
+fails the run. A species whose sequence cannot be downloaded (a node without
+network, an accession NCBI does not know, a database of your own genomes, whose
+names are not NCBI's accessions) gets a warning in the run's log, its table
+says why (`sequence`: `offline`, `not_found`, `not_ncbi`), and it has no dotplot;
+the rest of the run goes on. On a cluster whose nodes have no network but whose
+login node does, run that one process there, with a configuration of your own
+(`-c closest.config`):
+
+```groovy
+process {
+    withName: 'PLEXEMBLER_CLOSEST' {
+        executor = 'local'
+    }
+}
+```
+
 ## Profiles
 
 `-profile` takes a container engine (`docker`, `apptainer`, `singularity`,

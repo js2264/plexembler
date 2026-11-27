@@ -84,6 +84,46 @@ the unplaced scaffolds, longest first.
 | `length_bp` | Its length, in bases |
 | `role` | `chromosome`, `organelle` or `unplaced` |
 
+## The closest genomes { #closest-genomes }
+
+What [`plexembler closest`](cli.md#closest) writes for a species,
+`<species>.closest.tsv`: tab-separated, with a header, a row per genome of the
+database that sourmash gather matched to the species' genome, best first
+(`--top` of them, 5): the first is its closest known genome. A species with no
+match has the header alone.
+
+| Column | Description |
+|---|---|
+| `rank` | The match's rank, from 1 |
+| `accession` | Its NCBI assembly accession (`GCA_000146045.2`), from its name; `NA` when the name has none |
+| `name` | Its name in the database (`GCA_000146045.2 Saccharomyces cerevisiae S288C`) |
+| `ani` | Its average nucleotide identity to the species' genome, in percent, estimated from the k-mers they share (sourmash's `max_containment_ani`) |
+| `species_containment` | The share of the species' k-mers found in it, in percent |
+| `match_containment` | The share of its k-mers found in the species' genome, in percent |
+| `shared_bp` | The bases they share, estimated from their k-mers |
+| `lineage` | Its lineage, its ranks joined by `;`, from the database's taxonomy (`--lineages`); `NA` without it |
+| `sequence` | What became of the first match's sequence: `downloaded`; `offline` (NCBI could not be reached); `not_found` (NCBI does not know the accession); `failed` (any other answer); `not_ncbi` (its name has no accession); `not_downloaded` (`--no-download`). `NA` for the other matches |
+
+## The dotplot's table { #dotplot-table }
+
+What [`plexembler dotplot`](cli.md#dotplot) writes beside the dotplot,
+`<species>.dotplot.tsv`: tab-separated, with a header, a row per sequence of
+the species' genome, in its order, then a row per sequence of the other genome,
+in its order. The numbers are those of minimap2's primary alignments.
+
+| Column | Description |
+|---|---|
+| `genome` | `species` or `reference`, the other genome |
+| `sequence` | The sequence's name in its genome |
+| `label` | Its name on the dotplot: the species' without `<species>_`; the reference's from its FASTA header (`chrIV` for `… chromosome IV, complete sequence`, `chrM` for a mitochondrion) |
+| `length_bp` | Its length, in bases |
+| `aligned_bp` | Its bases aligned to the other genome, each counted once |
+| `aligned_fraction` | Those bases over its length, in percent |
+| `identity` | The alignments' matching bases over their columns, in percent; `NA` without one |
+| `best_match` | The sequence of the other genome it aligns to most |
+| `best_match_share` | The share of its aligned bases that align to that one, in percent: under 100, it aligns to several (a translocation, a fusion) |
+| `strand` | `+` when most of what aligns to `best_match` is on the same strand, `-` on the other |
+
 ## The report of a species
 
 `plexembler report` (milestone 6 of the [plan](plan.md)) writes the report of
@@ -118,12 +158,22 @@ MultiQC column changes or goes.
 | `annotation` | `transcripts`, `genes_with_introns` |  |  |
 | `annotation` | `proteins_busco_complete` | % | BUSCO, proteins (%) |
 | `expression` | `libraries`, `pairs_on_genes` | pairs |  |
+| `closest_genome` | `matches`, `accession`, `name`, `lineage`, `sequence` |  |  |
+| `closest_genome` | `ani`, `species_containment`, `match_containment` | % |  |
+| `closest_genome` | `species_aligned`, `reference_aligned`, `identity` | % |  |
 
 And its tables: `candidates` (each assembly candidate's `candidate`, `kept`,
 `busco_complete`, `qv`, `contigs`, `contig_n50`, `total_length`), `libraries`
 (the species' `pairs` and `share` of each pooled library), `chromosomes` (each
-sequence's `name`, `length_bp`, `role`, `original_name`) and `expression`
-(each library's `pairs_on_genes`).
+sequence's `name`, `length_bp`, `role`, `original_name`), `expression` (each
+library's `pairs_on_genes`), `closest_genomes` (each match's `rank`,
+`accession`, `name`, `ani`, `species_containment`, `match_containment`,
+`lineage`) and `alignment_to_closest` (the dotplot's table: each sequence's
+`genome`, `sequence`, `label`, `length_bp`, `aligned_pct`, `identity`,
+`best_match`, `best_match_share`, `strand`). The `closest_genome` section's
+`species_aligned` and `reference_aligned` are the shares of each genome aligned
+to the other, and its `identity` the species' sequences' identity, weighed by
+their aligned bases.
 
 ### `<sample>.report_mqc.yaml` { #report_mqcyaml }
 
@@ -133,7 +183,8 @@ the species' row of its General Statistics table, the columns above.
 ### `<sample>.report.html` { #reporthtml }
 
 A page to read the run with. Its plots are drawn by plotly.js, which it loads
-from its CDN: offline, it keeps its numbers and tables.
+from its CDN: offline, it keeps its numbers and tables. With the species'
+closest known genome, its dotplot is one of them.
 
 ## Logs
 

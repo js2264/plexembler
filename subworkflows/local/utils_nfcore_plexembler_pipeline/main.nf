@@ -324,6 +324,8 @@ def toolCitationText() {
             "barrnap (Seemann),",
             "featureCounts (Liao et al. 2014),",
             "deepTools (Ramírez et al. 2016),",
+            "sourmash (Irber et al. 2024),",
+            "NCBI Datasets (O'Leary et al. 2024),",
             "FastQC (Andrews 2010),",
             "MultiQC (Ewels et al. 2016)",
             "."
@@ -365,6 +367,8 @@ def toolBibliographyText() {
             "<li>Seemann, T. barrnap: BAsic Rapid Ribosomal RNA Predictor. URL: https://github.com/tseemann/barrnap</li>",
             "<li>Liao, Y., Smyth, G. K., & Shi, W. (2014). featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics, 30(7), 923-930. doi: 10.1093/bioinformatics/btt656</li>",
             "<li>Ramírez, F., et al. (2016). deepTools2: a next generation web server for deep-sequencing data analysis. Nucleic Acids Research, 44(W1), W160-W165. doi: 10.1093/nar/gkw257</li>",
+            "<li>Irber, L., et al. (2024). sourmash v4: A multitool to quickly search, compare, and analyze genomic and metagenomic data sets. Journal of Open Source Software, 9(98), 6830. doi: 10.21105/joss.06830</li>",
+            "<li>O'Leary, N. A., et al. (2024). Exploring and retrieving sequence and metadata for species across the tree of life with NCBI Datasets. Scientific Data, 11(1), 732. doi: 10.1038/s41597-024-03571-y</li>",
             "<li>Andrews S, (2010) FastQC, URL: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/).</li>",
             "<li>Ewels, P., Magnusson, M., Lundin, S., & Käller, M. (2016). MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics , 32(19), 3047–3048. doi: /10.1093/bioinformatics/btw354</li>"
         ].join(' ').trim()

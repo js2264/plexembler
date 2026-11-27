@@ -22,6 +22,8 @@ pipeline is built towards ([implementation plan](plan.md)); a path marked
 │   ├── hic/           (now) <species>.mcool, <species>.pairs.gz and their stats;
 │   │                  later <species>.hic, <species>.pretext, maps (PNG), contact decay
 │   ├── expression/    (now) <species>.counts.tsv, <species>.tpm.tsv: genes × RNA-seq libraries
+│   ├── closest/       (now, with --sourmash_db) its closest known genomes, and its dotplot
+│   │                  against the first: <species>.closest.tsv, <species>.dotplot.svg
 │   ├── variation/     heterozygous sites, ploidy and per-chromosome depth
 │   ├── tracks/        (now) coverage of the RNA-seq, by strand, and the nanopore reads'
 │   │                  depth (bigWig); later the WGS'
@@ -266,6 +268,29 @@ by [featureCounts](https://subread.sourceforge.net) (exons, by gene,
   million (`<species>.<library>.forward.bigWig`, `.reverse.bigWig`), and the
   nanopore reads' depth on the genome (`<species>.ont.bigWig`).
 
+### The closest known genome
+
+With `--sourmash_db` ([usage](usage.md#the-closest-known-genome)), each
+species' genome matched against a sourmash database of genomes, its closest
+one's sequence downloaded from NCBI, and the species' genome drawn against it.
+
+- `species/<species>/closest/<species>.closest.tsv`: its closest genomes, best
+  first ([`plexembler closest`](cli.md#closest),
+  [format](formats.md#closest-genomes)): each one's accession, name, ANI,
+  shared k-mers and lineage, and what became of the first one's sequence
+  (`downloaded`; `offline`, without network; `not_found`, `not_ncbi`): a
+  species without it has no dotplot. With the command's log, and
+  `<species>.gather.csv.gz`, sourmash gather's matches.
+- `species/<species>/closest/<species>.dotplot.svg`: the dotplot, the closest
+  genome's sequences along x, the species' along y
+  ([`plexembler dotplot`](cli.md#dotplot)); `<species>.dotplot.tsv`, every
+  sequence of both genomes, how much of it aligns to the other, how well and
+  to which sequence most ([format](formats.md#dotplot-table));
+  `<species>.dotplot.json`, the dotplot for the report; and
+  `<species>.closest.paf`, minimap2's alignments (`-x asm20 -c`), which other
+  viewers read (D-GENIES). The closest genome's sequence itself is not kept:
+  its accession names it.
+
 ### Reports
 
 [`plexembler report`](cli.md#report) gathers what the pipeline made of each
@@ -273,7 +298,8 @@ species ([format](formats.md#the-report-of-a-species)).
 
 - `species/<species>/<species>.report.html`: its page: the assembly's
   candidates and choice, the polishing, its share of each pooled library, the
-  screen, its chromosomes, BUSCO and QV, its joins, genes and expression.
+  screen, its chromosomes, BUSCO and QV, its joins, genes and expression, and
+  its closest known genome, with the dotplot against it.
 - `species/<species>/<species>.report.txt`: every number of it, for scripts.
 - `species/<species>/<species>.report_mqc.yaml`: its row of MultiQC's General
   Statistics table.
@@ -297,8 +323,9 @@ contigs), each species' polishing and its Hi-C reads' digestion, the contig
 screen, each genome's BUSCO and gfastats numbers and its joins' verdicts, each
 map's pairs, each RNA-seq library's split and STAR's report, each species'
 genes and BUSCO on its proteins, featureCounts' assignments and each
-library's pairs on genes, each species' row of the General Statistics (its
-report), and the software versions, in one report,
+library's pairs on genes, each species' closest known genome, each species'
+row of the General Statistics (its report), and the software versions, in one
+report,
 with the methods' description and its references.
 
 ### Pipeline information

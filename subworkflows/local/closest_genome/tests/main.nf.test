@@ -1,0 +1,85 @@
+nextflow_workflow {
+
+    name "Test subworkflow CLOSEST_GENOME"
+    script "../main.nf"
+    workflow "CLOSEST_GENOME"
+    config "./nextflow.config"
+
+    tag "subworkflows"
+    tag "subworkflows_local"
+    tag "closest_genome"
+
+    test("two species, one of them in the database, without network") {
+
+        // The database: sp1's genome alone, under an NCBI accession.
+        setup {
+            run("SOURMASH_SKETCH", alias: "SKETCH_DATABASE") {
+                script "../../../../modules/nf-core/sourmash/sketch/main.nf"
+                process {
+                    """
+                    input[0] = channel.of(
+                        [ [ id: 'GCA_000000001.1' ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ],
+                    )
+                    input[1] = true
+                    """
+                }
+            }
+        }
+
+        when {
+            workflow {
+                """
+                input[0] = channel.of(
+                    [ [ id: 'sp1', pool: 'pool' ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ],
+                    [ [ id: 'sp2', pool: 'pool' ], file('${moduleDir}/../../../tests/data/truth/sp2.fa', checkIfExists: true) ],
+                )
+                input[1] = SKETCH_DATABASE.out.signatures.map { _meta, signature -> signature }.collect()
+                input[2] = []
+                """
+            }
+        }
+
+        then {
+            def tables = workflow.out.table.collectEntries { meta, table -> [meta.id, path(table).readLines()] }
+            assertAll(
+                // No network: each species' table, and no dotplot; the run goes on.
+                { assert workflow.success },
+                { assert tables.sp1.size() == 2 },
+                { assert tables.sp1[1].tokenize('\t')[1] == 'GCA_000000001.1' },
+                { assert tables.sp1[1].endsWith('\toffline') },
+                // sp2 shares no k-mer with the database's genome: no match.
+                { assert tables.sp2.size() == 1 },
+                { assert workflow.out.dotplot.size() == 0 },
+                { assert workflow.out.multiqc_files.size() == 2 },
+            )
+        }
+    }
+
+    test("two species - stub") {
+
+        options "-stub"
+
+        when {
+            workflow {
+                """
+                input[0] = channel.of(
+                    [ [ id: 'sp1', pool: 'pool' ], file('${moduleDir}/../../../tests/data/truth/sp1.fa', checkIfExists: true) ],
+                    [ [ id: 'sp2', pool: 'pool' ], file('${moduleDir}/../../../tests/data/truth/sp2.fa', checkIfExists: true) ],
+                )
+                input[1] = file('${moduleDir}/../../../tests/data/truth/genes.tsv', checkIfExists: true)
+                input[2] = []
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert workflow.success },
+                { assert workflow.out.table.size() == 2 },
+                // The stub's sequence comes: each species is aligned and drawn.
+                { assert workflow.out.dotplot.size() == 2 },
+                { assert workflow.out.alignment.size() == 2 },
+            )
+        }
+    }
+}

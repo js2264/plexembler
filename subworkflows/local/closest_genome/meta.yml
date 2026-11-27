@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "closest_genome"
+description: Each species' closest known genome in a sourmash database, its sequence downloaded from NCBI when the network allows, and a dotplot of the species' genome against it
+keywords:
+  - taxonomy
+  - sourmash
+  - dotplot
+  - synteny
+components:
+  - sourmash/sketch
+  - sourmash/gather
+  - plexembler/closest
+  - minimap2/align
+  - plexembler/dotplot
+input:
+  - ch_genomes:
+      type: file
+      description: |
+        Each species' genome. Structure: [ val(meta), path(fasta) ]
+  - sourmash_db:
+      type: file
+      description: |
+        A sourmash database of genomes (sourmash's prepared databases of NCBI's genomes), at the k-mer size gather is given
+  - lineages:
+      type: file
+      description: |
+        The database's taxonomy, sourmash's lineages (CSV); [] without one
+output:
+  - table:
+      type: file
+      description: |
+        Each species' closest genomes, best first. Structure: [ val(meta), path(tsv) ]
+  - dotplot:
+      type: file
+      description: |
+        Each species' dotplot against its closest genome, when that one's sequence was downloaded. Structure: [ val(meta), path(svg) ]
+  - figure:
+      type: file
+      description: |
+        The dotplot as a plotly figure, for the species' report. Structure: [ val(meta), path(json) ]
+  - alignment:
+      type: file
+      description: |
+        How the two genomes align, sequence by sequence. Structure: [ val(meta), path(tsv) ]
+  - multiqc_files:
+      type: file
+      description: |
+        The files MultiQC reads. Structure: [ path(file) ]
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

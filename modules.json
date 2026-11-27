@@ -201,6 +201,16 @@
             "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
             "installed_by": ["modules"]
           },
+          "sourmash/gather": {
+            "branch": "master",
+            "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
+            "installed_by": ["modules"]
+          },
+          "sourmash/sketch": {
+            "branch": "master",
+            "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
+            "installed_by": ["modules"]
+          },
           "star/align": {
             "branch": "master",
             "git_sha": "9804fc814f848fd7100b2203e35ff6d5321d031f",
