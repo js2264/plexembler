@@ -13,9 +13,9 @@ From that, it makes for each species:
 - a **genome reference**, assembled from the species' nanopore reads,
   polished, screened for contamination and scaffolded with its Hi-C pairs;
 - its **gene annotation** (GTF and GFF3), with RNA-seq evidence when there is
-  some, and its repeats, tRNAs, rDNA, telomeres, centromeres and mitochondrial
-  genome;
-- its **Hi-C map** (`.mcool`, `.hic`, `.pretext`);
+  some, and its repeats, tRNAs and rDNA (its telomeres, centromeres and
+  mitochondrial genes to come);
+- its **Hi-C map** (`.mcool`; `.hic` and `.pretext` to come);
 - its **gene expression table**, one column per RNA-seq library;
 - its **report**: what each step did, and how complete, correct and clean the
   genome is.
@@ -28,9 +28,10 @@ From that, it makes for each species:
 - **The pool is its own control.** Hi-C pairs between species measure the
   library's random ligation; contigs whose reads and contacts point to another
   species are found and moved.
-- **Tools compete.** Assemblers and scaffolders (YaHS and instaGRAAL among
-  them) each make a candidate, and every candidate goes through the same
-  checks before one is kept.
+- **Tools compete.** Assemblers (Flye, hifiasm) and short-read polishers
+  (Polypolish, pypolca) each make a candidate, and every candidate goes
+  through the same checks before one is kept; scaffolders will too (YaHS
+  today, instaGRAAL and HapHiC to come).
 - **One pipeline for a workstation and a cluster**, built on nf-core's
   practices: containers, profiles, a checked samplesheet, tests.
 
