@@ -213,7 +213,12 @@ screened.
 - [x] **Short-read polishing** (`--sr_polisher polypolish,pypolca|none`):
       Polypolish on `bwa mem -a` alignments of the species' reads, single-end for
       Hi-C pieces (its insert-size filter needs true pairs), alignments with
-      more than 5 clipped bases dropped (a junction the cutting missed); then
+      more than 5 clipped bases dropped (a junction the cutting missed), and
+      `--careful` for them: a single piece from a repeat aligns to every copy,
+      and voted there for the other copies' bases (on the benchmark's easy set,
+      Spar's errors against its reference went from 2.14 to 5.51 per 100 kb,
+      0.51 with it; WGS pairs, which keep every alignment, fare better
+      without); then
       pypolca. Hi-C's coverage is uneven, highest near restriction sites: a base
       it does not cover is left as it was, not changed. The guard: Merqury's QV
       before and after on k-mers of 10 % of the pairs, held out of the polishing

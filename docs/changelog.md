@@ -76,7 +76,10 @@ follow [semantic versioning](https://semver.org).
   `pools/<pool>/deconvolution/`.
 - **Short-read polishing**: each species with its WGS pairs, or, in a pool
   without WGS, its Hi-C reads cut at their ligation junctions (`plexembler
-  digest`); Polypolish then pypolca, judged by pairs held out of the
+  digest`); Polypolish (`--careful` on the Hi-C pieces: a single read from a
+  repeat aligns to every copy, and on the benchmark's easy set took Spar's
+  errors from 2.14 to 5.51 per 100 kb; 0.51 with it) then pypolca, judged by
+  pairs held out of the
   polishing where it changed the draft: the draft's k-mers they lack that it
   removed, against those it made that they lack (`MERYL_CHANGES`); the one
   that removed the most more than it made is kept, if one did (`plexembler

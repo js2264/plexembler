@@ -200,7 +200,8 @@ species' copy, 85 to 95 % identical.
 - **Polishing:** each species' screened contigs with its own short reads, of
   that second split (`--polish_reads auto`: its WGS pairs, or, in a pool
   without WGS, its Hi-C reads cut at their ligation junctions; `wgs` or `hic`
-  to choose), Polypolish then pypolca, judged by `--polish_holdout` (10 %) of
+  to choose), Polypolish (on Hi-C pieces, single reads, leaving out those
+  aligned more than once) then pypolca, judged by `--polish_holdout` (10 %) of
   the pairs, held out of the polishing: where a polishing changed the draft,
   the draft's k-mers they lack that it removed, against those it made that they
   lack. The polishing that removed the most more than it made is kept, if one
