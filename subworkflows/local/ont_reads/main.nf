@@ -70,7 +70,7 @@ workflow ONT_READS {
 
     // The chemistry: the samplesheet's, else told from the reads' median quality.
     def ch_profiled = ch_raw
-        .join(NANOPLOT.out.txt.map { meta, txt -> [meta, [txt].flatten().find { file -> file.name.endsWith('NanoStats.txt') }] })
+        .join(NANOPLOT.out.txt.map { meta, txt -> [meta, [txt].flatten().find { stats -> stats.name.endsWith('NanoStats.txt') }] })
         .map { meta, reads, nanostats ->
             def median = medianReadQuality(nanostats)
             def profiled = meta + [

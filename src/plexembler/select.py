@@ -14,6 +14,11 @@ before (a tie is a difference within the rule's tolerance):
 3. the longest contig N50.
 
 A number that a candidate lacks leaves its rule out, for every candidate.
+
+The rule of the polishing step: the draft is the first candidate, each
+polishing after it; one is kept only if its QV, counted against k-mers the
+polishing never saw, beats the draft's by more than the tolerance. A polishing
+that does not help is not kept (docs/plan.md, M2).
 """
 
 from __future__ import annotations
@@ -30,8 +35,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-#: The steps that have rules, and what each one's kept sequence is called.
-STEPS = ("assembly",)
+#: The steps that have rules.
+STEPS = ("assembly", "polish")
 
 #: BUSCO's one-line summary: C:98.5%[S:97.9%,D:0.6%],F:0.3%,M:1.2%,n:2137
 _BUSCO_LINE = re.compile(
@@ -290,6 +295,26 @@ def choose_assembly(
     return Choice(left[0], "a tie on every rule: the first candidate")
 
 
+def choose_polish(candidates: list[Candidate], qv_tolerance: float = 0.0) -> Choice:
+    """The polishing kept, if one beats the draft (the first candidate)'s QV.
+
+    Without QVs to compare, the last polishing is kept: nothing says it hurt.
+    """
+    draft = candidates[0]
+    if len(candidates) == 1:
+        return Choice(draft, "the only candidate")
+    if any(c.qv is None for c in candidates):
+        return Choice(candidates[-1], "no QV to compare: the last polishing")
+    best = max(candidates[1:], key=lambda c: (c.qv, -candidates.index(c)))
+    if (
+        best.qv is not None
+        and draft.qv is not None
+        and best.qv > draft.qv + qv_tolerance
+    ):
+        return Choice(best, "a higher QV than the draft's")
+    return Choice(draft, "no polishing raised the QV")
+
+
 def copy_sequence(source: Path, output: Path) -> None:
     """Copy a FASTA to ``output``, gzipped when its name ends in .gz."""
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -423,7 +448,10 @@ def select(
     if step not in STEPS:
         raise ValueError(f"no rules for the step {step!r}: {', '.join(STEPS)}")
     candidates = read_candidates(table)
-    choice = choose_assembly(candidates, keep, busco_tolerance, qv_tolerance)
+    if step == "polish":
+        choice = choose_polish(candidates, qv_tolerance)
+    else:
+        choice = choose_assembly(candidates, keep, busco_tolerance, qv_tolerance)
     paths = output_paths(outdir, prefix, step)
     copy_sequence(choice.kept.fasta, paths["fasta"])
     write_selection(candidates, choice, paths["table"])

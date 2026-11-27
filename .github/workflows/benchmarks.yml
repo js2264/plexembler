@@ -68,7 +68,7 @@ jobs:
           environment-name: bench
           create-args: >-
             -c conda-forge -c bioconda
-            python=3.12 badread=0.4.1 insilicoseq=2.0.1 busco=6.1.0 quast=5.3.0
+            python=3.12 badread=0.4.1 insilicoseq=2.0.1 busco=6.1.0 quast=5.3.0 minimap2=2.30
           cache-environment: false
 
       - name: Fetch the set, or generate it
@@ -122,11 +122,21 @@ jobs:
           nextflow run . -profile benchmark,docker --outdir results \
             --busco_db "$PWD/busco_downloads"
 
+      # Milestone 2 compares polishing with the Hi-C reads, cut at their
+      # junctions, to polishing with the WGS pairs: a second run, resumed.
+      - name: The pipeline, polished with Hi-C
+        if: env.MILESTONE != '1'
+        run: |
+          nextflow run . -profile benchmark,docker --outdir results-hic \
+            --busco_db "$PWD/busco_downloads" --polish_reads hic -resume
+
       - name: The checks
         shell: micromamba-shell {0}
         run: |
+          hic=""
+          [ "$MILESTONE" != "1" ] && hic="--hic-results results-hic"
           python benchmarks/evaluate.py --results results --milestone "$MILESTONE" \
-            --busco-db busco_downloads
+            --busco-db busco_downloads $hic
           cat "results/benchmark/m$MILESTONE.md" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v6

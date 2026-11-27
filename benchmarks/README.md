@@ -20,7 +20,7 @@ from both.
 
 | Reads | How | Truth in the read's name |
 |---|---|---|
-| Nanopore, per species (`ont/<species>.fastq.gz`) | Badread 0.4.1, R10.4.1's error and quality models (`nanopore2023`), 40×, reads of 98 % identity on average; 1 % of them the next species' (bleed-through) | the sequence, strand and position |
+| Nanopore, per species (`ont/<species>.fastq.gz`) | Badread 0.4.1, R10.4.1's error and quality models (`nanopore2023`), 40×, reads of 98 % identity on average; bleed-through: 15 % of `Spar`'s reads are `Cgla`'s (enough to assemble some), 1 % of the others' another species' | the sequence, strand and position |
 | WGS, pooled (`pool/wgs_R{1,2}.fastq.gz`) | InSilicoSeq 2.0.1, NovaSeq's errors, 40× of `Scer`, 30× of the others | the sequence |
 | Hi-C, pooled (`pool/hic_R{1,2}.fastq.gz`) | here: Arima's DpnII and HinfI, 300,000 pairs; each pair two restriction fragments' ends ligated, a read through the junction when the molecule is short; contacts decaying as 1/s; 12 % between chromosomes, 3 % random ligations (a partner from anywhere in the pool, by abundance: ε), 5 % unligated, 5 % PCR duplicates | both ends, their sites and enzymes |
 
@@ -48,7 +48,8 @@ python benchmarks/evaluate.py --results results --milestone 1
 
 `evaluate.py` runs BUSCO on the references and QUAST against them (`--busco`,
 `--quast`: how to run them, on PATH by default) and writes
-`results/benchmark/m<N>.md`; it exits 1 when a check fails.
+`results/benchmark/m<N>.md`; it exits 1 when a check fails (a check with
+nothing to judge reads "not judged").
 
 ## To come
 

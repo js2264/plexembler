@@ -179,6 +179,29 @@ BUSCO downloads its lineages when it runs; on a cluster whose nodes have no
 network, download them beforehand (`busco --download saccharomycetes_odb12`)
 and give their folder to `--busco_db`.
 
+## The pool, split
+
+The pooled libraries are split between the species of their pool (milestone 2
+of the [plan](plan.md); [the parameters](parameters.md#the-pool-split)): every
+species' contigs in one reference, each WGS and Hi-C library aligned to it at
+once, each pair given to the species of its two mates when both are unique
+(`--deconvolve_mapq`, 20) and near-identical (`--deconvolve_min_identity`,
+98 %). The identity matters for a pair of species of a genus: a read of a
+region missing from its own species' contigs aligns, unique, to the sister
+species' copy, 85 to 95 % identical.
+
+- **Polishing:** each species with its own short reads (`--polish_reads auto`:
+  its WGS pairs, or, in a pool without WGS, its Hi-C reads cut at their
+  ligation junctions; `wgs` or `hic` to choose), Polypolish then pypolca,
+  kept only when the QV against `--polish_holdout` (10 %) of the pairs, held
+  out of the polishing, rises. A pool whose Hi-C library was made without an
+  enzyme (Micro-C) and that has no WGS library is not polished with short
+  reads. `--sr_polisher none` skips the step.
+- **The screen:** each contig kept, moved to another species of its pool,
+  dropped, or named its species' mitochondrion, from each species' nanopore
+  depth on it, its identity to the other species' contigs and its Hi-C
+  contacts ([`plexembler screen`](cli.md#screen)).
+
 ## Profiles
 
 `-profile` takes a container engine (`docker`, `apptainer`, `singularity`,

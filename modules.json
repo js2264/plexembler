@@ -10,6 +10,26 @@
             "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
             "installed_by": ["modules"]
           },
+          "bwa/index": {
+            "branch": "master",
+            "git_sha": "3b0d9821716a51645b641577551c03eddacd04fc",
+            "installed_by": ["modules"]
+          },
+          "bwa/mem": {
+            "branch": "master",
+            "git_sha": "9804fc814f848fd7100b2203e35ff6d5321d031f",
+            "installed_by": ["modules"]
+          },
+          "bwamem2/index": {
+            "branch": "master",
+            "git_sha": "baaeefb43222b8e9b253330d70d95dce2885b40a",
+            "installed_by": ["modules"]
+          },
+          "bwamem2/mem": {
+            "branch": "master",
+            "git_sha": "baaeefb43222b8e9b253330d70d95dce2885b40a",
+            "installed_by": ["modules"]
+          },
           "cat/fastq": {
             "branch": "master",
             "git_sha": "3ed7dbab112fa8802f0affff345b8fa2ac935e5c",
@@ -26,6 +46,11 @@
             "installed_by": ["modules"]
           },
           "filtlong": {
+            "branch": "master",
+            "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
+            "installed_by": ["modules"]
+          },
+          "find/concatenate": {
             "branch": "master",
             "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
             "installed_by": ["modules"]
@@ -80,6 +105,11 @@
             "git_sha": "3f10df6804f18c40f80f9df5fd2b1bed0a8ab74d",
             "installed_by": ["modules"]
           },
+          "minimap2/align": {
+            "branch": "master",
+            "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
+            "installed_by": ["modules"]
+          },
           "multiqc": {
             "branch": "master",
             "git_sha": "868791e991feaaeff234b79f7910b6b442627529",
@@ -88,6 +118,11 @@
           "nanoplot": {
             "branch": "master",
             "git_sha": "9ab17d6c0c6cda0bb4ed8a1ee15173209eb4f881",
+            "installed_by": ["modules"]
+          },
+          "polypolish/polish": {
+            "branch": "master",
+            "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
             "installed_by": ["modules"]
           },
           "samtools/fastq": {

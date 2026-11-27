@@ -166,7 +166,7 @@ finds no misassembly over 10 kb in the kept candidate.
 with their own species' short reads (WGS, or Hi-C cut at its junctions), and
 screened.
 
-- [ ] **`POOL_DECONVOLVE`**, the pool-level subworkflow
+- [x] **`POOL_DECONVOLVE`**, the pool-level subworkflow
       ([concepts](concepts.md#deconvolution)): the contigs of every species of a
       pool in one reference; `bwa-mem2` (`-5SP` for Hi-C); pairs sorted by name;
       `plexembler split` (pysam, in a local module) gives each pair to the species
@@ -178,10 +178,14 @@ screened.
       copy, 85 to 95 % identical (Decisions). It writes each species' BAM (and FASTQ where a
       tool wants reads) and the pool's numbers: each species' share of each
       library, the ambiguous fraction of each pair of species, the pairs between
-      species and the random-ligation rate ε. The pool's channels are grouped
-      with `groupKey(pool, n_species)`, so that a pool starts as soon as its own
-      species are ready.
-- [ ] **The polishing reads** (`--polish_reads auto|wgs|hic|both`, `auto` by
+      species and the random-ligation rate ε (Hi-C: the pairs between species
+      over 1 − Σpᵢ²), and, for Hi-C, the unique pairs between contigs (the
+      screen's Hi-C signal); 10 % of each library's pairs held out, by a hash of
+      their names, for the QV guard. Duplicates are dropped by `plexembler split`
+      itself (the mates' 5' ends), not by `pairtools dedup`. To come: a pool's
+      channels grouped with `groupKey(pool, n_species)`, so that a pool starts as
+      soon as its own species are ready (today, every pool waits for all).
+- [x] **The polishing reads** (`--polish_reads auto|wgs|hic`, `auto` by
       default): a species' WGS pairs when its pool has a WGS library; when it has
       none, or for a species whose WGS depth is under `--min_polish_depth`
       (30×), its **Hi-C reads, cut at their ligation junctions**. A Hi-C read is
@@ -198,7 +202,9 @@ screened.
       2 or more junctions are counted: a ligation-efficiency figure for the
       report. (hicstuff's own `cutsite` pairs the pieces again; a mode of it
       that writes them once, unpaired, would replace `plexembler digest`, T4.)
-- [ ] **Short-read polishing** (`--sr_polisher polypolish,pypolca|none`):
+      To come: `both`, and `--min_polish_depth`, Hi-C for a species whose WGS
+      depth is too low.
+- [x] **Short-read polishing** (`--sr_polisher polypolish,pypolca|none`):
       Polypolish on `bwa mem -a` alignments of the species' reads, single-end for
       Hi-C pieces (its insert-size filter needs true pairs), alignments with
       more than 5 clipped bases dropped (a junction the cutting missed); then
@@ -207,7 +213,8 @@ screened.
       before and after on k-mers of 10 % of the pairs, held out of the polishing
       (the polishing reads' own k-mers would flatter it, and Hi-C's uneven
       coverage makes a QV from its k-mers pessimistic); the polished version is
-      kept only if it is better (`plexembler select --step polish`).
+      kept only if it is better (`plexembler select --step polish`: the draft,
+      Polypolish's and pypolca's QVs). pypolca runs `--careful`.
 - [ ] **Micro-C** (`enzymes` is `none`) has no junction sequence to cut at:
       such a pool's species stay polished with nanopore reads alone, by default.
       Polishing with the clipped local alignments of its reads (primary and
@@ -220,17 +227,20 @@ screened.
       --by genome` and `network` give each species' contacts, P(s) and the
       contacts between species, the noise floor's raw material; chromosomix
       opens it as it opens a metagenome's map.
-- [ ] **The contig screen,** `plexembler screen`, which weighs three signals for
+- [x] **The contig screen,** `plexembler screen`, which weighs three signals for
       each contig: the nanopore reads of every species of the pool mapped on the
       pool's contigs (`minimap2 -x map-ont`, the pool's cross-talk matrix); its
       identity to the other species' contigs (`minimap2 -x asm10`); and its Hi-C
-      contacts outside its species, from `chromosomix magpurity` on the pool's
-      `.metacool` (organelles left out: their contacts are mostly random
-      ligation). A verdict per contig, keep, move or drop, with its evidence; a
-      move is applied with `metacooler reassign`.
-- [ ] **Organelles and plasmids:** the mitochondrial contig, by circularity, GC,
+      contacts outside its species, from `plexembler split`'s unique pairs
+      between contigs (`chromosomix magpurity` on the pool's `.metacool`, once
+      the pool has one). A verdict per contig, keep, move, drop or organelle,
+      with its evidence and thresholds; a move renames the contig
+      `<species>_<contig>` (`metacooler reassign` for the pool's map, then).
+- [x] **Organelles and plasmids:** the mitochondrial contig, by circularity, GC,
       depth and `miniprot` hits of a small set of yeast mitochondrial proteins
-      (`assets/`), kept apart as `<species>_chrM`.
+      (`assets/`), kept apart as `<species>_chrM`. Today by depth and GC (the
+      screen's `organelle` verdict); circularity (Flye's graph) and miniprot's
+      hits to come.
 - [ ] **Foreign DNA:** FCS-adaptor always; FCS-GX with `--fcsgx_db` (nf-core's
       subworkflow `fasta_clean_fcs`); Tiara's labels (eukaryote, prokaryote,
       organelle) for the report.
