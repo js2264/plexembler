@@ -133,3 +133,71 @@ def test_the_command(files, tmp_path: Path):
         cli, ["report", str(bad), "-p", "Scer", "-o", str(outdir), "--force"]
     )
     assert failed.exit_code == 1
+
+
+CLOSEST = (
+    "rank\taccession\tname\tani\tspecies_containment\tmatch_containment\tshared_bp\tlineage\tsequence\n"
+    "1\tGCA_000146045.2\tGCA_000146045.2 Saccharomyces cerevisiae S288C\t99.30\t80.45\t23.81\t2712000\tEukaryota;Saccharomyces\tdownloaded\n"
+    "2\tNA\tmy own yeast\t91.00\t30.00\t10.00\t1200000\tNA\tNA\n"
+)
+DOTPLOT = (
+    "genome\tsequence\tlabel\tlength_bp\taligned_bp\taligned_fraction\tidentity\tbest_match\tbest_match_share\tstrand\n"
+    "species\tScer_chr01\tchr01\t1500000\t1500000\t100.00\t99.00\tBK006938.2\t100.00\t+\n"
+    "species\tScer_chr02\tchr02\t1000000\t500000\t50.00\t97.00\tBK006936.2\t100.00\t-\n"
+    "species\tScer_unplaced_01\tunplaced_01\t15000\t0\t0.00\tNA\tNA\tNA\tNA\n"
+    "reference\tBK006938.2\tchrIV\t1531933\t1500000\t97.92\t99.00\tScer_chr01\t100.00\t+\n"
+)
+FIGURE = {
+    "data": [{"type": "scatter", "x": [0, 1, None], "y": [0, 1, None]}],
+    "layout": {},
+}
+
+
+def test_the_closest_genome_and_its_dotplot(tmp_path: Path, files):
+    import json
+
+    extra = [
+        write(tmp_path / "Scer.closest.tsv", CLOSEST),
+        write(tmp_path / "Scer.dotplot.tsv", DOTPLOT),
+        write(tmp_path / "Scer.dotplot.json", json.dumps(FIGURE)),
+    ]
+    found = sort_files(files + extra, "Scer")
+    assert found.closest.name == "Scer.closest.tsv"
+    assert found.dotplot.name == "Scer.dotplot.tsv"
+    assert found.dotplot_figure.name == "Scer.dotplot.json"
+
+    report = build("Scer", "poolA", files + extra)
+    section = report.sections["closest_genome"]
+    assert section["matches"] == 2
+    assert section["accession"] == "GCA_000146045.2"
+    assert section["name"] == "Saccharomyces cerevisiae S288C"
+    assert section["ani"] == 99.3
+    assert section["lineage"] == "Eukaryota;Saccharomyces"
+    assert section["sequence"] == "downloaded"
+    assert section["species_aligned"] == round(100 * 2000000 / 2515000, 2)
+    assert section["reference_aligned"] == 97.92
+    # The species' identity, its sequences weighed by their aligned bases.
+    assert section["identity"] == round((1500000 * 99 + 500000 * 97) / 2000000, 2)
+    assert report.tables["closest_genomes"].rows[1][:3] == (2, "NA", "my own yeast")
+    assert report.tables["alignment_to_closest"].rows[1][4:6] == (50.0, 97.0)
+    assert report.plots == {"plot-dotplot": FIGURE}
+
+    outdir = tmp_path / "out"
+    arguments = ["report", *map(str, files + extra), "-p", "Scer", "-o", str(outdir)]
+    result = CliRunner().invoke(cli, arguments)
+    assert result.exit_code == 0, result.output
+    text = (outdir / "Scer.report.txt").read_text()
+    assert "[closest_genome]" in text
+    assert "[table: alignment_to_closest]" in text
+    assert "plot-dotplot" in (outdir / "Scer.report.html").read_text()
+
+
+def test_a_species_without_a_closest_genome(tmp_path: Path):
+    header = CLOSEST.splitlines()[0] + "\n"
+    report = build("Scer", None, [write(tmp_path / "Scer.closest.tsv", header)])
+    section = report.sections["closest_genome"]
+    assert section["matches"] == 0
+    assert section["accession"] is None and section["sequence"] is None
+    assert section["species_aligned"] is None
+    assert report.tables["closest_genomes"].rows == []
+    assert report.plots == {}

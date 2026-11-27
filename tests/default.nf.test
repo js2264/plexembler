@@ -73,6 +73,8 @@ nextflow_pipeline {
         when {
             params {
                 outdir = "$outputDir"
+                // The closest known genome's step, on: a stub reads no database.
+                sourmash_db = "${projectDir}/tests/data/truth/genes.tsv"
             }
         }
 
@@ -84,6 +86,9 @@ nextflow_pipeline {
                 { assert path("$outputDir/species/sp1/genome/sp1.fa.gz").exists() },
                 { assert path("$outputDir/species/sp1/annotation/sp1.gff3.gz").exists() },
                 { assert path("$outputDir/species/sp1/expression/sp1.tpm.tsv").exists() },
+                { assert path("$outputDir/species/sp1/closest/sp1.closest.tsv").exists() },
+                { assert path("$outputDir/species/sp1/closest/sp1.dotplot.svg").exists() },
+                { assert !path("$outputDir/species/sp1/closest/sp1.closest.fa.gz").exists() },
                 { assert path("$outputDir/species/sp1/sp1.report.html").exists() },
                 { assert path("$outputDir/chromosomix.store.json").exists() },
                 { assert path("$outputDir/multiqc/multiqc_report.html").exists() },

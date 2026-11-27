@@ -298,6 +298,42 @@
                 }
             }
         },
+        "closest_genome_options": {
+            "title": "The closest known genome",
+            "type": "object",
+            "fa_icon": "fas fa-sitemap",
+            "description": "Each species' closest genome in a sourmash database, and a dotplot of its genome against it (milestone 6). Off without --sourmash_db.",
+            "properties": {
+                "sourmash_db": {
+                    "type": "string",
+                    "format": "path",
+                    "exists": true,
+                    "description": "A sourmash database of genomes, such as sourmash's fungal reference genomes (ncbi-euks-fungi-2025.01.dna.k=51.sig.zip): each species' closest genome is found there.",
+                    "help_text": "The database is read where it is, without network. The closest genome's sequence, for the dotplot, is then downloaded from NCBI: a species whose sequence cannot be downloaded (no network on the node) gets a warning and no dotplot, and the run goes on (docs/usage.md, The closest known genome).",
+                    "fa_icon": "fas fa-database"
+                },
+                "sourmash_taxonomy": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "pattern": "^\\S+\\.csv(\\.gz)?$",
+                    "description": "The database's taxonomy, sourmash's lineages (ncbi-eukaryotes.2025.01.lineages.csv): each match's lineage.",
+                    "fa_icon": "fas fa-sitemap"
+                },
+                "sourmash_ksize": {
+                    "type": "integer",
+                    "default": 51,
+                    "enum": [
+                        21,
+                        31,
+                        51
+                    ],
+                    "description": "The k-mer size of --sourmash_db's sketches, as its file's name says: 51 for sourmash's current eukaryote databases; 21, 31 or 51 for its GenBank 2022.03 ones.",
+                    "help_text": "The shorter the k-mers, the further the search reaches: for a yeast's genome, k=51 finds genomes down to about 90 % identity, k=21 down to about 80 %.",
+                    "fa_icon": "fas fa-ruler-horizontal"
+                }
+            }
+        },
         "institutional_config_options": {
             "title": "Institutional config options",
             "type": "object",
@@ -459,6 +495,9 @@
         },
         {
             "$ref": "#/$defs/report_options"
+        },
+        {
+            "$ref": "#/$defs/closest_genome_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"

@@ -1,0 +1,92 @@
+name: "plexembler_dotplot"
+description: A species' genome against its closest known genome, from minimap2's alignments, drawn as a dotplot
+keywords:
+  - genome
+  - dotplot
+  - synteny
+  - paf
+tools:
+  - "plexembler":
+      description: "The commands of plexembler's pipeline"
+      homepage: "https://github.com/js2264/plexembler"
+      documentation: "https://js2264.github.io/plexembler/cli/#dotplot"
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: The species' meta map
+    - paf:
+        type: file
+        description: minimap2's alignments of the species' genome (query) to its closest known genome (target)
+        pattern: "*.paf"
+    - genome:
+        type: file
+        description: The species' genome
+        pattern: "*.{fa,fasta,fna}{,.gz}"
+    - reference:
+        type: file
+        description: Its closest known genome, NCBI's FASTA
+        pattern: "*.{fa,fasta,fna}{,.gz}"
+    - closest:
+        type: file
+        description: plexembler closest's table, whose first match names the closest genome
+        pattern: "*.closest.tsv"
+output:
+  svg:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.dotplot.svg:
+          type: file
+          description: The dotplot
+          pattern: "*.dotplot.svg"
+  figure:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.dotplot.json:
+          type: file
+          description: The dotplot as a plotly figure, for the species' report
+          pattern: "*.dotplot.json"
+  table:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.dotplot.tsv:
+          type: file
+          description: Every sequence of both genomes, and how it aligns to the other
+          pattern: "*.dotplot.tsv"
+  log:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - "*.log":
+          type: file
+          description: The command's log
+          pattern: "*.log"
+  versions_plexembler:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"

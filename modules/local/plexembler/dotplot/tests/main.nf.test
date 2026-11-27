@@ -1,0 +1,68 @@
+nextflow_process {
+
+    name "Test process PLEXEMBLER_DOTPLOT"
+    script "../main.nf"
+    process "PLEXEMBLER_DOTPLOT"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plexembler"
+    tag "plexembler/dotplot"
+
+    test("a genome against its closest, one chromosome turned round") {
+
+        when {
+            process {
+                """
+                def paf = file("\${launchDir}/sp1.closest.paf")
+                paf.text = [
+                    ['sp1_chr01', 600, 0, 600, '-', 'refB', 600, 0, 600, 594, 600, 60, 'tp:A:P'],
+                    ['sp1_chr02', 1000, 0, 1000, '+', 'refA', 1000, 0, 1000, 990, 1000, 60, 'tp:A:P'],
+                ].collect { row -> row.join('\\t') }.join('\\n') + '\\n'
+                def genome = file("\${launchDir}/sp1.fa")
+                genome.text = '>sp1_chr01\\n' + 'C' * 600 + '\\n>sp1_chr02\\n' + 'A' * 1000 + '\\n'
+                def reference = file("\${launchDir}/sp1.closest.fa")
+                reference.text = '>refA Org chromosome I, complete sequence\\n' + 'A' * 1000 + '\\n>refB Org chromosome II, complete sequence\\n' + 'C' * 600 + '\\n'
+                def closest = file("\${launchDir}/sp1.closest.tsv")
+                closest.text = [
+                    'rank\\taccession\\tname\\tani\\tspecies_containment\\tmatch_containment\\tshared_bp\\tlineage\\tsequence',
+                    '1\\tGCA_000146045.2\\tGCA_000146045.2 Saccharomyces cerevisiae S288C\\t99.30\\t80.00\\t24.00\\t1\\tNA\\tdownloaded',
+                ].join('\\n') + '\\n'
+                input[0] = [ [ id: 'sp1' ], paf, genome, reference, closest ]
+                """
+            }
+        }
+
+        then {
+            def table = path(process.out.table[0][1]).readLines()
+            assertAll(
+                { assert process.success },
+                { assert table[1].startsWith('species\tsp1_chr01\tchr01\t600\t600\t100.00\t99.00\trefB\t100.00\t-') },
+                { assert table.find { line -> line.startsWith('reference\trefA\tchrI\t') } },
+                { assert path(process.out.svg[0][1]).text.contains('sp1 against Saccharomyces cerevisiae S288C (GCA_000146045.2)') },
+                { assert path(process.out.figure[0][1]).json.data.size() == 2 },
+            )
+        }
+    }
+
+    test("a genome against its closest - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [ [ id: 'sp1' ], file('${moduleDir}/main.nf'), file('${moduleDir}/meta.yml'), file('${moduleDir}/environment.yml'), file('${moduleDir}/tests/main.nf.test') ]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.svg.size() == 1 },
+                { assert process.out.table.size() == 1 },
+            )
+        }
+    }
+}

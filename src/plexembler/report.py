@@ -20,6 +20,9 @@ File                                      What the report takes from it
 ``<species>.genes.tsv``                   its genes
 ``short_summary.*.<species>.proteins*``   BUSCO on its proteins
 ``<species>.counts.tsv``                  its pairs on genes, by library
+``<species>.closest.tsv``                 its closest known genomes
+``<species>.dotplot.tsv``                 its alignment to the closest one
+``<species>.dotplot.json``                the dotplot, a plotly figure
 ========================================  =====================================
 
 A file it is not given leaves its numbers out (``NA``): a species of a pool
@@ -29,6 +32,7 @@ without Hi-C has no joins, without RNA-seq no expression.
 from __future__ import annotations
 
 import csv
+import json
 import logging
 import math
 import re
@@ -109,6 +113,9 @@ class Inputs:
     genes: Path | None = None
     proteins_busco: Path | None = None
     counts: Path | None = None
+    closest: Path | None = None
+    dotplot: Path | None = None
+    dotplot_figure: Path | None = None
 
 
 def sort_files(files: list[Path], species: str) -> Inputs:
@@ -139,6 +146,12 @@ def sort_files(files: list[Path], species: str) -> Inputs:
             found.genes = path
         elif name == f"{species}.counts.tsv":
             found.counts = path
+        elif name == f"{species}.closest.tsv":
+            found.closest = path
+        elif name == f"{species}.dotplot.tsv":
+            found.dotplot = path
+        elif name == f"{species}.dotplot.json":
+            found.dotplot_figure = path
         else:
             logger.debug("%s: not a file the report reads", name)
     found.splits.sort()
@@ -299,13 +312,97 @@ def build(species: str, pool: str | None, files: list[Path]) -> Report:
         report.tables["expression"] = Rows(
             ["library", "pairs_on_genes"], list(zip(header[2:], totals, strict=True))
         )
+
+    if inputs.closest is not None:
+        closest_genome(report, inputs.closest, inputs.dotplot)
+    if inputs.dotplot_figure is not None:
+        report.plots["plot-dotplot"] = json.loads(
+            inputs.dotplot_figure.read_text(encoding="utf-8")
+        )
     return report
+
+
+def closest_genome(report: Report, closest: Path, dotplot: Path | None) -> None:
+    """The species' closest known genome (plexembler closest) and, when its
+    sequence could be downloaded, how the two genomes align (plexembler dotplot)."""
+    rows = read_tsv(closest)
+    best = rows[0] if rows else {}
+    accession = best.get("accession")
+    name = best.get("name") or None
+    if name and accession and accession != "NA":
+        name = name.removeprefix(accession).strip() or name
+    section: dict = {
+        "matches": len(rows),
+        "accession": None if accession in (None, "NA") else accession,
+        "name": name,
+        "ani": number(best.get("ani")),
+        "species_containment": number(best.get("species_containment")),
+        "match_containment": number(best.get("match_containment")),
+        "lineage": None if best.get("lineage") in (None, "", "NA") else best["lineage"],
+        "sequence": best.get("sequence"),
+        "species_aligned": None,
+        "reference_aligned": None,
+        "identity": None,
+    }
+    report.tables["closest_genomes"] = Rows(
+        ["rank", "accession", "name", "ani", "species_containment", "match_containment", "lineage"],
+        [
+            (
+                int(row["rank"]),
+                row["accession"],
+                row["name"],
+                number(row.get("ani")),
+                number(row.get("species_containment")),
+                number(row.get("match_containment")),
+                row.get("lineage"),
+            )
+            for row in rows
+        ],
+    )  # fmt: skip
+    if dotplot is not None:
+        aligned = read_tsv(dotplot)
+        for genome, key in (("species", "species_aligned"), ("reference", "reference_aligned")):  # fmt: skip
+            mine = [row for row in aligned if row["genome"] == genome]
+            length = sum(int(row["length_bp"]) for row in mine)
+            if length:
+                section[key] = round(
+                    100 * sum(int(row["aligned_bp"]) for row in mine) / length, 2
+                )
+        weighed = [
+            (int(row["aligned_bp"]), number(row["identity"]))
+            for row in aligned
+            if row["genome"] == "species" and number(row["identity"]) is not None
+        ]
+        bases = sum(count for count, _identity in weighed)
+        if bases:
+            section["identity"] = round(
+                sum(count * (identity or 0.0) for count, identity in weighed) / bases, 2
+            )
+        report.tables["alignment_to_closest"] = Rows(
+            # report.txt writes a _fraction as a fraction: this one is in percent.
+            ["genome", "sequence", "label", "length_bp", "aligned_pct", "identity", "best_match", "best_match_share", "strand"],
+            [
+                (
+                    row["genome"],
+                    row["sequence"],
+                    row["label"],
+                    int(row["length_bp"]),
+                    number(row["aligned_fraction"]),
+                    number(row["identity"]),
+                    row["best_match"],
+                    number(row["best_match_share"]),
+                    row["strand"],
+                )
+                for row in aligned
+            ],
+        )  # fmt: skip
+    report.sections["closest_genome"] = section
 
 
 def write(species: str, pool: str | None, files: list[Path], outdir: Path) -> list[str]:
     """Write a species' report in outdir: its text, MultiQC row and page."""
     report = build(species, pool, files)
-    paths = write_report(report, str(outdir), TOOL)
+    paths = write_report(report, str(outdir), TOOL, figures=report.plots or None)
     genome = report.sections["genome"]
     quality = report.sections["quality"]
     logger.info(

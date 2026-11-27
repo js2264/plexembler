@@ -13,6 +13,7 @@ include { SCREEN                 } from '../subworkflows/local/screen'
 include { POOL_DECONVOLVE as POOL_DECONVOLVE_SCREENED } from '../subworkflows/local/pool_deconvolve'
 include { SCAFFOLD               } from '../subworkflows/local/scaffold'
 include { GENOME_QC as GENOME_QC_FINAL } from '../subworkflows/local/genome_qc'
+include { CLOSEST_GENOME         } from '../subworkflows/local/closest_genome'
 include { MAPS                   } from '../subworkflows/local/maps'
 include { PLEXEMBLER_JUNCTIONS   } from '../modules/local/plexembler/junctions/main'
 include { RNASEQ                 } from '../subworkflows/local/rnaseq'
@@ -142,6 +143,24 @@ workflow PLEXEMBLER {
     ch_multiqc_files = ch_multiqc_files.mix(GENOME_QC_FINAL.out.multiqc_files)
 
     //
+    // SUBWORKFLOW: each species' closest known genome, in a sourmash database,
+    // and its dotplot against it, the network allowing: without network, a
+    // warning and no dotplot
+    //
+    def ch_closest_files = channel.empty()
+    if (params.sourmash_db) {
+        CLOSEST_GENOME(
+            SCAFFOLD.out.genome,
+            file(params.sourmash_db, checkIfExists: true),
+            params.sourmash_taxonomy ? file(params.sourmash_taxonomy, checkIfExists: true) : [],
+        )
+        ch_closest_files = CLOSEST_GENOME.out.table
+            .mix(CLOSEST_GENOME.out.alignment)
+            .mix(CLOSEST_GENOME.out.figure)
+        ch_multiqc_files = ch_multiqc_files.mix(CLOSEST_GENOME.out.multiqc_files)
+    }
+
+    //
     // SUBWORKFLOW: each species' Hi-C map on its genome
     //
     MAPS(SCAFFOLD.out.genome, SCAFFOLD.out.sizes, SCAFFOLD.out.hic, params.map_resolution)
@@ -209,6 +228,7 @@ workflow PLEXEMBLER {
         .mix(ANNOTATION.out.genes.map { meta, table -> [meta.id, table] })
         .mix(ANNOTATION.out.proteins_busco.map { meta, summary -> [meta.id, summary] })
         .mix(EXPRESSION.out.counts.map { meta, table -> [meta.id, table] })
+        .mix(ch_closest_files.map { meta, file -> [meta.id, file] })
     def ch_pool_files = POOL_DECONVOLVE.out.table.map { meta, table -> [meta.pool, table] }
         .mix(RNASEQ.out.table.map { meta, table -> [meta.pool, table] })
         .mix(SCREEN.out.table.map { meta, table -> [meta.pool ?: meta.id, table] })

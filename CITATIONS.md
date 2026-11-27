@@ -140,6 +140,14 @@ Every tool a step of the pipeline runs, added with its step ([docs/plan.md](docs
 
   > Ramírez F, Ryan DP, Grüning B, Bhardwaj V, Kilpert F, Richter AS, Heyne S, Dündar F, Manke T. deepTools2: a next generation web server for deep-sequencing data analysis. Nucleic Acids Res. 2016 Jul 8;44(W1):W160-5. doi: 10.1093/nar/gkw257.
 
+- [sourmash](https://doi.org/10.21105/joss.06830)
+
+  > Irber L, Pierce-Ward NT, Abuelanin M, et al. sourmash v4: A multitool to quickly search, compare, and analyze genomic and metagenomic data sets. Journal of Open Source Software. 2024;9(98):6830. doi: 10.21105/joss.06830.
+
+- [NCBI Datasets](https://doi.org/10.1038/s41597-024-03571-y)
+
+  > O'Leary NA, Cox E, Holmes JB, et al. Exploring and retrieving sequence and metadata for species across the tree of life with NCBI Datasets. Sci Data. 2024;11(1):732. doi: 10.1038/s41597-024-03571-y.
+
 - [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
 
 > Andrews, S. (2010). FastQC: A Quality Control Tool for High Throughput Sequence Data [Online].

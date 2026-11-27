@@ -1,0 +1,88 @@
+nextflow_process {
+
+    name "Test process PLEXEMBLER_CLOSEST"
+    script "../main.nf"
+    process "PLEXEMBLER_CLOSEST"
+    config "./nextflow.config"
+
+    tag "modules"
+    tag "modules_local"
+    tag "plexembler"
+    tag "plexembler/closest"
+
+    test("a closest genome, without network") {
+
+        when {
+            process {
+                """
+                def gather = file("\${launchDir}/sp1.csv")
+                gather.text = [
+                    'intersect_bp,f_orig_query,f_match,name,gather_result_rank,max_containment_ani',
+                    '2712000,0.80,0.24,GCA_000146045.2 Saccharomyces cerevisiae S288C,0,0.993',
+                ].join('\\n') + '\\n'
+                def lineages = file("\${launchDir}/lineages.csv")
+                lineages.text = 'ident,superkingdom,genus\\nGCA_000146045,Eukaryota,Saccharomyces\\n'
+                input[0] = [ [ id: 'sp1' ], gather ]
+                input[1] = lineages
+                """
+            }
+        }
+
+        then {
+            def row = path(process.out.table[0][1]).readLines()[1].tokenize('\t')
+            assertAll(
+                // The step ends without an error, and without the sequence.
+                { assert process.success },
+                { assert row[1] == 'GCA_000146045.2' },
+                { assert row[7] == 'Eukaryota;Saccharomyces' },
+                { assert row[8] == 'offline' },
+                { assert process.out.fasta.size() == 0 },
+                { assert path(process.out.log[0][1]).text.contains(':: WARNING :: sp1: its closest genome\'s sequence was not downloaded') },
+            )
+        }
+    }
+
+    test("no match") {
+
+        when {
+            process {
+                """
+                def gather = file("\${launchDir}/sp1.csv.gz")
+                gather.text = ''
+                input[0] = [ [ id: 'sp1' ], gather ]
+                input[1] = []
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.table[0][1]).readLines().size() == 1 },
+                { assert process.out.fasta.size() == 0 },
+            )
+        }
+    }
+
+    test("a closest genome - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = [ [ id: 'sp1' ], file('${moduleDir}/main.nf') ]
+                input[1] = []
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert process.out.table.size() == 1 },
+                { assert process.out.fasta.size() == 1 },
+            )
+        }
+    }
+}

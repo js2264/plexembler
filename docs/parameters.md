@@ -80,6 +80,16 @@ Each species' report, and chromosomix's store of the results (milestone 6).
 |-----------|-----------|-----------|-----------|-----------|-----------|
 | `browser_base` | Where the results will be served (https://.../results/), when they go on a bucket: the store's base, which its relative paths join. <details><summary>Help</summary><small>Without it, the store's paths are relative to it: the results open in chromosomix with their folder connected, or wherever they are served beside it.</small></details>| `string` |  |  |  |
 
+## The closest known genome
+
+Each species' closest genome in a sourmash database, and a dotplot of its genome against it (milestone 6). Off without --sourmash_db.
+
+| Parameter | Description | Type | Default | Required | Hidden |
+|-----------|-----------|-----------|-----------|-----------|-----------|
+| `sourmash_db` | A sourmash database of genomes, such as sourmash's fungal reference genomes (ncbi-euks-fungi-2025.01.dna.k=51.sig.zip): each species' closest genome is found there. <details><summary>Help</summary><small>The database is read where it is, without network. The closest genome's sequence, for the dotplot, is then downloaded from NCBI: a species whose sequence cannot be downloaded (no network on the node) gets a warning and no dotplot, and the run goes on (docs/usage.md, The closest known genome).</small></details>| `string` |  |  |  |
+| `sourmash_taxonomy` | The database's taxonomy, sourmash's lineages (ncbi-eukaryotes.2025.01.lineages.csv): each match's lineage. | `string` |  |  |  |
+| `sourmash_ksize` | The k-mer size of --sourmash_db's sketches, as its file's name says: 51 for sourmash's current eukaryote databases; 21, 31 or 51 for its GenBank 2022.03 ones. (accepted: `21`\|`31`\|`51`) <details><summary>Help</summary><small>The shorter the k-mers, the further the search reaches: for a yeast's genome, k=51 finds genomes down to about 90 % identity, k=21 down to about 80 %.</small></details>| `integer` | 51 |  |  |
+
 ## Institutional config options
 
 Parameters used to describe centralised config profiles. These should not be edited.

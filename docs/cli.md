@@ -463,6 +463,83 @@ library's pairs on genes and genes detected) and its log.
 | `-v, --verbose` | off | Debug messages, in the log and on stderr. |
 | `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
 
+### `closest` { #closest }
+
+Names a species' closest known genome from `sourmash gather`'s matches of its
+genome in a database of genomes (sourmash's prepared databases of NCBI's
+genomes: [usage](usage.md#the-closest-known-genome)), best first; with the
+database's taxonomy (`--lineages`), each match's lineage. Then downloads the first
+match's sequence from [NCBI Datasets](https://www.ncbi.nlm.nih.gov/datasets/),
+by the assembly accession its name starts with (`GCA_000146045.2 Saccharomyces
+cerevisiae S288C`): the reference of the species' [`dotplot`](#dotplot).
+
+The download is the command's only use of the network, and it never fails the
+command: without network, for an accession NCBI does not know, or a match
+whose name has no accession, it warns, writes the table without the sequence
+and ends without an error. The species then has no dotplot.
+
+```bash
+plexembler closest Scer.gather.csv.gz -p Scer -o Scer/ -l ncbi-eukaryotes.2025.01.lineages.csv
+```
+
+It writes the matches (`Scer.closest.tsv`: [format](formats.md#closest-genomes)),
+the first one's sequence when it was downloaded (`Scer.closest.fa.gz`, NCBI's
+FASTA, gzipped), MultiQC's table (`Scer.closest_mqc.tsv`) and its log. An empty
+gather file (`sourmash gather --create-empty-results`) is no match: the table
+has its header alone.
+
+| Option | Default | Description |
+|---|---|---|
+| `GATHER` | (required) | sourmash gather's matches (CSV, gzipped or not). |
+| `-p, --prefix` | (required) | The species' ID, which names the outputs. |
+| `-o, --outdir` | (required) | The folder of the table, the closest genome's sequence, MultiQC's table and the log. |
+| `-l, --lineages` | | The database's taxonomy, sourmash's lineages (CSV, or gzipped CSV): each match's lineage. |
+| `-n, --top` | `5` | How many matches the table keeps, best first. |
+| `--download/--no-download` | `--download` | Download the closest genome's sequence from NCBI, for the dotplot. |
+| `--timeout` | `60.0` | How long to wait for NCBI at each step of the download, in seconds. |
+| `--attempts` | `3` | How many times to try NCBI when it cannot be reached or is busy. |
+| `--api` | `https://api.ncbi.nlm.nih.gov/datasets/v2` | NCBI Datasets' API, which the sequence is downloaded from. |
+| `--force` | off | Overwrite outputs that exist already. |
+| `-v, --verbose` | off | Debug messages, in the log and on stderr. |
+| `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
+
+### `dotplot` { #dotplot }
+
+Draws a species' genome against another, its closest known genome
+([`closest`](#closest)), from minimap2's alignments of the first (the query) to
+the second (the target): the other genome's sequences along x, in their order,
+named from their FASTA headers (`chrIV` for NCBI's `… chromosome IV, complete
+sequence`, `chrM` for a mitochondrion); the species' along y, each beside the
+sequence it aligns to most, turned round, and marked (−), when most of it
+aligns to that one's other strand. The chromosomes the two genomes share make a
+diagonal; an inversion, a translocation or a fusion stands out of it.
+Alignments on the same strand are blue, on the other vermilion.
+
+```bash
+minimap2 -x asm20 -c Scer.closest.fa.gz Scer.fa.gz > Scer.closest.paf
+plexembler dotplot Scer.closest.paf -p Scer -o Scer/ -g Scer.fa.gz -r Scer.closest.fa.gz -c Scer.closest.tsv
+```
+
+It writes the dotplot (`Scer.dotplot.svg`), the same as a plotly figure, which
+the species' [report](#report) draws (`Scer.dotplot.json`), the table of every
+sequence of both genomes and how it aligns to the other
+(`Scer.dotplot.tsv`: [format](formats.md#dotplot-table)), and its log. The
+table counts every primary alignment; the plot draws those of `--min-length`
+bases or more, secondary ones included.
+
+| Option | Default | Description |
+|---|---|---|
+| `PAF` | (required) | minimap2's alignments of the species' genome (query) to the other (target). |
+| `-p, --prefix` | (required) | The species' ID, which names the outputs and the y axis. |
+| `-o, --outdir` | (required) | The folder of the dotplot, its figure, its table and the log. |
+| `-g, --genome` | | The species' genome (FASTA), the alignments' query: its sequences without an alignment are drawn too. |
+| `-r, --reference` | | The other genome (FASTA), the alignments' target: its sequences' order, and names from their headers. |
+| `-c, --closest` | | plexembler closest's table, whose first match names the other genome on the x axis. |
+| `--min-length` | `1000` | The shortest alignment drawn, in bases; the table counts every one. |
+| `--force` | off | Overwrite outputs that exist already. |
+| `-v, --verbose` | off | Debug messages, in the log and on stderr. |
+| `-q, --quiet` | off | Only warnings and errors on stderr; the log keeps everything. |
+
 ### `report` { #report }
 
 Writes a species' report from the files the pipeline wrote for it, each known
@@ -474,8 +551,11 @@ by its name: its assembly's candidates and choice
 Merqury on its genome (`short_summary.*.<species>.fa.txt`,
 `<species>.genome.<k-mers>.qv`), its joins (`<species>.junctions.tsv`), its
 genes (`<species>.genes.tsv`), BUSCO on its proteins
-(`short_summary.*.<species>.proteins.faa.txt`) and its pairs on genes
-(`<species>.counts.tsv`). A file it is not given leaves its numbers `NA`.
+(`short_summary.*.<species>.proteins.faa.txt`), its pairs on genes
+(`<species>.counts.tsv`), its closest known genome (`<species>.closest.tsv`)
+and how it aligns to it (`<species>.dotplot.tsv`, and the dotplot,
+`<species>.dotplot.json`, which the page draws). A file it is not given leaves
+its numbers `NA`.
 
 ```bash
 plexembler report Scer.* poolA.* short_summary.* -p Scer --pool poolA -o Scer/

@@ -206,3 +206,15 @@ follow [semantic versioning](https://semver.org).
   is under `/tmp` (the module rewrote every `/tmp` of it, its temporary
   folder's meant), and `cooler cload`'s environment pins numpy, as `cooler
   zoomify`'s does, without which micromamba took 14 GB to solve it. ([#10](https://github.com/js2264/plexembler/pull/10))
+- **Each species' closest known genome, and a dotplot against it**
+  (`--sourmash_db`): its genome's k-mers matched against a sourmash database
+  of genomes (sourmash gather; `--sourmash_ksize`, 51), its closest genomes
+  named with their ANI and, with `--sourmash_taxonomy`, their lineages
+  (`plexembler closest`); the closest one's sequence downloaded from NCBI
+  Datasets, the species' genome aligned to it (minimap2) and drawn against it,
+  its chromosomes ordered and turned to follow the other's
+  (`plexembler dotplot`: SVG, a table of how each sequence aligns, and the
+  dotplot in the species' report). Everything under
+  `species/<species>/closest/`. The download is the pipeline's only use of the
+  network, and never fails the run: without network, a species gets a warning
+  and no dotplot.

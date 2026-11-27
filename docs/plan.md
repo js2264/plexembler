@@ -456,7 +456,8 @@ Spearman's ρ ≥ 0.9 for every species.
       report beside it (`pools/<pool>/`). Done on the kit's own page: the
       assembly and polishing, the share of each library, the screen, the
       chromosomes, BUSCO and QV, the joins, the genes and BUSCO on the
-      proteins, the expression. To come: its own template and plots, the
+      proteins, the expression, the closest known genome and its dotplot.
+      To come: its own template and plots, the
       telomeres, centromeres and rDNA in the karyotype, the pool's report.
 - [ ] **Contamination, further:** EukCC; a GC × depth plot of the contigs,
       labelled by Tiara, FCS-GX and the screen.
@@ -466,6 +467,17 @@ Spearman's ρ ≥ 0.9 for every species.
 - [ ] **Centromeres from Hi-C:** `plexembler centromeres`, from the
       inter-chromosomal contacts of the Rabl configuration, as centurion does
       (Varoquaux et al. 2015; Marie-Nelly et al. 2014) → `centromeres.bed`.
+- [x] **Each species' closest known genome, and a dotplot against it**
+      (`--sourmash_db`): the genome's k-mers against a sourmash database of
+      genomes (sourmash's prepared NCBI ones; `sourmash gather`), its closest
+      genomes named with their ANI and lineage (`plexembler closest`); the
+      closest one's sequence downloaded from NCBI Datasets, the genome aligned
+      to it (minimap2 `-x asm20`) and drawn against it (`plexembler dotplot`,
+      also in the report). Decided on 2026-11-27: the database is given
+      locally, and the download, the pipeline's only use of the network, never
+      fails a run: without network, a warning and no dotplot. To come: the
+      closest genome as `--orient_reference`'s default (M3), which needs the
+      search on the contigs.
 - [ ] **Each species' identity:** ITS (ITSx, local) and the D1/D2 domain of the
       28S rRNA, against a local UNITE or NCBI set (BLAST): sample swaps show.
 - [ ] **Comparative**, per pool (`--comparative`): OrthoFinder (orthogroups,
@@ -691,4 +703,5 @@ All answered ([Decisions](#decisions)):
 | The Rabl configuration | Scaffolders join chromosomes at their centromeres | Each join scored against the species' P(s) (M3); and the same signal annotates the centromeres (M6) |
 | An MCMC run differs from the next | instaGRAAL's results change run to run | `cpu` mode by default; a seed upstream (T4) |
 | Large databases (FCS-GX, InterProScan) | Steps that cannot run on a workstation | Optional, behind their `--*_db` parameter; skipped with a note in the report |
+| No network on a cluster's nodes | The closest known genome's sequence cannot be downloaded | The database is local (`--sourmash_db`); the download warns and stops, never fails the run; the process can run on the login node (docs/usage.md) |
 | nf-core's template and language move | Rewrites of the template's files | `nf-core pipelines sync`; local modules ready for records (T3) |

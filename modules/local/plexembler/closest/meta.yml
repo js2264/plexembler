@@ -1,0 +1,84 @@
+name: "plexembler_closest"
+description: A species' closest known genome, from sourmash gather's matches; its sequence, from NCBI
+keywords:
+  - genome
+  - taxonomy
+  - sourmash
+  - ncbi
+tools:
+  - "plexembler":
+      description: "The commands of plexembler's pipeline"
+      homepage: "https://github.com/js2264/plexembler"
+      documentation: "https://js2264.github.io/plexembler/cli/#closest"
+      licence: ["MIT"]
+      identifier: ""
+input:
+  - - meta:
+        type: map
+        description: The species' meta map
+    - gather:
+        type: file
+        description: sourmash gather's matches of the species' genome (CSV, gzipped or not; empty when none)
+        pattern: "*.csv{,.gz}"
+  - lineages:
+      type: file
+      description: The database's taxonomy, sourmash's lineages (CSV, gzipped or not); [] without one
+      pattern: "*.csv{,.gz}"
+output:
+  table:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.closest.tsv:
+          type: file
+          description: The matches, best first, and what became of the first one's sequence
+          pattern: "*.closest.tsv"
+  fasta:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.closest.fa.gz:
+          type: file
+          description: The closest genome's sequence, from NCBI, when it could be downloaded
+          pattern: "*.closest.fa.gz"
+  multiqc:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - ${meta.id}.closest_mqc.tsv:
+          type: file
+          description: The closest genome, for MultiQC
+          pattern: "*_mqc.tsv"
+  log:
+    - - meta:
+          type: map
+          description: The species' meta map
+      - "*.log":
+          type: file
+          description: The command's log
+          pattern: "*.log"
+  versions_plexembler:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process
+      - plexembler:
+          type: string
+          description: The tool
+      - "plexembler --version | sed 's/.* //'":
+          type: eval
+          description: Its version
+authors:
+  - "@js2264"
+maintainers:
+  - "@js2264"
